@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <script>
+    // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
+    const VERSION = '202511131530';
+    const BUILD_TIME = '202511131530';
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BBB Golf</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.png" />
+  <meta id="cacheBuster" name="version" content="202511131530">
+
+  <style>
+    /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
+ /* Enable full scroll + safe area */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  position: static;
+  overscroll-behavior-y: contain;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+
+    :root {
+      --bg: #f4f4f4;
+      --card: #fff;
+      --text: #222;
+      --green: #0f0;
+      --btn-bg: #0f0;
+      --btn-text: #000;
+      --table-header: #555;
+      --table-bg: #eee;
+    }
+    [data-theme="dark"] {
+      --bg: #111;
+      --card: #222;
+      --text: #eee;
+      --green: #0f0;
+      --btn-bg: #0f0;
+      --btn-text: #000;
+      --table-header: #444;
+      --table-bg: #333;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+    .card {
+      background: var(--card);
+      padding: 1rem;
+      border-radius: 12px;
+      margin: 0 auto 1rem;
+      max-width: 800px;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #courseSetup, #playerSetup, #game, #summary {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 { 
+      color: var(--green); 
+      text-align: center; 
+      margin: 0.5rem 0; 
+      font-size: 1.4rem; 
+    }
+
+    button {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 0.25rem;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* === ICON-ONLY 40px BUTTONS (HORIZONTAL SCROLL) === */
+    @media (max-width: 768px) {
+      .control-bar {
+        position: static !important;
+        width: 100% !important;
+        background: var(--card);
+        padding: 0.4rem 0.3rem !important;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        display: flex;
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+        gap: 0.3rem !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .control-bar::-webkit-scrollbar { display: none; }
+
+      .control-bar button {
+        flex: 0 0 40px !important;
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 8px !important;
+        background: var(--btn-bg);
+        color: var(--btn-text);
+        border: none;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 0 !important;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      }
+
+      .control-bar button svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+        pointer-events: none;
+      }
+
+      /* FORCE VISIBILITY */
+      .control-bar button svg * { fill: inherit !important; }
+      .control-bar button svg { fill: #000; }
+      [data-theme="dark"] .control-bar button svg { fill: #eee; }
+      .control-bar button:disabled { opacity: 0.4; }
+      .control-bar button:disabled svg { fill: inherit !important; opacity: 1; }
+    }
+
+    .hidden {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .center-block { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      width: 100%; 
+    }
+
+    #holeDisplay {
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      margin: 0.5rem 0;
+    }
+
+    #scoreTable { 
+      width: 100%; 
+      max-width: 800px; 
+      margin: 0.5rem auto; 
+      border-collapse: collapse; 
+    }
+    #scoreTable th, #scoreTable td { 
+      padding: 0.75rem; 
+      text-align: center; 
+      border-bottom: 1px solid #ddd; 
+    }
+    #scoreTable th { 
+      background: var(--table-header); 
+      color: #fff; 
+      font-weight: 600; 
+    }
+    #scoreTable th:first-child, #scoreTable td:first-child { text-align: left; }
+    tbody tr:nth-child(even) { background: var(--table-bg); }
+
+    /* === CHECKBOXES: FINAL VERSION (NO DUPLICATES) === */
+    input[type="checkbox"] {
+      width: 28px;
+      height: 28px;
+      transform: scale(1.6);
+      margin: 0 6px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      input[type="checkbox"] {
+        width: 16px !important;
+        height: 16px !important;
+        transform: scale(1) !important;
+        margin: 0 4px !important;
+      }
+
+      /* TIGHTEN TABLE PADDING IN MOBILE */
+      #scoreTable th, #scoreTable td {
+        padding: 0.5rem 0.4rem !important;
+        font-size: 0.9rem !important;
+      }
+      #scoreTable th:first-child, #scoreTable td:first-child {
+        padding-left: 0.6rem !important;
+      }
+    }
+
+    /* === DARK/CB TEXT ON MOBILE === */
+@media (max-width: 768px) {
+  .control-bar button {
+    position: relative !important;
+    padding: 0 4px !important;
+    width: auto !important;
+    min-width: 40px !important;
+    flex: 0 0 auto !important;
+  }
+  .control-bar button .btn-label {
+    display: inline !important;
+    font-size: 0.55rem !important;
+    font-weight: bold !important;
+    margin-left: 2px !important;
+    color: #000 !important;
+    line-height: 1 !important;
+  }
+  [data-theme="dark"] .control-bar button .btn-label {
+    color: #eee !important;
+  }
+  .control-bar button svg {
+    fill: currentColor !important;
+  }
+}
+
+
+
+
+    /* Ensure game screen has room */
+    #game {
+      padding-bottom: 1rem !important;
+    }
+
+    /* === COURSE SETUP (ONLY ONCE) === */
+    #courseSetup {
+      padding: 1rem !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    #courseSetup > div {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      align-items: center !important;
+    }
+    #courseSelect, #addCourse, #nextToPlayers {
+      width: 100% !important;
+      max-width: none !important;
+      font-size: 1rem !important;
+      padding: 0.75rem !important;
+    }
+    #nextToPlayers:disabled {
+      opacity: 0.4 !important;
+      background: #ccc !important;
+      cursor: not-allowed !important;
+    }
+
+    /* PLAYER SETUP & START ROUND */
+    #playerSetup {
+      padding: 1rem 1rem 160px 1rem !important;
+      overflow: visible !important;
+    }
+
+    #playerSetup > div[style*="margin-top: 1rem"] {
+      margin-top: 1.5rem !important;
+      padding: 0.5rem !important;
+      background: var(--card) !important;
+      border-radius: 8px !important;
+      display: block !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    #startGame {
+      width: 100% !important;
+      max-width: none !important;
+      padding: 1.2rem !important;
+      font-size: 1.2rem !important;
+      min-height: 60px !important;
+      background: var(--btn-bg) !important;
+      color: var(--btn-text) !important;
+      border: none !important;
+      border-radius: 12px !important;
+      font-weight: bold !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+    }
+    #startGame:disabled {
+      opacity: 0.6 !important;
+      background: #ccc !important;
+      color: #999 !important;
+      cursor: not-allowed !important;
+    }
+
+    .holeSummary,
+    #roundSummary {
+      margin: 0.3rem auto !important;
+      padding: 0.35rem !important;
+      line-height: 1.2 !important;
+      font-size: 0.82rem !important;
+      text-align: center;
+      background: #fff !important;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #d4edda;
+      max-width: 800px;
+    }
+
+    .holeSummary {
+      font-weight: bold !important;
+      color: #dc3545 !important;
+    }
+
+    #roundSummary {
+      color: #dc3545 !important;
+      font-weight: 600;
+      font-size: 0.80rem !important;
+    }
+
+    #roundSummary small { 
+      color: #a00 !important;
+      font-weight: normal;
+      font-size: 0.76rem !important;
+    }
+
+    /* ONE-LINE TIGHT LAYOUT */
+    .holeSummary > div,
+    .summary-awarded,
+    .summary-carry-in,
+    .summary-no-carry {
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 0.78rem !important;
+      line-height: 1.2 !important;
+    }
+
+    .audit-good { color: #0f0; } 
+    .audit-bad { color: #f00; }
+    .audit-line { margin-top: 0.5rem; font-size: 0.85rem; line-height: 1.5; }
+    .history-item { background: var(--card); padding: 0.75rem; margin: 0.5rem 0; border-radius: 8px; cursor: pointer; }
+    .player-tag { display: inline-block; background: #0f0; color: #000; padding: 0.25rem 0.5rem; border-radius: 6px; margin: 0.25rem; font-size: 0.85rem; }
+
+    #playerSelect { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 0.5rem; 
+      max-width: 600px; 
+      margin: 0 auto; 
+    }
+    #playerSelect label { 
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem; 
+      font-size: 1.1rem; 
+      justify-content: flex-start; 
+    }
+
+#bbbHelpBtn {
+  transition: color 0.2s;
+}
+#bbbHelpBtn:hover, #bbbHelpBtn:focus {
+  color: #090;
+}
+
+  </style>
+</head>
+
+<body>
+
+
+ <!-- COURSE SETUP -->
+<section id="courseSetup" class="card center-block" role="region" aria-labelledby="courseSetupTitle">
+  <h2 id="courseSetupTitle" class="hidden">Course Setup</h2>
+
+  <!-- COPY-PASTE DATA SECTION -->
+  <div style="margin:1rem 0;padding:1rem;background:var(--card);border-radius:12px;text-align:center;border:2px solid var(--green);">
+    <h3 style="margin:0 0 0.75rem;color:var(--green);font-size:1.1rem;">Update Private Data</h3>
+    <button onclick="pastePlayers()" style="background:#0066cc;color:white;padding:0.75rem 1.2rem;margin:0.4rem;border-radius:8px;font-weight:bold;font-size:1rem;">
+      Paste Players CSV
+    </button>
+    <button onclick="pasteCourses()" style="background:#0066cc;color:white;padding:0.75rem 1.2rem;margin:0.4rem;border-radius:8px;font-weight:bold;font-size:1rem;">
+      Paste Courses CSV
+    </button>
+    <p style="font-size:0.85rem;margin:0.75rem 0 0;color:#666;">
+      Copy from email → long-press → Paste
+    </p>
+  </div>
+
+  <div style="display:flex;gap:0.5rem;align-items:center;justify-content:center;flex-wrap:wrap;">
+    <select id="courseSelect" style="flex:1;max-width:300px;"></select>
+    <button id="addCourse">+ Course</button>
+    <button id="nextToPlayers" disabled>Next</button>
+  </div>
+</section>
+
+  <!-- PLAYER SETUP -->
+  <section id="playerSetup" class="card hidden center-block" role="region" aria-labelledby="playerSetupTitle">
+    <h2 id="playerSetupTitle" class="hidden">Player Setup</h2>
+    <button id="backToCourse">Back</button>
+    <div id="playerSelect"></div>
+    <div style="margin-top: 1rem; text-align: center;">
+      <button id="startGame" disabled style="width: 100%; padding: 1rem; font-size: 1.1rem;">Start Round</button>
+    </div>
+  </section>
+
+  <!-- ROSTER -->
+  <section id="roster" class="card hidden center-block" role="region" aria-labelledby="rosterTitle">
+    <h2 id="rosterTitle" class="hidden">Roster</h2>
+    <button id="backToCourseFromRoster">Back</button>
+    <input id="rosterName" placeholder="Name" style="width:100%;margin:0.5rem 0;" />
+    <input id="rosterPhone" placeholder="Phone" style="width:100%;margin:0.5rem 0;" />
+    <input id="rosterEmail" placeholder="Email" style="width:100%;margin:0.5rem 0;" />
+    <button id="addToRoster">Add</button>
+    <div id="rosterList"></div>
+  </section>
+
+  <!-- COURSE FORM -->
+  <section id="courseForm" class="card hidden center-block" role="region" aria-labelledby="courseFormTitle">
+    <h2 id="courseFormTitle" class="hidden">Add Course</h2>
+    <button id="cancelCourse">Cancel</button>
+    <input id="courseName" placeholder="Course Name" style="width:100%;margin:0.5rem 0;" />
+    <div id="pars"></div>
+    <button id="saveCourse">Save Course</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game" class="card hidden center-block" role="region" aria-labelledby="gameTitle">
+    <h2 id="gameTitle" class="hidden">Game</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <h3 id="holeDisplay"></h3>
+      <div>
+        <button id="prevHole">Prev</button>
+        <button id="nextHole">Next</button>
+        <button id="editHole" class="hidden">Edit</button>
+        <button id="finishHole">Finish Hole</button>
+      </div>
+    </div>
+
+    <table id="scoreTable">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th id="firstOnHeader">FO</th>
+          <th>CL</th>
+          <th>P</th>
+          <th>H</th>
+          <th>RUN</th>
+          <th>TOT</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="holeSummary"></div>
+    <div id="roundSummary" class="hidden"></div>
+
+    <div class="control-bar">
+      <!-- 1. SMS -->
+      <button id="sendSMS" title="Send Update" aria-label="Send Update">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+      </button>
+
+      <!-- 2. CSV -->
+      <button id="exportCSV" title="Export CSV" aria-label="Export CSV">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </button>
+
+      <!-- 3. Complete -->
+      <button id="completeRound" title="Complete Round" aria-label="Complete Round">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </button>
+
+      <!-- 4. Save -->
+      <button id="saveRound" title="Save Round" aria-label="Save Round">
+        <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+      </button>
+
+      <!-- 5. Exit -->
+      <button id="exitRound" title="Exit" aria-label="Exit">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </button>
+
+             <!-- 6. Dark Mode -->
+      <button id="darkModeToggle" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5.39 0 .74-.15 1.01-.39.26-.23.61-.38.99-.38C16.33 15 15 13.83 15 12c0-3.87-3.13-7-7-7z"/></svg>
+        <span style="font-size:0.55rem !important;font-weight:bold !important;color:#000 !important;line-height:1 !important;">DARK</span>
+      </button>
+
+      <!-- 7. Colorblind -->
+      <button id="cbToggle" title="Colorblind Mode" aria-label="Colorblind Mode">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 7V17M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span style="font-size:0.55rem !important;font-weight:bold !important;color:#000 !important;line-height:1 !important;">CB</span>
+      </button>
+
+      <!-- 8. Roster -->
+      <button id="manageRosterBtn" title="Manage Roster" aria-label="Manage Roster">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;" fill="#000">
+          <path d="M12 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm12 4a4 4 0 1 00 8 4 4 0 0 0 0-8z"/>
+        </svg>
+      </button>
+
+      <!-- 9. History -->
+      <button id="historyBtn" title="Round History" aria-label="Round History">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;" fill="#000">
+          <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12V9c0-1.1.9-2 2-2h6v2l4-4-4-4v2z"/>
+        </svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
+    <h2 id="summaryTitle" class="hidden">Summary</h2>
+    <button id="backToSetup">Setup</button>
+    <h3>Final Leaderboard</h3>
+    <ol id="leaderboard"></ol>
+    <div class="control-bar">
+      <button id="restart">New Round</button>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="history" class="card hidden center-block" role="region" aria-labelledby="historyTitle">
+    <h2 id="historyTitle" class="hidden">History</h2>
+    <button id="backToSetup">Setup</button>
+    <h3>Round History</h3>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- DEBUG -->
+  <div id="debugPanel" class="card hidden" style="position:fixed;bottom:10px;right:10px;width:300px;max-height:80vh;overflow:auto;z-index:1000;">
+    <button id="closeDebug" style="float:right;">Close</button>
+    <h4>Carry Debug</h4>
+    <div id="debugOutput"></div>
+  </div>
+
+  <div id="simResult"></div>
+
+  <button id="bbbHelpBtn" type="button" aria-label="Open BBB Golf Help" style="all:unset; cursor:pointer; text-align:center; margin:0.5rem 0; display:block; width:100%; border:none; background:none;">
+  <h1 style="margin:0; font-size:1.4rem; color:var(--green);">
+    BBB Golf Help
+  </h1>
+    </button>
+
+  <!-- COURSE + HOLE INFO BAR -->
+  <div id="courseInfoBar" class="card center-block" style="margin: 0.5rem auto; padding: 0.75rem; font-size: 0.95rem; text-align: center; background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: none;">
+    <strong id="infoCourseName"></strong> — 
+    Hole <span id="infoCurrentHole"></span> of 18
+    <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
+  </div>
+
+   <!-- BBB HELP MODAL -->
+  <div id="bbbHelpModal" class="card hidden" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:var(--card);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding-top:env(safe-area-inset-top, 0px);">
+    <div style="text-align:center;padding:0.75rem;border-bottom:1px solid #ddd;position:relative;">
+      <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Golf Icons</h3>
+      <button id="closeHelp" type="button" aria-label="Close help" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">×</button>
+    </div>
+    <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
+      <!-- CONTROL BAR -->
+      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        <div><strong>SMS</strong> – Send live update</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <div><strong>CSV</strong> – Export scores</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <div><strong>FIN</strong> – Complete round</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+        <div><strong>SAVE</strong> – Save to history</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <div><strong>EXIT</strong> – Quit without saving</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5.39 0 .74-.15 1.01-.39.26-.23.61-.38.99-.38C16.33 15 15 13.83 15 12c0-3.87-3.13-7-7-7z"/></svg>
+        <div><strong>DARK</strong> – Toggle dark mode</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><circle cx="12" cy="12" r="10" stroke="#000" stroke-width="2" fill="none"/><path d="M12 7V17M7 12H17" stroke="#000" stroke-width="2" stroke-linecap="round"/></svg>
+        <div><strong>CB</strong> – Colorblind mode</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+        <div><strong>ROSTER</strong> – Manage players</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12V9c0-1.1.9-2 2-2h6v2l4-4-4-4v2z"/></svg>
+        <div><strong>HIST</strong> – View past rounds</div>
+      </div>
+
+      <!-- SCORE TABLE -->
+      <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
+      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Score Table</div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">FO</span>
+        <div><strong>FO</strong> – First On</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">CL</span>
+        <div><strong>CL</strong> – Closest</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">P</span>
+        <div><strong>P</strong> – Putts</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">H</span>
+        <div><strong>H</strong> – Hole</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">RUN</span>
+        <div><strong>RUN</strong> – Running Total</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">TOT</span>
+        <div><strong>TOT</strong> – Round Total</div>
+      </div>
+
+      <!-- CARRY LOGIC -->
+      <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
+      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Carry Logic</div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">C_Car</span>
+        <div><strong>C_Car</strong> – Closed Carry</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">O_Car</span>
+        <div><strong>O_Car</strong> – Open Carry</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">Pts</span>
+        <div><strong>Pts</strong> – Points awarded</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">A_Car</span>
+        <div><strong>A_Car</strong> – Available Carry</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKDROP -->
+  <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
+
+
+   <!-- SERVICE WORKER -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registered', reg))
+          .catch(err => console.log('SW failed', err));
+      });
+    }
+  </script>
+
+  <!-- APP JS -->
+  <script src="app-v21.js?v=202511131530"></script>
+
+  <!-- MODAL JS (DOM READY) -->
+    <!-- MODAL JS (DOM READY) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('bbbHelpModal');
+      const backdrop = document.getElementById('bbbHelpBackdrop');
+      if (modal) modal.classList.add('hidden');
+      if (backdrop) backdrop.classList.add('hidden');
+
+      const helpBtn = document.getElementById('bbbHelpBtn');
+      const closeBtn = document.getElementById('closeHelp');
+
+      if (!helpBtn || !modal || !backdrop || !closeBtn) return;
+
+      const openModal = () => {
+        modal.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        backdrop.setAttribute('aria-hidden', 'false');
+      };
+
+      const closeModal = () => {
+        modal.classList.add('hidden');
+        backdrop.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        backdrop.setAttribute('aria-hidden', 'true');
+      };
+
+      helpBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+      });
+    });
+  </script>
+ </body>
+</html>

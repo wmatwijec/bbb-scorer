@@ -1,0 +1,8 @@
+# Ignore backups and CSVs
+*.csv
+index_25_*.html
+app - Copy*.js
+*_backup
+Thumbs.db
+*.log
+Readme.MD
