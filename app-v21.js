@@ -4,6 +4,10 @@ console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION", "color: gold; font-wei
 const BACKEND = 'https://pwa-players-backend.onrender.com';
 
 async function loadDataFromBackend() {
+  const loader = document.getElementById('courseLoader');
+  const error = document.getElementById('courseError');
+  const picker = document.getElementById('coursePicker');
+
   try {
     const [playersRes, coursesRes] = await Promise.all([
       fetch(`${BACKEND}/players`),
@@ -31,16 +35,33 @@ async function loadDataFromBackend() {
       return { name, pars };
     }).filter(c => c.name && c.pars.length === 18);
 
-    renderCourseSelect();
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
-    console.log('%cData loaded from private backend — NO COPY-PASTE EVER AGAIN', 'color: gold; font-weight: bold');
+    if (courses.length === 0) throw new Error('No courses returned');
+
+    // SUCCESS – SHOW PICKER
+    loader.classList.add('hidden');
+    picker.classList.remove('hidden');
+    renderCourseSelect(); // your existing function – works perfectly
+
+    console.log('%cBackend data loaded – PWA ready!', 'color: gold; font-weight: bold');
+
+    // First-time welcome
+    if (!localStorage.getItem('bbb-welcome-2025')) {
+      setTimeout(() => document.getElementById('firstTimeWelcome')?.classList.remove('hidden'), 400);
+    }
 
   } catch (err) {
     console.error('Backend load failed:', err);
-    alert('No internet — cannot load players/courses. Check connection and try again.');
+    loader.classList.add('hidden');
+    error.classList.remove('hidden');
   }
 }
+
+// Retry button
+document.getElementById('retryBtn')?.addEventListener('click', () => {
+  document.getElementById('courseError').classList.add('hidden');
+  document.getElementById('courseLoader').classList.remove('hidden');
+  loadDataFromBackend();
+});
 
 // === CSV PARSER ===
 function parseCSV(text) {

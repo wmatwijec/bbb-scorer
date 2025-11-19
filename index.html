@@ -384,15 +384,61 @@ body {
   color: #090;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
   </style>
 </head>
 
 <body>
 
 
- <!-- COURSE SETUP -->
-<section id="courseSetup" class="card center-block" role="region" aria-labelledby="courseSetupTitle">
-  <h2 id="courseSetupTitle" class="hidden">Course Setup</h2>
+ <!-- COURSE SETUP – BACKEND-DRIVEN (FINAL) -->
+<section id="courseSetup" class="card center-block">
+  <h2 style="text-align:center; color:var(--green); margin:1rem 0 0.5rem; font-size:1.6rem;">
+    BBB Golf
+  </h2>
+
+  <div id="courseLoader" style="text-align:center; padding:2rem 1rem;">
+    <div style="font-size:1rem; color:#666; margin-bottom:1rem;">Loading your courses...</div>
+    <div style="width:48px; height:48px; border:5px solid #f0f0f0; border-top:5px solid var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
+  </div>
+
+  <div id="courseError" class="hidden" style="text-align:center; padding:1.5rem; color:#a00;">
+    <p>Failed to load data from server.</p>
+    <button id="retryBtn" style="background:var(--btn-bg); color:var(--btn-text); padding:0.8rem 1.6rem; font-size:1rem; margin:0.5rem;">
+      Retry
+    </button>
+    <p style="font-size:0.9rem; color:#666; margin-top:1rem;">
+      Check internet or wake the backend (it may be sleeping).
+    </p>
+  </div>
+
+  <div id="coursePicker" class="hidden">
+    <select id="courseSelect" style="width:100%; padding:0.9rem; font-size:1.2rem; margin-bottom:1rem; border-radius:8px; border:1px solid #aaa;">
+      <option value="">– Select Course –</option>
+    </select>
+    <button id="nextToPlayers" disabled style="width:100%; padding:1.1rem; font-size:1.3rem; font-weight:bold;">
+      Load Course →
+    </button>
+  </div>
+
+  <!-- First-time welcome -->
+  <div id="firstTimeWelcome" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:var(--card);padding:2rem;border-radius:16px;max-width:340px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.4);">
+      <h3 style="color:var(--green);margin-top:0;">Welcome!</h3>
+      <p style="line-height:1.5;">
+        Your players and courses now load automatically from your private backend.<br><br>
+        <strong>No more copy-paste ever again!</strong>
+      </p>
+      <button onclick="document.getElementById('firstTimeWelcome').classList.add('hidden'); localStorage.setItem('bbb-welcome-2025','1')" 
+              style="margin-top:1rem;padding:0.9rem 2rem;font-size:1.1rem;">
+        Got it!
+      </button>
+    </div>
+  </div>
+</section>
 
  
   <!-- PLAYER SETUP -->
