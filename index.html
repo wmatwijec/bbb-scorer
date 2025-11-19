@@ -70,14 +70,41 @@ body {
 }
 
     .card {
-      background: var(--card);
-      padding: 1rem;
-      border-radius: 12px;
-      margin: 0 auto 1rem;
-      max-width: 800px;
-      width: 100%;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+  background: var(--card);
+  padding: 1rem;
+  border-radius: 12px;
+  margin: 0 auto 1rem;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* FIX EMPTY SPACE ON MOBILE — PLAYER SETUP & GAME SCREEN */
+#playerSetup,
+#game {
+  padding-top: 0.3rem !important;
+  min-height: auto !important;
+}
+
+#playerSetup > div,
+#game > div:first-child {
+  margin-top: 0.2rem !important;
+}
+
+/* Make the hole header tighter on mobile */
+@media (max-width: 768px) {
+  #playerSetup,
+  #game {
+    padding: 0.4rem 0.8rem !important;
+  }
+  #holeDisplay {
+    margin: 0.2rem 0 !important;
+    font-size: 1.05rem !important;
+  }
+  #scoreTable {
+    margin-top: 0.5rem !important;
+  }
+}
 
     #courseSetup, #playerSetup, #game, #summary {
       display: flex;
