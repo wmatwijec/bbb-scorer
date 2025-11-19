@@ -885,16 +885,16 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;  // GROK: Set false immediately for nav unlock
-  
-  // GROK: Recalc totals async, then force full UI/nav refresh
-  setTimeout(() => {
+  isHoleInProgress = false;        // Unlock navigation immediately
+
+  // Force full recalc + UI refresh (this is the missing piece)
+  requestAnimationFrame(() => {
     precomputeAllTotals();
-    updateHole();  // This calls updateNavButtons() internally
-    updateNavButtons();  // GROK: Double-call for mobile queue flush
+    updateHole();                  // This rebuilds table + summary
+    updateNavButtons();            // ← THIS WAS MISSING → buttons now re-enable!
     save();
-  }, 0);  // 0ms queue-next-tick ensures mobile JS finishes the heavy loop
-  
+  });
+
   logScreen('FINISHED HOLE ' + currentHole);
 }
 
