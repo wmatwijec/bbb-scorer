@@ -435,6 +435,42 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* NUCLEAR FIX — KILL ALL EMPTY SPACE ABOVE PLAYER SELECT AND SCORING TABLE */
+#playerSetup,
+#game {
+  padding-top: 0 !important;
+  padding-bottom: 0.5rem !important;
+}
+
+#playerSetup > div,
+#playerSetup > div[style*="margin-top"],
+#game > div:first-child,
+#game > div[style*="display:flex;justify-content"] {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+#scoreTable {
+  margin-top: 0.4rem !important;
+}
+
+/* Extra insurance for mobile */
+@media (max-width: 768px) {
+  #playerSetup .card,
+  #game .card {
+    padding: 0.4rem !important;
+  }
+  #playerSelect,
+  #scoreTable {
+    margin-top: 0 !important;
+  }
+  #holeDisplay {
+    margin: 0.3rem 0 !important;
+    padding: 0 !important;
+  }
+}
+
+
   </style>
 </head>
 
