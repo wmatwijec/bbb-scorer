@@ -1,57 +1,45 @@
-console.log("%cBBB PWA v21.3 — FINAL: COPY-PASTE ONLY + PRIVATE", "color: gold; font-weight: bold");
+console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION", "color: gold; font-weight: bold");
 
-// This is a dummy note:  Testing for the big M
-// === DEFAULT DATA (EMBEDDED) ===
+// === BACKEND LOADER (RENDER.COM) ===
+const BACKEND = 'https://pwa-players-backend.onrender.com';
 
-const DEFAULT_PLAYERS_CSV = `Name,Phone,Email
-Walt,555-1111,walt@example.com
-Tim,555-2222,tim@example.com
-Frank,555-3333,frank@example.com
-Sally,555-4444,sally@example.com`;
-
-const DEFAULT_COURSES_CSV = `Name,Par1,Par2,Par3,Par4,Par5,Par6,Par7,Par8,Par9,Par10,Par11,Par12,Par13,Par14,Par15,Par16,Par17,Par18
-Home Course,4,4,3,5,4,3,4,4,5,4,3,4,5,4,3,4,4,5
-Lakes,4,3,4,5,4,3,4,4,5,3,4,5,4,3,4,5,4,3
-Hills,5,4,3,4,3,4,5,4,3,4,5,3,4,4,3,5,4,3`;
-
-// === COPY-PASTE FUNCTIONS (GLOBAL) ===
-window.pastePlayers = async () => {
+async function loadDataFromBackend() {
   try {
-    const text = await navigator.clipboard.readText();
-    if (!text.trim().startsWith('Name,Phone,Email')) throw new Error('Invalid players CSV');
-    localStorage.setItem('bbb_players.csv', text);
-    alert('Players updated! Reloading...');
-    location.reload();
+    const [playersRes, coursesRes] = await Promise.all([
+      fetch(`${BACKEND}/players`),
+      fetch(`${BACKEND}/courses`)
+    ]);
+
+    if (!playersRes.ok || !coursesRes.ok) throw new Error('Network error');
+
+    const playersCSV = await playersRes.text();
+    const coursesCSV = await coursesRes.text();
+
+    roster = parseCSV(playersCSV).map(p => ({
+      name: p.Name?.trim(),
+      phone: p.Phone?.trim(),
+      email: p.Email?.trim()
+    })).filter(p => p.name);
+
+    courses = parseCSV(coursesCSV).map(c => {
+      const name = c.Name?.trim();
+      const pars = [];
+      for (let i = 1; i <= 18; i++) {
+        const par = parseInt(c[`Par${i}`]);
+        if (!isNaN(par)) pars.push(par);
+      }
+      return { name, pars };
+    }).filter(c => c.name && c.pars.length === 18);
+
+    renderCourseSelect();
+    hideAll();
+    els.courseSetup.classList.remove('hidden');
+    console.log('%cData loaded from private backend — NO COPY-PASTE EVER AGAIN', 'color: gold; font-weight: bold');
+
   } catch (err) {
-    alert('Paste failed — copy the CSV text first');
+    console.error('Backend load failed:', err);
+    alert('No internet — cannot load players/courses. Check connection and try again.');
   }
-};
-
-window.pasteCourses = async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text.trim().includes('Name,Par1')) throw new Error('Invalid courses CSV');
-    localStorage.setItem('bbb_courses.csv', text);
-    alert('Courses updated! Reloading...');
-    location.reload();
-  } catch (err) {
-    alert('Paste failed — copy the CSV text first');
-  }
-};
-
-// === MAIN LOAD: localStorage → DEFAULTS ===
-function load(callback) {
-  const playersCSV = localStorage.getItem('bbb_players.csv') || DEFAULT_PLAYERS_CSV;
-  const coursesCSV = localStorage.getItem('bbb_courses.csv') || DEFAULT_COURSES_CSV;
-
-  roster = parseCSV(playersCSV).map(p => ({ name: p.Name, phone: p.Phone, email: p.Email }));
-  courses = parseCSV(coursesCSV).map(c => ({
-    name: c.Name,
-    pars: Object.keys(c).filter(k => k.startsWith('Par')).sort((a,b) => parseInt(a.slice(3)) - parseInt(b.slice(3))).map(k => parseInt(c[k]))
-  }));
-
-  players = []; currentCourse = null; currentHole = 1; inRound = false; finishedHoles.clear();
-  if (callback) callback();
 }
 
 // === CSV PARSER ===
@@ -79,7 +67,7 @@ function parseCSV(text) {
   });
 }
 
-// === STATE ===
+// === STATE & REST OF YOUR ORIGINAL CODE (UNCHANGED) ===
 let roster = [];
 let players = [];
 let currentHole = 1;
@@ -92,6 +80,7 @@ let finishedHoles = new Set();
 let inRound = false;
 let isHoleInProgress = false;
 let els = {};
+
 
 // === NAVIGATION LOCK ===
 function lockNavigation() {
@@ -194,12 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startGame: document.getElementById('startGame')
   };
 
-  load(() => {
-    renderCourseSelect();
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
-    els.historyBtn.disabled = false;
-  });
+  loadDataFromBackend();
 
   // === DARK MODE ===
   function initDarkMode() {
@@ -453,12 +437,6 @@ function renderPlayerSelect() {
   logScreen('GAME STARTED');
 };
 }
-
-
-
-
-
-
   els.nextToPlayers.addEventListener('click', () => {
     if (currentCourse === null) return alert('Select a course');
     hideAll();
