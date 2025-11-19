@@ -106,18 +106,34 @@ let els = {};
 // === NAVIGATION LOCK ===
 function lockNavigation() {
   isHoleInProgress = true;
-  els.prevHole.disabled = true;
-  els.nextHole.disabled = true;
+  // Force immediate disable on mobile
+  if ('ontouchstart' in window) setTimeout(() => updateNavButtons(), 0);
+  else updateNavButtons();
 }
 
 function unlockNavigation() {
   isHoleInProgress = false;
+  // Force immediate enable + double-call for mobile async
   updateNavButtons();
+  if ('ontouchstart' in window) setTimeout(updateNavButtons, 0);
 }
 
 function updateNavButtons() {
-  els.prevHole.disabled = currentHole <= 1 || isHoleInProgress;
-  els.nextHole.disabled = currentHole >= HOLES || isHoleInProgress;
+  const canPrev = currentHole > 1 && !isHoleInProgress;
+  const canNext = currentHole < HOLES && !isHoleInProgress;
+  
+  els.prevHole.disabled = !canPrev;
+  els.nextHole.disabled = !canNext;
+  
+  // Visual feedback for mobile
+  [els.prevHole, els.nextHole].forEach(btn => {
+    if (btn.disabled) {
+      btn.style.opacity = '0.5';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  });
 }
 
 // === RENDER COURSE SELECT ===
@@ -675,7 +691,10 @@ function renderPlayerSelect() {
         input.type = 'checkbox';
         input.checked = !!s[point];
         input.disabled = isFinished;
-        input.onclick = () => toggleScore(p, holeIdx, point);
+        input.onclick = (e) => {
+           e.preventDefault(); // Stop double-tap zoom on iOS
+           toggleScore(p, holeIdx, point);
+    };
         cell.appendChild(input);
       };
 
@@ -848,14 +867,20 @@ function renderPlayerSelect() {
   }
 
 
-    function finishCurrentHole() {
-    finishedHoles.add(currentHole);
-    unlockNavigation();  // ← UNLOCK FIRST
+  function finishCurrentHole() {
+  finishedHoles.add(currentHole);
+  unlockNavigation();
+  
+  // Mobile: Wait for totals recalc, then refresh nav/UI
+  setTimeout(() => {
     precomputeAllTotals();
-    updateHole();        // ← THEN UPDATE
+    updateHole();
     save();
-    logScreen('FINISHED HOLE ' + currentHole);
-  }
+    if ('ontouchstart' in window) updateNavButtons(); // Extra kick
+  }, 10); // Tiny delay for mobile JS queue
+  
+  logScreen('FINISHED HOLE ' + currentHole);
+}
 
   function simulateRound() {
     if (inRound) {
