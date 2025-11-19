@@ -498,6 +498,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   isHoleInProgress = false;  // ← RESET
   hideAll();
   els.game.classList.remove('hidden');
+  attachFinishHoleListener();   // ← ADD THIS LINE
   els.manageRosterBtn.disabled = true;
   els.historyBtn.disabled = true;
   updateHole();
@@ -1129,7 +1130,14 @@ function finishCurrentHole() {
     logScreen(`NEXT → HOLE ${currentHole}`);
   });
 
-  els.finishHole.addEventListener('click', finishCurrentHole);
+  // Re-attach Finish Hole listener every time game screen is shown (prevents listener loss on hide/show)
+function attachFinishHoleListener() {
+  const btn = document.getElementById('finishHole');
+  if (btn) {
+    btn.replaceWith(btn.cloneNode(true)); // remove old listeners
+    document.getElementById('finishHole').addEventListener('click', finishCurrentHole);
+  }
+}
 
   els.editHole.addEventListener('click', () => {
     if (!finishedHoles.has(currentHole)) return;
