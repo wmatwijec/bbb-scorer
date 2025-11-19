@@ -885,16 +885,12 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;        // Unlock navigation immediately
+  isHoleInProgress = false;   // ← unlock navigation
 
-  // Force full recalc + UI refresh (this is the missing piece)
-  requestAnimationFrame(() => {
-    precomputeAllTotals();
-    updateHole();                  // This rebuilds table + summary
-    updateNavButtons();            // ← THIS WAS MISSING → buttons now re-enable!
-    save();
-  });
-
+  // ONE AND ONLY CALL – let updateHole() handle everything including nav buttons
+  precomputeAllTotals();
+  updateHole();   // ← this already ends with updateNavButtons() and save()
+  
   logScreen('FINISHED HOLE ' + currentHole);
 }
 
