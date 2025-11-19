@@ -905,10 +905,10 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;   // ← THIS unlocks Next
+  isHoleInProgress = false;   // unlocks Next
 
   precomputeAllTotals();
-  updateHole();               // ← this calls updateNavButtons() + save()
+  updateHole();               // refreshes everything including nav buttons
 
   logScreen('FINISHED HOLE ' + currentHole);
 }
