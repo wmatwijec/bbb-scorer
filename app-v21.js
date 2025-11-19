@@ -58,6 +58,11 @@ async function loadDataFromBackend() {
   }
 }
 
+function logScreen(msg) {
+  console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
+}
+
+
 // Retry button
 document.getElementById('retryBtn')?.addEventListener('click', () => {
   document.getElementById('courseError').classList.add('hidden');
@@ -683,10 +688,17 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     return;
   }
 
-  els.infoCourseName.textContent = currentCourse.name;
+  // NEW: Safely get the course object (works whether currentCourse is object or old index)
+  const course = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
+  
+  if (!course || !course.pars || !course.pars[currentHole - 1]) {
+    els.courseInfoBar.style.display = 'none';
+    return;
+  }
+
+  els.infoCourseName.textContent = course.name;
   els.infoCurrentHole.textContent = currentHole;
-  const par = currentCourse.pars[currentHole - 1];
-  els.infoPar.textContent = `Par ${par}`;
+  els.infoPar.textContent = `Par ${course.pars[currentHole - 1]}`;
 
   els.courseInfoBar.style.display = 'block';
 }
@@ -893,34 +905,12 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
 
 function finishCurrentHole() {
-  console.log('%c=== FINISH START ===', 'color: red; font-weight: bold');
-  console.log('Before: isHoleInProgress =', isHoleInProgress);
-  console.log('Adding hole', currentHole, 'to finishedHoles. Size now:', finishedHoles.size);
-  
   finishedHoles.add(currentHole);
   isHoleInProgress = false;   // unlock navigation
-  console.log('After set false: isHoleInProgress =', isHoleInProgress);
 
-  try {
-    console.log('Starting precomputeAllTotals...');
-    precomputeAllTotals();
-    console.log('precomputeAllTotals done.');
-    
-    console.log('Starting updateHole...');
-    updateHole();
-    console.log('updateHole done.');
-    
-    console.log('Manual nav update call...');
-    updateNavButtons();
-    console.log('After updateNavButtons: prev.disabled =', els.prevHole.disabled, 'next.disabled =', els.nextHole.disabled);
-    
-    save();
-    console.log('=== FINISH END — SUCCESS ===', 'color: green; font-weight: bold');
-  } catch (error) {
-    console.error('ERROR in finishCurrentHole:', error);
-    console.log('=== FINISH FAILED ===', 'color: red; font-weight: bold');
-  }
-  
+  precomputeAllTotals();
+  updateHole();   // this already calls updateNavButtons() + save() at the very end
+
   logScreen('FINISHED HOLE ' + currentHole);
 }
 
