@@ -129,13 +129,20 @@ function unlockNavigation() {
 }
 
 function updateNavButtons() {
+  console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
+  console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
+  
   const canPrev = currentHole > 1 && !isHoleInProgress;
   const canNext = currentHole < HOLES && !isHoleInProgress;
+  
+  console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
   
   els.prevHole.disabled = !canPrev;
   els.nextHole.disabled = !canNext;
   
-  // Visual feedback for mobile
+  console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
+  
+  // Your existing visual feedback
   [els.prevHole, els.nextHole].forEach(btn => {
     if (btn.disabled) {
       btn.style.opacity = '0.5';
@@ -144,6 +151,8 @@ function updateNavButtons() {
       btn.style.cursor = 'pointer';
     }
   });
+  
+  console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
 }
 
 // === RENDER COURSE SELECT ===
@@ -884,12 +893,33 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
 
 function finishCurrentHole() {
+  console.log('%c=== FINISH START ===', 'color: red; font-weight: bold');
+  console.log('Before: isHoleInProgress =', isHoleInProgress);
+  console.log('Adding hole', currentHole, 'to finishedHoles. Size now:', finishedHoles.size);
+  
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;   // ← unlock navigation
+  isHoleInProgress = false;   // unlock navigation
+  console.log('After set false: isHoleInProgress =', isHoleInProgress);
 
-  // ONE AND ONLY CALL – let updateHole() handle everything including nav buttons
-  precomputeAllTotals();
-  updateHole();   // ← this already ends with updateNavButtons() and save()
+  try {
+    console.log('Starting precomputeAllTotals...');
+    precomputeAllTotals();
+    console.log('precomputeAllTotals done.');
+    
+    console.log('Starting updateHole...');
+    updateHole();
+    console.log('updateHole done.');
+    
+    console.log('Manual nav update call...');
+    updateNavButtons();
+    console.log('After updateNavButtons: prev.disabled =', els.prevHole.disabled, 'next.disabled =', els.nextHole.disabled);
+    
+    save();
+    console.log('=== FINISH END — SUCCESS ===', 'color: green; font-weight: bold');
+  } catch (error) {
+    console.error('ERROR in finishCurrentHole:', error);
+    console.log('=== FINISH FAILED ===', 'color: red; font-weight: bold');
+  }
   
   logScreen('FINISHED HOLE ' + currentHole);
 }
