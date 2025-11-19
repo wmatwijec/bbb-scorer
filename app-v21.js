@@ -35,6 +35,8 @@ async function loadDataFromBackend() {
       return { name, pars };
     }).filter(c => c.name && c.pars.length === 18);
 
+    sortPlayersAlphabetically();   // ← ALPHABETIZES BOTH ROSTER AND FUTURE PLAYERS
+
     if (courses.length === 0) throw new Error('No courses returned');
 
     // SUCCESS – SHOW PICKER
@@ -101,6 +103,14 @@ let finishedHoles = new Set();
 let inRound = false;
 let isHoleInProgress = false;
 let els = {};
+
+function sortPlayersAlphabetically() {
+  players.sort((a, b) => a.name.localeCompare(b.name));
+  // Also keep roster sorted for consistency in player select screen
+  roster.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+
 
 
 // === NAVIGATION LOCK ===
@@ -430,16 +440,20 @@ function renderPlayerSelect() {
       const idx = parseInt(chk.dataset.index);
       const player = roster[idx];
 
-      if (chk.checked) {
-        if (players.length >= MAX_PLAYERS) {
-          chk.checked = false;
-          alert(`Max ${MAX_PLAYERS} players`);
-          return;
-        }
-        players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: Array(HOLES).fill(false), _cachedTotal: 0, _cachedHoleTotals: {} });
-      } else {
-        players = players.filter(p => p.name !== player.name);
-      }
+   if (chk.checked) {
+    if (players.length >= MAX_PLAYERS) {
+     chk.checked = false;
+     alert(`Max ${MAX_PLAYERS} players`);
+     return;
+    }
+    players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: Array(HOLES).fill(false), _cachedTotal: 0, _cachedHoleTotals: {} });
+  } else {
+  players = players.filter(p => p.name !== player.name);
+}
+
+// ADD THIS LINE — keeps table and standings alphabetical
+players.sort((a, b) => a.name.localeCompare(b.name));
+
 
       els.startGame.disabled = players.length < 2;
       save();
@@ -463,6 +477,8 @@ function renderPlayerSelect() {
     p._cachedTotal = 0;
     p._cachedHoleTotals = {};
   });
+
+  players.sort((a, b) => a.name.localeCompare(b.name));
 
   inRound = true;
   isHoleInProgress = false;  // ← RESET
@@ -867,17 +883,17 @@ function renderPlayerSelect() {
   }
 
 
-  function finishCurrentHole() {
+function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  unlockNavigation();
+  isHoleInProgress = false;  // GROK: Set false immediately for nav unlock
   
-  // Mobile: Wait for totals recalc, then refresh nav/UI
+  // GROK: Recalc totals async, then force full UI/nav refresh
   setTimeout(() => {
     precomputeAllTotals();
-    updateHole();
+    updateHole();  // This calls updateNavButtons() internally
+    updateNavButtons();  // GROK: Double-call for mobile queue flush
     save();
-    if ('ontouchstart' in window) updateNavButtons(); // Extra kick
-  }, 10); // Tiny delay for mobile JS queue
+  }, 0);  // 0ms queue-next-tick ensures mobile JS finishes the heavy loop
   
   logScreen('FINISHED HOLE ' + currentHole);
 }
