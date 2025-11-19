@@ -499,6 +499,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   hideAll();
   els.game.classList.remove('hidden');
   attachFinishHoleListener();   // ← ADD THIS LINE
+  attachNavListeners();   // ← ADD THIS LINE
   els.manageRosterBtn.disabled = true;
   els.historyBtn.disabled = true;
   updateHole();
@@ -1138,6 +1139,38 @@ function attachFinishHoleListener() {
     document.getElementById('finishHole').addEventListener('click', finishCurrentHole);
   }
 }
+
+function attachNavListeners() {
+  const prev = document.getElementById('prevHole');
+  const next = document.getElementById('nextHole');
+  if (prev) {
+    prev.replaceWith(prev.cloneNode(true));
+    document.getElementById('prevHole').addEventListener('click', () => {
+      if (currentHole > 1 && !isHoleInProgress) {
+        currentHole--;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`PREV → HOLE ${currentHole}`);
+      }
+    });
+  }
+  if (next) {
+    next.replaceWith(next.cloneNode(true));
+    document.getElementById('nextHole').addEventListener('click', () => {
+      if (currentHole < HOLES && !isHoleInProgress) {
+        currentHole++;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`NEXT → HOLE ${currentHole}`);
+      }
+    });
+  }
+}
+
+
+
+
+
 
   els.editHole.addEventListener('click', () => {
     if (!finishedHoles.has(currentHole)) return;
