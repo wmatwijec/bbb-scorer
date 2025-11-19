@@ -128,6 +128,9 @@ function renderCourseSelect() {
 
 // === DOM READY ===
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM ready — initializing app');
+
+  // === BUILD ELS CACHE ===
   els = {
     courseSetup: document.getElementById('courseSetup'),
     playerSetup: document.getElementById('playerSetup'),
