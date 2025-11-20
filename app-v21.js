@@ -608,6 +608,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   const carryIn = getCarryInForHole(currentHole);
   renderTable(carryIn, isFinished);
   renderHoleSummary(carryIn, isFinished);
+  precomputeAllTotals(); 
   renderRoundSummary();
   updateCourseInfoBar();
   updateNavButtons();
@@ -801,6 +802,33 @@ els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`
 
   el.classList.remove('hidden');
 }
+
+function renderHoleSummary() {
+  if (!els.holeSummary) return;
+
+  // Always calculate fresh carry-in for the hole we are currently looking at
+  const carryIn = getCarryInForHole(currentHole);
+
+  const parts = [];
+  if (carryIn.firstOn)  parts.push(`FO: +${carryIn.firstOn}`);
+  if (carryIn.closest) parts.push(`CL: +${carryIn.closest}`);
+  if (carryIn.putt)     parts.push(`P: +${carryIn.putt}`);
+  if (carryIn.greenie)  parts.push(`GR: +${carryIn.greenie}`);
+
+  let text = '';
+  if (parts.length > 0) {
+    text = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
+  } else if (finishedHoles.has(currentHole)) {
+    const nextCarry = getCarryInForHole(currentHole + 1);
+    const totalOpen = nextCarry.firstOn + nextCarry.closest + nextCarry.putt + nextCarry.greenie;
+    text = totalOpen > 0 ? `<strong>Open Carry:</strong> ${totalOpen}` : `<strong>Open Carry: 0</strong>`;
+  } else {
+    text = `<strong>Open Carry: 0</strong>`;
+  }
+
+  els.holeSummary.innerHTML = `<div class="summary-carry-in">${text}</div>`;
+}
+
 
     function toggleScore(player, holeIdx, point) {
     const currentHoleIdx = currentHole - 1;
