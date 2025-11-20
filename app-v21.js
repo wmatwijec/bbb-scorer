@@ -289,13 +289,13 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   });
 
   // === COLORBLIND MODE ===
-  let colorblindMode = localStorage.getItem('bbb_cb') === 'true';
+ /*  let colorblindMode = localStorage.getItem('bbb_cb') === 'true';
   document.body.classList.toggle('cb-mode', colorblindMode);
   els.cbToggle.addEventListener('click', () => {
     colorblindMode = !colorblindMode;
     localStorage.setItem('bbb_cb', colorblindMode);
     document.body.classList.toggle('cb-mode', colorblindMode);
-  });
+  }); */
 
 
   let debugMode = false;
