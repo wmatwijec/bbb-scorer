@@ -191,6 +191,29 @@ function renderCourseSelect() {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready — initializing app');
 
+// Prevent iOS from sleeping / killing the tab during a round
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator && inRound) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock active — screen stays awake during round');
+    } catch (err) {
+      console.log('Wake Lock failed (iOS ignores it anyway)', err);
+    }
+  }
+}
+
+// Call it when round starts and release when finished
+// In startGame.onclick after inRound = true:
+requestWakeLock();
+
+// In completeRound, saveRound, exitRound, etc.:
+if (wakeLock) wakeLock.release().then(() => wakeLock = null);
+
+
+
   // === BUILD ELS CACHE ===
   els = {
     courseSetup: document.getElementById('courseSetup'),
@@ -1162,6 +1185,25 @@ function attachNavListeners() {
         updateHole();
         updateCourseInfoBar();
         logScreen(`NEXT → HOLE ${currentHole}`);
+      }
+    });
+  }
+  const edit = document.getElementById('editHole');
+  if (edit) {
+    edit.replaceWith(edit.cloneNode(true));
+    document.getElementById('editHole').addEventListener('click', () => {
+      if (finishedHoles.has(currentHole)) {
+        finishedHoles.delete(currentHole);
+        players.forEach(p => {
+          p._cachedHoleTotals = {};
+          p._cachedTotal = 0;
+        });
+        precomputeAllTotals();
+        save();
+        updateHole();
+        isHoleInProgress = false;
+        unlockNavigation();
+        logScreen('EDIT MODE');
       }
     });
   }
