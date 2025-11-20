@@ -1064,32 +1064,9 @@ function finishCurrentHole() {
     finishedHoles.clear();
   }
 
-  els.prevHole.addEventListener('click', () => {
-    if (!inRound) return;
-    if (isHoleInProgress) {
-      alert("Finish current hole first!");
-      return;
-    }
-    currentHole = currentHole === 1 ? HOLES : currentHole - 1;
-    isHoleInProgress = false;  // ← RESET
-    updateHole();
-    updateCourseInfoBar();
-    logScreen(`PREV → HOLE ${currentHole}`);
-  });
+  
 
-    els.nextHole.addEventListener('click', () => {
-    if (!inRound) return;
-    if (isHoleInProgress) {
-      alert("Finish current hole first!");
-      return;
-    }
-    currentHole = (currentHole % HOLES) + 1;
-    isHoleInProgress = false;  // ← RESET ON HOLE CHANGE
-    updateHole();
-    updateCourseInfoBar();
-    updateNavButtons();  // ← FORCE UPDATE
-    logScreen(`NEXT → HOLE ${currentHole}`);
-  });
+   
 
   // Re-attach Finish Hole listener every time game screen is shown (prevents listener loss on hide/show)
 function attachFinishHoleListener() {
