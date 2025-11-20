@@ -429,8 +429,8 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   hideAll();
   els.game.classList.remove('hidden');
   attachFinishHoleListener();   // ← ADD THIS LINE
-  attachNavListeners();   // ← ADD THIS LINE
   updateHole();
+  attachNavListeners();   // ← ADD THIS LINE
   setupGameButtons();
   updateCourseInfoBar()
   save();
