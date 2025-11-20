@@ -218,59 +218,50 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
 
   // === BUILD ELS CACHE ===
   els = {
-    courseSetup: document.getElementById('courseSetup'),
-    playerSetup: document.getElementById('playerSetup'),
-    roster: document.getElementById('roster'),
-    courseForm: document.getElementById('courseForm'),
-    game: document.getElementById('game'),
-    summary: document.getElementById('summary'),
-    history: document.getElementById('history'),
-    darkModeToggle: document.getElementById('darkModeToggle'),
-    /* manageRosterBtn: document.getElementById('manageRosterBtn'), */
-    /* historyBtn: document.getElementById('historyBtn'), */
-    /* cbToggle: document.getElementById('cbToggle'), */
-    backToSetup: document.querySelectorAll('#backToSetup'),
-    historyList: document.getElementById('historyList'),
-    rosterName: document.getElementById('rosterName'),
-    rosterPhone: document.getElementById('rosterPhone'),
-    rosterEmail: document.getElementById('rosterEmail'),
-    addToRoster: document.getElementById('addToRoster'),
-    rosterList: document.getElementById('rosterList'),
-    backToCourseFromRoster: document.getElementById('backToCourseFromRoster'),
-    courseSelect: document.getElementById('courseSelect'),
-    addCourse: document.getElementById('addCourse'),
-    nextToPlayers: document.getElementById('nextToPlayers'),
-    playerSelect: document.getElementById('playerSelect'),
-    backToCourse: document.getElementById('backToCourse'),
-    courseName: document.getElementById('courseName'),
-    saveCourse: document.getElementById('saveCourse'),
-    cancelCourse: document.getElementById('cancelCourse'),
-    holeDisplay: document.getElementById('holeDisplay'),
-    prevHole: document.getElementById('prevHole'),
-    nextHole: document.getElementById('nextHole'),
-    finishHole: document.getElementById('finishHole'),
-    editHole: document.getElementById('editHole'),
-    firstOnHeader: document.getElementById('firstOnHeader'),
-    scoreTable: document.getElementById('scoreTable'),
-    holeSummary: document.querySelector('.holeSummary'),
-    roundSummary: document.getElementById('roundSummary'),
-    sendSMS: document.getElementById('sendSMS'),
-    exportCSV: document.getElementById('exportCSV'),
-    completeRound: document.getElementById('completeRound'),
-    exitRound: document.getElementById('exitRound'),
-    saveRound: document.getElementById('saveRound'),
-    leaderboard: document.getElementById('leaderboard'),
-    restart: document.getElementById('restart'),
-    debugPanel: document.getElementById('debugPanel'),
-    debugOutput: document.getElementById('debugOutput'),
-    closeDebug: document.getElementById('closeDebug'),
-    simResult: document.getElementById('simResult'),
-    courseInfoBar: document.getElementById('courseInfoBar'),
-    infoCourseName: document.getElementById('infoCourseName'),
-    infoCurrentHole: document.getElementById('infoCurrentHole'),
-    infoPar: document.getElementById('infoPar'),
-    startGame: document.getElementById('startGame')
-  };
+  courseSetup: document.getElementById('courseSetup'),
+  playerSetup: document.getElementById('playerSetup'),
+  game: document.getElementById('game'),
+  summary: document.getElementById('summary'),
+
+  darkModeToggle: document.getElementById('darkModeToggle'),
+  backToSetup: document.querySelectorAll('#backToSetup'),
+
+  courseSelect: document.getElementById('courseSelect'),
+  nextToPlayers: document.getElementById('nextToPlayers'),
+  playerSelect: document.getElementById('playerSelect'),
+  startGame: document.getElementById('startGame'),
+
+  holeDisplay: document.getElementById('holeDisplay'),
+  prevHole: document.getElementById('prevHole'),
+  nextHole: document.getElementById('nextHole'),
+  finishHole: document.getElementById('finishHole'),
+  editHole: document.getElementById('editHole'),
+  firstOnHeader: document.getElementById('firstOnHeader'),
+  scoreTable: document.getElementById('scoreTable'),
+  holeSummary: document.querySelector('.holeSummary'),
+  roundSummary: document.getElementById('roundSummary'),
+
+  sendSMS: document.getElementById('sendSMS'),
+  exportCSV: document.getElementById('exportCSV'),
+  completeRound: document.getElementById('completeRound'),
+  exitRound: document.getElementById('exitRound'),
+  saveRound: document.getElementById('saveRound'),
+
+  leaderboard: document.getElementById('leaderboard'),
+  restart: document.getElementById('restart'),
+
+  courseInfoBar: document.getElementById('courseInfoBar'),
+  infoCourseName: document.getElementById('infoCourseName'),
+  infoCurrentHole: document.getElementById('infoCurrentHole'),
+  infoPar: document.getElementById('infoPar'),
+
+  // Debug (optional — you can keep these if you ever use F2 or Ctrl+Shift+D)
+  debugPanel: document.getElementById('debugPanel'),
+  debugOutput: document.getElementById('debugOutput'),
+  closeDebug: document.getElementById('closeDebug'),
+  simResult: document.getElementById('simResult')
+};
+
 
   loadDataFromBackend();
 
@@ -543,18 +534,15 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   });
 
   
-  els.backToCourse.addEventListener('click', () => {
-    hideAll();
-    logScreen('BACK TO COURSE');
-  });
+  
 
-  els.addCourse.addEventListener('click', () => {
+  /* els.addCourse.addEventListener('click', () => {
     hideAll();
     els.courseForm.classList.remove('hidden');
     els.courseName.value = '';
     generateParInputs();
     logScreen('NEW COURSE');
-  });
+  }); */
 
   function generateParInputs() {
     const container = document.getElementById('pars');
@@ -566,7 +554,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     }
   }
 
-  els.saveCourse.addEventListener('click', () => {
+  /* els.saveCourse.addEventListener('click', () => {
     const name = els.courseName.value.trim();
     if (!name) return alert('Enter course name');
     const pars = Array.from(document.querySelectorAll('.par-input')).map(inp => parseInt(inp.value));
@@ -576,13 +564,13 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     hideAll();
     renderCourseSelect();
     logScreen('COURSE SAVED');
-  });
+  }); */
 
-  els.cancelCourse.addEventListener('click', () => {
+ /*  els.cancelCourse.addEventListener('click', () => {
     hideAll();
     logScreen('COURSE CANCELLED');
   });
-
+ */
   // === CARRY LOGIC ===
  function getCarryInForHole(holeNumber) {
   const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
