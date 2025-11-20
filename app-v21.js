@@ -614,10 +614,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   updateNavButtons();
   save();
   if (debugMode) renderDebugCarryTable();
-
-  // ---- RE-ATTACH ALL BUTTON LISTENERS EVERY TIME (this is why nothing ever disappears again) ----
-  attachNavListeners();       // Prev / Next / Edit
-  attachFinishHoleListener(); // Finish Hole
+  
 }
  
   function updateCourseInfoBar() {
