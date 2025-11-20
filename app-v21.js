@@ -64,10 +64,12 @@ function logScreen(msg) {
 
 
 // Retry button
-document.getElementById('retryBtn')?.addEventListener('click', () => {
-  document.getElementById('courseError').classList.add('hidden');
-  document.getElementById('courseLoader').classList.remove('hidden');
-  loadDataFromBackend();
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'retryBtn') {
+    document.getElementById('courseError').classList.add('hidden');
+    document.getElementById('courseLoader').classList.remove('hidden');
+    loadDataFromBackend();
+  }
 });
 
 // === CSV PARSER ===
