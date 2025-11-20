@@ -1080,28 +1080,47 @@ function attachFinishHoleListener() {
 function attachNavListeners() {
   // Prev
   const prev = document.getElementById('prevHole');
-  if (prev) { prev.onclick = null; prev.addEventListener('click', () => {
-    if (currentHole > 1 && !isHoleInProgress) { currentHole--; updateHole(); updateCourseInfoBar(); }
-  }); }
+  if (prev) {
+    prev.onclick = null;
+    prev.addEventListener('click', () => {
+      if (currentHole > 1 && !isHoleInProgress) {
+        currentHole--;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`PREV → HOLE ${currentHole}`);
+      }
+    });
+  }
 
   // Next
   const next = document.getElementById('nextHole');
-  if (next) { next.onclick = null; next.addEventListener('click', () => {
-    if (currentHole < HOLES && !isHoleInProgress) { currentHole++; updateHole(); updateCourseInfoBar(); }
-  }); }
+  if (next) {
+    next.onclick = null;
+    next.addEventListener('click', () => {
+      if (currentHole < HOLES && !isHoleInProgress) {
+        currentHole++;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`NEXT → HOLE ${currentHole}`);
+      }
+    });
+  }
 
-  // Edit Hole
+  // Edit
   const edit = document.getElementById('editHole');
-  if (edit) { edit.onclick = null; edit.addEventListener('click', () => {
-    if (finishedHoles.has(currentHole)) {
-      finishedHoles.delete(currentHole);
-      isHoleInProgress = false;
-      precomputeAllTotals();
-      updateHole();
-    }
-  }); }
+  if (edit) {
+    edit.onclick = null;
+    edit.addEventListener('click', () => {
+      if (finishedHoles.has(currentHole)) {
+        finishedHoles.delete(currentHole);
+        isHoleInProgress = false;
+        precomputeAllTotals();
+        updateHole();
+        logScreen('EDIT MODE');
+      }
+    });
+  }
 }
-
 
 
 
