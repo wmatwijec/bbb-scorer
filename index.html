@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112034'
-    const BUILD_TIME = '2025112034'
+    const VERSION = '2025112035'
+    const BUILD_TIME = '2025112035'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112034">
+  <meta id="cacheBuster" name="version" content="2025112035">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -611,21 +611,13 @@ body {
     <div class="holeSummary"></div>
     <div id="roundSummary" class="hidden"></div>
 
-    <div class="control-bar">
-  <!-- 1. SMS -->
-  <button id="sendSMS" title="Send Update">
-    SMS
-  </button>
-
-  <!-- 2. CSV -->
-  <button id="exportCSV" title="Export CSV">
-    CSV
-  </button>
-
-  <!-- 3. Complete -->
-  <button id="completeRound" title="Complete Round">
-    FIN
-  </button>
+   <div class="control-bar">
+  <button id="sendSMS" title="Send live update to group">SMS</button>
+  <button id="exportCSV" title="Download CSV">CSV</button>
+  <button id="completeRound" title="Finish round & email Walt">BBB COMP</button>
+  <button id="exitRound" title="Quit without saving">EXIT</button>
+  <button id="darkModeToggle" title="Toggle dark mode">DARK</button>
+</div>
 
   
 
@@ -764,7 +756,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112034"></script>
+  <script src="app-v21.js?v=2025112035"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
