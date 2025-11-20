@@ -418,14 +418,18 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
 
   // ==== FLOW ====
  function hideAll() {
-  els.courseSetup.classList.add('hidden');
-  els.playerSetup.classList.add('hidden');
-  els.roster.classList.add('hidden');
-  els.courseForm.classList.add('hidden');
-  els.game.classList.add('hidden');
-  els.summary.classList.add('hidden');
-  els.history.classList.add('hidden');
- }
+  const screens = [
+    els.courseSetup,
+    els.playerSetup,
+    els.game,
+    els.summary
+    // roster, history, courseForm are gone — no longer referenced
+  ];
+
+  screens.forEach(screen => {
+    if (screen) screen.classList.add('hidden');
+  });
+}
 
   els.courseSelect.addEventListener('change', () => {
     const val = els.courseSelect.value;
