@@ -226,9 +226,9 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     summary: document.getElementById('summary'),
     history: document.getElementById('history'),
     darkModeToggle: document.getElementById('darkModeToggle'),
-    manageRosterBtn: document.getElementById('manageRosterBtn'),
-    historyBtn: document.getElementById('historyBtn'),
-    cbToggle: document.getElementById('cbToggle'),
+    /* manageRosterBtn: document.getElementById('manageRosterBtn'), */
+    /* historyBtn: document.getElementById('historyBtn'), */
+    /* cbToggle: document.getElementById('cbToggle'), */
     backToSetup: document.querySelectorAll('#backToSetup'),
     historyList: document.getElementById('historyList'),
     rosterName: document.getElementById('rosterName'),
@@ -1244,13 +1244,13 @@ function attachNavListeners() {
     logScreen('EDIT MODE');
   });
 
-  els.historyBtn.addEventListener('click', () => {
+  /* els.historyBtn.addEventListener('click', () => {
     if (inRound) {
       alert('Cannot view History during active round.');
       return;
     }
     showHistory();
-  });
+  }); */
 
   els.backToSetup.forEach(btn => {
     btn.addEventListener('click', () => {
