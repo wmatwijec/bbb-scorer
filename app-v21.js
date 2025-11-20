@@ -604,16 +604,21 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
   if (editBtn)   editBtn.classList.toggle('hidden', !isFinished);
 
-  // ---- REST OF YOUR ORIGINAL CODE ----
-  const carryIn = getCarryInForHole(currentHole);
+    const carryIn = getCarryInForHole(currentHole);
   renderTable(carryIn, isFinished);
-  renderHoleSummary(carryIn, isFinished);
-  precomputeAllTotals(); 
-  renderRoundSummary();
+
+  // ---- HOLE & ROUND SUMMARIES — ALWAYS CORRECT AFTER EDITS ----
+  renderHoleSummary();      // ← current hole carry summary
+  renderRoundSummary();     // ← bottom round summary (Wins / C_Car / O_Car)
+
   updateCourseInfoBar();
   updateNavButtons();
   save();
   if (debugMode) renderDebugCarryTable();
+
+  attachNavListeners();       // Prev / Next / Edit
+  attachFinishHoleListener(); // Finish Hole
+
   
 }
  
