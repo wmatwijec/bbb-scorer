@@ -616,9 +616,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   save();
   if (debugMode) renderDebugCarryTable();
 
-  attachNavListeners();       // Prev / Next / Edit
-  attachFinishHoleListener(); // Finish Hole
-
+  
   
 }
  
