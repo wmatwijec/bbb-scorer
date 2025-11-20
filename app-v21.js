@@ -727,7 +727,7 @@ if (isFinished) {
  
 
 // Always show the correct carry summary — works after edits too
-const currentCarryIn = getCarryInForHole(currentHole);
+/* const currentCarryIn = getCarryInForHole(currentHole);
 const nextCarryOut = getCarryInForHole(currentHole + 1);
 
 let summaryText = '';
@@ -746,7 +746,7 @@ if (currentCarryIn.firstOn || currentCarryIn.closest || currentCarryIn.putt || c
 
 els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`;
 
-
+ */
    
 
  function renderRoundSummary() {
