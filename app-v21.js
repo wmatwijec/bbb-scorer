@@ -748,62 +748,37 @@ els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`
 
  */
    
+function renderRoundSummary() {
+  if (!els.roundSummary) return;
 
- function renderRoundSummary() {
-  const el = document.getElementById('roundSummary');
-  if (!el) return;
+  // Use the EXACT same numbers that precomputeAllTotals() uses
+  let awarded = 0;
+  let consumed = 0;
+  let open = 0;
 
-  let awarded = 0, consumed = 0, open = 0;
-
-  // === Count points awarded on finished holes ===
-  finishedHoles.forEach(h => {
-    const idx = h - 1;
-    players.forEach(p => {
-      const s = p.scores[idx] || {};
-      if (s.firstOn) awarded++;
-      if (s.closest) awarded++;
-      if (s.putt) awarded++;
-    });
+  players.forEach(p => {
+    awarded += p._cachedTotal || 0; // every point the player actually got
   });
 
-  // === Count carry-in consumed on finished holes ===
-  for (let h = 1; h <= HOLES; h++) {
-    if (!finishedHoles.has(h)) continue;
-    const carryIn = getCarryInForHole(h);
-    const idx = h - 1;
-    const par = courses[currentCourse].pars[idx];
-    const isPar3 = par === 3;
+  // Open carry = total possible points for finished holes minus points awarded so far
+  const expectedForFinished = finishedHoles.size * 3;
+  open = expectedForFinished - awarded;
 
-    players.forEach(p => {
-      const s = p.scores[idx] || {};
-      if (s.firstOn) consumed += isPar3 ? carryIn.greenie : carryIn.firstOn;
-      if (s.closest) consumed += carryIn.closest;
-      if (s.putt) consumed += carryIn.putt;
-    });
-  }
+  // Consumed carry = awarded - base wins (base wins = 3 per finished hole max)
+  consumed = awarded - expectedForFinished;
 
-  // === Open carry: only if currentHole < 18 ===
-  if (currentHole < HOLES) {
-    const nextCarry = getCarryInForHole(currentHole + 1);
-    open = nextCarry.firstOn + nextCarry.closest + nextCarry.putt + nextCarry.greenie;
-  } else {
-    open = 0;  // No carry after hole 18
-  }
+  const total = awarded + open; // should always = expectedForFinished
 
-  const expected = finishedHoles.size * 3;
-  const total = awarded + consumed + open;
-
-  // === TIGHT LABELS + COMPACT LAYOUT ===
   els.roundSummary.innerHTML = `
-    <div style="font-size:0.9rem; line-height:1.4;">
+    <div style="font-size:0.9rem;line-height:1.4;">
       Wins: <strong>${awarded}</strong> | 
       C_Car: <strong>${consumed}</strong> | 
       O_Car: <strong>${open}</strong> = <strong>${total}</strong><br>
-      <small>Total Expected Pts: <strong>${expected}</strong></small>
+      <small>Total Expected Pts: <strong>${expectedForFinished}</strong></small>
     </div>
   `;
 
-  el.classList.remove('hidden');
+  els.roundSummary.classList.remove('hidden');
 }
 
 function renderHoleSummary() {
