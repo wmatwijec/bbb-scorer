@@ -523,8 +523,8 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   els.game.classList.remove('hidden');
   attachFinishHoleListener();   // ← ADD THIS LINE
   attachNavListeners();   // ← ADD THIS LINE
-  els.manageRosterBtn.disabled = true;
-  els.historyBtn.disabled = true;
+  /* els.manageRosterBtn.disabled = true;
+  els.historyBtn.disabled = true; */
   updateHole();
   setupGameButtons();
   updateCourseInfoBar()
