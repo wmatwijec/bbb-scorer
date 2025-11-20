@@ -722,52 +722,25 @@ if (isFinished) {
   }
  
 
-   function renderHoleSummary(carryIn, isFinished) {
-    if (!els.holeSummary) return;
-    const holeIdx = currentHole - 1;
-    const par = courses[currentCourse].pars[holeIdx];
-    const isPar3 = par === 3;
+// Always show the correct carry summary — works after edits too
+const currentCarryIn = getCarryInForHole(currentHole);
+const nextCarryOut = getCarryInForHole(currentHole + 1);
 
-    let awarded = 0;
-    let carryOutLines = [];
-    let carryInLines = [];
+let summaryText = '';
+if (currentCarryIn.firstOn || currentCarryIn.closest || currentCarryIn.putt || currentCarryIn.greenie) {
+  const parts = [];
+  if (currentCarryIn.firstOn) parts.push(`FO: +${currentCarryIn.firstOn}`);
+  if (currentCarryIn.closest) parts.push(`CL: +${currentCarryIn.closest}`);
+  if (currentCarryIn.putt) parts.push(`P: +${currentCarryIn.putt}`);
+  if (currentCarryIn.greenie) parts.push(`GR: +${currentCarryIn.greenie}`);
+  summaryText = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
+} else if (isFinished) {
+  summaryText = `<strong>Open Carry:</strong> ${nextCarryOut.firstOn + nextCarryOut.closest + nextCarryOut.putt + nextCarryOut.greenie}`;
+} else {
+  summaryText = `<strong>Open Carry: 0</strong>`;
+}
 
-    if (carryIn.firstOn) carryInLines.push(`FO: +${carryIn.firstOn}`);
-    if (carryIn.closest) carryInLines.push(`CL: +${carryIn.closest}`);
-    if (carryIn.putt) carryInLines.push(`P: +${carryIn.putt}`);
-    if (carryIn.greenie) carryInLines.push(`GR: +${carryIn.greenie}`);
-
-    if (isFinished) {
-      players.forEach(p => {
-        const s = p.scores[holeIdx] || {};
-        if (s.firstOn) awarded += 1;
-        if (s.closest) awarded += 1;
-        if (s.putt) awarded += 1;
-      });
-      const carryOut = getCarryInForHole(currentHole + 1);
-      if (carryOut.firstOn) carryOutLines.push(`FO: +${carryOut.firstOn}`);
-      if (carryOut.closest) carryOutLines.push(`CL: +${carryOut.closest}`);
-      if (carryOut.putt) carryOutLines.push(`P: +${carryOut.putt}`);
-      if (carryOut.greenie) carryOutLines.push(`GR: +${carryOut.greenie}`);
-    }
-
-    const content = isFinished ? `
-    <div class="summary-awarded">
-      <strong>Wins:</strong> ${awarded} |
-      <strong>O_Car:</strong> ${carryOutLines.length ? carryOutLines.join(', ') : '0'}
-    </div>
-  ` : carryInLines.length ? `
-    <div class="summary-carry-in">
-      <strong>A_Car:</strong> ${carryInLines.join(', ')}
-    </div>
-  ` : `
-    <div class="summary-no-carry">
-      <strong>O_Car: 0</strong>
-    </div>
-  `;
-
-    els.holeSummary.innerHTML = content;
-  }
+els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`;
 
 
    
