@@ -428,8 +428,8 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   inRound = true;
   hideAll();
   els.game.classList.remove('hidden');
-  attachFinishHoleListener();   // ← ADD THIS LINE
   updateHole();
+  attachFinishHoleListener();   // ← ADD THIS LINE
   attachNavListeners();   // ← ADD THIS LINE
   setupGameButtons();
   updateCourseInfoBar()
@@ -1063,13 +1063,12 @@ function finishCurrentHole() {
 
    
 
-  // Re-attach Finish Hole listener every time game screen is shown (prevents listener loss on hide/show)
+ 
 function attachFinishHoleListener() {
   const btn = document.getElementById('finishHole');
   if (!btn) return;
-  // Remove old listeners without cloning the whole button (preserves SVG)
-  btn.onclick = null;
-  btn.addEventListener('click', finishCurrentHole);
+  btn.onclick = null; // clear any old listener
+  btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
 
 function attachNavListeners() {
