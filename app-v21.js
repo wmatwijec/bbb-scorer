@@ -679,7 +679,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     return sum;
   }
 
-  function updateHole() {
+ function updateHole() {
   if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
   precomputeAllTotals();  // always fresh totals
@@ -695,10 +695,14 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
   const isFinished = finishedHoles.has(currentHole);
 
-  // Show/hide Finish and Edit buttons
-  document.getElementById('finishHole').classList.toggle('hidden', isFinished);
-  document.getElementById('editHole').classList.toggle('hidden', !isFinished);
+  // ---- SHOW / HIDE BUTTONS (using direct DOM so they’re never stale) ----
+  const finishBtn = document.getElementById('finishHole');
+  const editBtn   = document.getElementById('editHole');
 
+  if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
+  if (editBtn)   editBtn.classList.toggle('hidden', !isFinished);
+
+  // ---- REST OF YOUR ORIGINAL CODE ----
   const carryIn = getCarryInForHole(currentHole);
   renderTable(carryIn, isFinished);
   renderHoleSummary(carryIn, isFinished);
@@ -708,12 +712,11 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   save();
   if (debugMode) renderDebugCarryTable();
 
-  // THIS IS THE KEY — re-attach ALL button listeners every time the hole updates
-  attachNavListeners();          // Prev / Next / Finish
- 100% reliable
-  attachFinishHoleListener();    // Finish Hole button
+  // ---- RE-ATTACH ALL BUTTON LISTENERS EVERY TIME (this is why nothing ever disappears again) ----
+  attachNavListeners();       // Prev / Next / Edit
+  attachFinishHoleListener(); // Finish Hole
 }
-
+ 
   function updateCourseInfoBar() {
   if (!inRound || !currentCourse) {
     els.courseInfoBar.style.display = 'none';
