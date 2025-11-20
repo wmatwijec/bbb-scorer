@@ -426,7 +426,6 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   players.sort((a, b) => a.name.localeCompare(b.name));
 
   inRound = true;
-  isHoleInProgress = false;  // ← RESET
   hideAll();
   els.game.classList.remove('hidden');
   attachFinishHoleListener();   // ← ADD THIS LINE
