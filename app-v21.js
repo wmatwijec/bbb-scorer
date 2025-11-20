@@ -866,6 +866,7 @@ function finishCurrentHole() {
   isHoleInProgress = false;   // unlocks Next
 
   precomputeAllTotals();
+  updateHole();
   logScreen('FINISHED HOLE ' + currentHole);
 }
 
