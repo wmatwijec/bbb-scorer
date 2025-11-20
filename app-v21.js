@@ -982,15 +982,29 @@ function finishCurrentHole() {
     
   }
 
-  els.completeRound.addEventListener('click', () => {
-    if (finishedHoles.size === HOLES) {
-      precomputeAllTotals();
-      showSummary();
-      /* els.historyBtn.disabled = false; */
-    } else {
-      alert(`Finish all ${HOLES} holes.`);
+ els.completeRound.addEventListener('click', () => {
+  if (finishedHoles.size !== HOLES) {
+    alert(`Finish all ${HOLES} holes first.`);
+    return;
+  }
+
+  precomputeAllTotals();
+
+  // 1. Show the nice leaderboard screen first
+  showSummary();
+
+  // 2. Auto-email the CSV to you (Walt)
+  emailRoundToWalt();
+
+  // 3. Optional: give them a second to read it, then offer New Round
+  setTimeout(() => {
+    if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
+      resetRound();
+      hideAll();
+      els.courseSetup.classList.remove('hidden');
     }
-  });
+  }, 500);
+});
 
   els.exitRound.addEventListener('click', () => {
     if (confirm('Exit without saving?')) {
