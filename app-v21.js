@@ -680,33 +680,39 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   function updateHole() {
-    if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
+  if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
-    precomputeAllTotals();  // ADD THIS AT TOP — FORCE FRESH CALC
+  precomputeAllTotals();  // always fresh totals
 
-    const holeIdx = currentHole - 1;
-    const par = courses[currentCourse].pars[holeIdx];
-    const isPar3 = par === 3;
+  const holeIdx = currentHole - 1;
+  const par = courses[currentCourse].pars[holeIdx];
+  const isPar3 = par === 3;
 
-    const courseName = courses[currentCourse].name;
-    els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
+  const courseName = courses[currentCourse].name;
+  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
 
-    els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
+  els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
 
-    const isFinished = finishedHoles.has(currentHole);
-    els.finishHole.classList.toggle('hidden', isFinished);
-    els.editHole.classList.toggle('hidden', !isFinished);
+  const isFinished = finishedHoles.has(currentHole);
 
-    const carryIn = getCarryInForHole(currentHole);
-    renderTable(carryIn, isFinished);
-    renderHoleSummary(carryIn, isFinished);
-    renderRoundSummary();
-    updateCourseInfoBar();
-    updateNavButtons();  // ← ADD THIS
-    save();
-    if (debugMode) renderDebugCarryTable();
-    attachNavListeners();   // ← ADD THIS
-  }
+  // Show/hide Finish and Edit buttons
+  document.getElementById('finishHole').classList.toggle('hidden', isFinished);
+  document.getElementById('editHole').classList.toggle('hidden', !isFinished);
+
+  const carryIn = getCarryInForHole(currentHole);
+  renderTable(carryIn, isFinished);
+  renderHoleSummary(carryIn, isFinished);
+  renderRoundSummary();
+  updateCourseInfoBar();
+  updateNavButtons();
+  save();
+  if (debugMode) renderDebugCarryTable();
+
+  // THIS IS THE KEY — re-attach ALL button listeners every time the hole updates
+  attachNavListeners();          // Prev / Next / Finish
+ 100% reliable
+  attachFinishHoleListener();    // Finish Hole button
+}
 
   function updateCourseInfoBar() {
   if (!inRound || !currentCourse) {
@@ -1178,6 +1184,25 @@ function attachNavListeners() {
       }
     };
   }
+
+function attachEditHoleListener() {
+  const editBtn = document.getElementById('editHole');
+  if (editBtn) {
+    editBtn.replaceWith(editBtn.cloneNode(true)); // remove old listeners
+    document.getElementById('editHole').addEventListener('click', () => {
+      if (finishedHoles.has(currentHole)) {
+        finishedHoles.delete(currentHole);
+        isHoleInProgress = false;
+        precomputeAllTotals();
+        updateHole();
+        logScreen('EDIT MODE — HOLE REOPENED');
+      }
+    });
+  }
+}
+
+
+
 
   // Next
   const next = document.getElementById('nextHole');
