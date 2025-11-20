@@ -326,10 +326,10 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   }
 
   // ==== ROSTER, HISTORY, LOAD/SAVE ====
-  function saveRoster() {
+ /*  function saveRoster() {
     localStorage.setItem('bbb_roster', JSON.stringify(roster));
-  }
-  function renderRoster() {
+  } */
+ /*  function renderRoster() {
     els.rosterList.innerHTML = '';
     roster.forEach((p, i) => {
       const div = document.createElement('div');
@@ -341,8 +341,8 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
       div.appendChild(del);
       els.rosterList.appendChild(div);
     });
-  }
-  els.addToRoster.addEventListener('click', () => {
+  } */
+  /* els.addToRoster.addEventListener('click', () => {
     const name = els.rosterName.value.trim();
     if (!name || roster.find(p => p.name === name)) return alert('Name required and unique');
     roster.push({ name, phone: els.rosterPhone.value.trim(), email: els.rosterEmail.value.trim() });
@@ -350,24 +350,24 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     saveRoster();
     renderRoster();
     renderPlayerSelect();
-  });
+  }); */
 
-  els.manageRosterBtn.addEventListener('click', () => {
+ /*  els.manageRosterBtn.addEventListener('click', () => {
     if (inRound) return alert('Cannot edit players during round.');
     hideAll();
     els.roster.classList.remove('hidden');
     logScreen('ROSTER');
-  });
-  els.backToCourseFromRoster.addEventListener('click', () => {
+  }); */
+  /* els.backToCourseFromRoster.addEventListener('click', () => {
     hideAll();
     logScreen('COURSE SETUP');
-  });
+  }); */
 
-  function saveHistory() {
+ /*  function saveHistory() {
     localStorage.setItem('bbb_history', JSON.stringify(roundHistory));
-  }
+  } */
 
-  function showHistory() {
+ /*  function showHistory() {
     hideAll();
     els.history.classList.remove('hidden');
     els.historyList.innerHTML = '';
@@ -413,7 +413,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
       els.historyList.appendChild(div);
     });
     logScreen('HISTORY');
-  }
+  } */
 
   function save() {
     localStorage.setItem('bbb', JSON.stringify({ 
