@@ -1191,81 +1191,35 @@ function finishCurrentHole() {
   // Re-attach Finish Hole listener every time game screen is shown (prevents listener loss on hide/show)
 function attachFinishHoleListener() {
   const btn = document.getElementById('finishHole');
-  if (btn) {
-    btn.replaceWith(btn.cloneNode(true)); // remove old listeners
-    document.getElementById('finishHole').addEventListener('click', finishCurrentHole);
-  }
+  if (!btn) return;
+  // Remove old listeners without cloning the whole button (preserves SVG)
+  btn.onclick = null;
+  btn.addEventListener('click', finishCurrentHole);
 }
 
 function attachNavListeners() {
   // Prev
   const prev = document.getElementById('prevHole');
-  if (prev) {
-    prev.replaceWith(prev.cloneNode(true));
-    document.getElementById('prevHole').onclick = () => {
-      if (currentHole > 1 && !isHoleInProgress) {
-        currentHole--;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`PREV → HOLE ${currentHole}`);
-      }
-    };
-  }
-
-function attachEditHoleListener() {
-  const editBtn = document.getElementById('editHole');
-  if (editBtn) {
-    editBtn.replaceWith(editBtn.cloneNode(true)); // remove old listeners
-    document.getElementById('editHole').addEventListener('click', () => {
-      if (finishedHoles.has(currentHole)) {
-        finishedHoles.delete(currentHole);
-        isHoleInProgress = false;
-        precomputeAllTotals();
-        updateHole();
-        logScreen('EDIT MODE — HOLE REOPENED');
-      }
-    });
-  }
-}
-
-
-
+  if (prev) { prev.onclick = null; prev.addEventListener('click', () => {
+    if (currentHole > 1 && !isHoleInProgress) { currentHole--; updateHole(); updateCourseInfoBar(); }
+  }); }
 
   // Next
   const next = document.getElementById('nextHole');
-  if (next) {
-    next.replaceWith(next.cloneNode(true));
-    document.getElementById('nextHole').onclick = () => {
-      if (currentHole < HOLES && !isHoleInProgress) {
-        currentHole++;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`NEXT → HOLE ${currentHole}`);
-      }
-    };
-  }
+  if (next) { next.onclick = null; next.addEventListener('click', () => {
+    if (currentHole < 18 && !isHoleInProgress) { currentHole++; updateHole(); updateCourseInfoBar(); }
+  }); }
 
-  // Finish Hole
-  const finish = document.getElementById('finishHole');
-  if (finish) {
-    finish.replaceWith(finish.cloneNode(true));
-    document.getElementById('finishHole').onclick = finishCurrentHole;
-  }
-
-  // Edit Hole — THIS WAS MISSING OR LOST
+  // Edit Hole
   const edit = document.getElementById('editHole');
-  if (edit) {
-    edit.replaceWith(edit.cloneNode(true));
-    document.getElementById('editHole').onclick = () => {
-      if (finishedHoles.has(currentHole)) {
-        finishedHoles.delete(currentHole);
-        isHoleInProgress = false;
-        precomputeAllTotals();
-        updateHole();
-        logScreen('EDIT MODE — HOLE REOPENED');
-      }
-    };
-  }
+  if (edit) { edit.onclick = null; edit.addEventListener('click', () => {
+    if (finishedHoles.has(currentHole)) {
+      finishedHoles.delete(currentHole);
+      isHoleInProgress = false;
+      precomputeAllTotals();
+      updateHole();
+    }
+  }); }
 }
 
 
