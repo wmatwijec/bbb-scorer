@@ -775,17 +775,41 @@ players.sort((a, b) => a.name.localeCompare(b.name));
       createCheckbox('putt');
 
       const holeCell = row.insertCell();
-      if (isFinished) {
-        const labels = [];
-        if (s.firstOn) labels.push(isPar3 ? 'GR' : 'FO');
-        if (s.closest) labels.push('CL');
-        if (s.putt) labels.push('P');
-        const pts = p._cachedHoleTotals?.[holeIdx] || 0;
-        holeCell.innerHTML = `<div style="font-size:0.85rem;line-height:1.2;"><strong>${pts}</strong><br><small style="color:#aaa;">${labels.join(', ')}</small></div>`;
-      } else {
-        holeCell.textContent = '—';
-        holeCell.style.color = '#666';
-      }
+if (isFinished) {
+  const s = p.scores[holeIdx] || {};
+  const counts = { FO: 0, GR: 0, CL: 0, P: 0 };
+
+  // Base win on this hole (always 1 if won)
+  if (s.firstOn) counts[isPar3 ? 'GR' : 'FO'] += 1;
+  if (s.closest) counts.CL += 1;
+  if (s.putt) counts.P += 1;
+
+  // Add carries
+  if (s.firstOn) counts[isPar3 ? 'GR' : 'FO'] += (isPar3 ? carryIn.greenie : carryIn.firstOn);
+  if (s.closest) counts.CL += carryIn.closest;
+  if (s.putt) counts.P += carryIn.putt;
+
+  const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
+
+  // Build label like "6GR" "3P" "2FO•CL"
+  const parts = [];
+  if (counts.GR > 0) parts.push(`${counts.GR}GR`);
+  if (counts.FO > 0) parts.push(`${counts.FO}FO`);
+  if (counts.CL > 0) parts.push(`${counts.CL}CL`);
+  if (counts.P  > 0) parts.push(`${counts.P}P`);
+
+  const labelText = parts.length > 0 ? parts.join(' • ') : '—';
+
+  holeCell.innerHTML = `
+    <div style="font-size:0.85rem;line-height:1.3;text-align:center;">
+      <strong style="font-size:1.1em;">${totalPts}</strong><br>
+      <small style="color:#888;">${labelText}</small>
+    </div>
+  `;
+} else {
+  holeCell.textContent = '—';
+  holeCell.style.color = '#666';
+}
 
       const runCell = row.insertCell();
       runCell.textContent = getRunningTotal(p);
