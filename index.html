@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '202511208'
-    const BUILD_TIME = '202511208'
+    const VERSION = '202511209'
+    const BUILD_TIME = '202511209'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="202511208">
+  <meta id="cacheBuster" name="version" content="202511209">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -487,32 +487,32 @@ body {
   gap: 0.4rem !important;
 }
 
+/* FINAL — GREEN ICONS NEVER SQUISHED, NEVER HIDDEN (EVEN ON MOBILE) */
 .control-bar button {
-  flex: 0 0 44px !important;   /* fixed 44px width — perfect touch target */
+  font-size: 0 !important;               /* keeps your label trick */
+  position: relative !important;
+  min-width: 44px !important;
   height: 44px !important;
   padding: 0 !important;
-  position: relative;
-  min-width: 44px !important;
 }
 
-/* Make sure SVG always shows full size */
 .control-bar button svg {
   width: 22px !important;
   height: 22px !important;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
 }
 
-/* Labels stay below SVG */
 .control-bar button .btn-label {
+  position: absolute !important;
+  bottom: 3px !important;
+  left: 0 !important;
+  right: 0 !important;
   font-size: 0.55rem !important;
-  position: absolute;
-  bottom: 4px;
-  left: 0;
-  right: 0;
-  text-align: center;
+  line-height: 1 !important;
 }
 
   </style>
@@ -836,7 +836,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=202511208"></script>
+  <script src="app-v21.js?v=202511209"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
