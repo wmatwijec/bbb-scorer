@@ -870,8 +870,6 @@ function finishCurrentHole() {
   isHoleInProgress = false;   // unlocks Next
 
   precomputeAllTotals();
-  updateHole();               // refreshes everything including nav buttons
-
   logScreen('FINISHED HOLE ' + currentHole);
 }
 
