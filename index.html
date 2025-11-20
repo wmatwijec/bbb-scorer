@@ -476,41 +476,25 @@ body {
   }
 }
 
-/* FINAL FIX — CONTROL BAR ICONS NEVER SQUISHED OR MISSING */
+/* NEW — CLEAN WORD BUTTONS IN CONTROL BAR */
 .control-bar {
-  flex-wrap: nowrap !important;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 0.4rem 0.3rem !important;
-  gap: 0.4rem !important;
+  padding: 0.6rem 0.4rem !important;
+  gap: 0.6rem !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+  background: var(--card);
+  border-top: 1px solid rgba(0,0,0,0.1);
 }
 
-/* FINAL — GREEN ICONS NEVER SQUISHED, NEVER HIDDEN (EVEN ON MOBILE) */
 .control-bar button {
-  font-size: 0 !important;               /* keeps your label trick */
-  position: relative !important;
-  min-width: 44px !important;
-  height: 44px !important;
-  padding: 0 !important;
-}
-
-.control-bar button svg {
-  width: 22px !important;
-  height: 22px !important;
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  pointer-events: none !important;
-}
-
-.control-bar button .btn-label {
-  position: absolute !important;
-  bottom: 3px !important;
-  left: 0 !important;
-  right: 0 !important;
-  font-size: 0.55rem !important;
-  line-height: 1 !important;
+  min-width: 72px !important;
+  height: 48px !important;
+  padding: 0 0.8rem !important;
+  font-size: 0.9rem !important;
+  font-weight: bold !important;
+  border-radius: 12px !important;
+  background: var(--green) !important;
+  color: #000 !important;
 }
 
   </style>
@@ -628,56 +612,33 @@ body {
     <div id="roundSummary" class="hidden"></div>
 
     <div class="control-bar">
-      <!-- 1. SMS -->
-      <button id="sendSMS" title="Send Update" aria-label="Send Update">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
-      </button>
+  <!-- 1. SMS -->
+  <button id="sendSMS" title="Send Update">
+    SMS
+  </button>
 
-      <!-- 2. CSV -->
-      <button id="exportCSV" title="Export CSV" aria-label="Export CSV">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </button>
+  <!-- 2. CSV -->
+  <button id="exportCSV" title="Export CSV">
+    CSV
+  </button>
 
-      <!-- 3. Complete -->
-      <button id="completeRound" title="Complete Round" aria-label="Complete Round">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </button>
+  <!-- 3. Complete -->
+  <button id="completeRound" title="Complete Round">
+    FIN
+  </button>
 
-      <!-- 4. Save -->
-      <button id="saveRound" title="Save Round" aria-label="Save Round">
-        <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-      </button>
+  
 
-      <!-- 5. Exit -->
-      <button id="exitRound" title="Exit" aria-label="Exit">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </button>
+  <!-- 5. Exit -->
+  <button id="exitRound" title="Exit Round">
+    EXIT
+  </button>
 
-             <!-- 6. Dark Mode -->
-      <button id="darkModeToggle" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5.39 0 .74-.15 1.01-.39.26-.23.61-.38.99-.38C16.33 15 15 13.83 15 12c0-3.87-3.13-7-7-7z"/></svg>
-        <span style="font-size:0.55rem !important;font-weight:bold !important;color:#000 !important;line-height:1 !important;">DARK</span>
-      </button>
-
-      <!-- 7. Colorblind -->
-     <!--  <button id="cbToggle" title="Colorblind Mode" aria-label="Colorblind Mode">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:currentColor;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 7V17M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <span style="font-size:0.55rem !important;font-weight:bold !important;color:#000 !important;line-height:1 !important;">CB</span>
-      </button> -->
-      <!-- 8. Roster -->
-     <!--  <button id="manageRosterBtn" title="Manage Roster" aria-label="Manage Roster">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;" fill="#000">
-          <path d="M12 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm12 4a4 4 0 1 00 8 4 4 0 0 0 0-8z"/>
-        </svg>
-      </button> -->
-
-      <!-- 9. History -->
-     <!--  <button id="historyBtn" title="Round History" aria-label="Round History">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;" fill="#000">
-          <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12V9c0-1.1.9-2 2-2h6v2l4-4-4-4v2z"/>
-        </svg>
-      </button> -->
-    </div>
+  <!-- 6. Dark Mode -->
+  <button id="darkModeToggle" title="Toggle Dark Mode">
+    DARK
+  </button>
+</div>
   </section>
 
   <!-- SUMMARY -->
@@ -730,42 +691,12 @@ body {
     <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
       <!-- CONTROL BAR -->
       <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
-        <div><strong>SMS</strong> – Send live update</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        <div><strong>CSV</strong> – Export scores</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        <div><strong>FIN</strong> – Complete round</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M17 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-        <div><strong>SAVE</strong> – Save to history</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        <div><strong>EXIT</strong> – Quit without saving</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 3a9 9 0 1 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5.39 0 .74-.15 1.01-.39.26-.23.61-.38.99-.38C16.33 15 15 13.83 15 12c0-3.87-3.13-7-7-7z"/></svg>
-        <div><strong>DARK</strong> – Toggle dark mode</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><circle cx="12" cy="12" r="10" stroke="#000" stroke-width="2" fill="none"/><path d="M12 7V17M7 12H17" stroke="#000" stroke-width="2" stroke-linecap="round"/></svg>
-        <div><strong>CB</strong> – Colorblind mode</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M12 6a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 10a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
-        <div><strong>ROSTER</strong> – Manage players</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#000;"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12V9c0-1.1.9-2 2-2h6v2l4-4-4-4v2z"/></svg>
-        <div><strong>HIST</strong> – View past rounds</div>
-      </div>
+      <div>SMS – Send live update</div>
+      <div>CSV – Export scores</div>
+      <div>FIN – Complete round</div>
+      <div>EXIT – Quit round</div>
+      <div>DARK – Toggle dark mode</div>
+      
 
       <!-- SCORE TABLE -->
       <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">

@@ -245,8 +245,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   exportCSV: document.getElementById('exportCSV'),
   completeRound: document.getElementById('completeRound'),
   exitRound: document.getElementById('exitRound'),
-  saveRound: document.getElementById('saveRound'),
-
+ 
   leaderboard: document.getElementById('leaderboard'),
   restart: document.getElementById('restart'),
 
@@ -1001,24 +1000,7 @@ function finishCurrentHole() {
     }
   });
 
-  els.saveRound.addEventListener('click', () => {
-    precomputeAllTotals();
-    const winner = players.reduce((a, b) => (a._cachedTotal > b._cachedTotal ? a : b));
-    const round = {
-      date: new Date().toLocaleDateString(),
-      courseName: courses[currentCourse].name,
-      players: players.map(p => ({ name: p.name, phone: p.phone, email: p.email })),
-      currentHole, currentCourse,
-      winner: winner.name, winnerPoints: winner._cachedTotal,
-      finishedHoles: Array.from(finishedHoles)
-    };
-    roundHistory.unshift(round);
-    saveHistory();
-    resetRound();
-    /* els.historyBtn.disabled = false; */
-    alert('Round saved!');
-    location.reload();
-  });
+ 
 
   function resetRound() {
     localStorage.removeItem('bbb');
