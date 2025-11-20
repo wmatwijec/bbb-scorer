@@ -1087,7 +1087,7 @@ function attachNavListeners() {
   // Next
   const next = document.getElementById('nextHole');
   if (next) { next.onclick = null; next.addEventListener('click', () => {
-    if (currentHole < 18 && !isHoleInProgress) { currentHole++; updateHole(); updateCourseInfoBar(); }
+    if (currentHole < HOLES && !isHoleInProgress) { currentHole++; updateHole(); updateCourseInfoBar(); }
   }); }
 
   // Edit Hole
