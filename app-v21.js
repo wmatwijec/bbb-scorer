@@ -705,6 +705,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     updateNavButtons();  // ← ADD THIS
     save();
     if (debugMode) renderDebugCarryTable();
+    attachNavListeners();   // ← ADD THIS
   }
 
   function updateCourseInfoBar() {
@@ -1164,48 +1165,54 @@ function attachFinishHoleListener() {
 }
 
 function attachNavListeners() {
+  // Prev
   const prev = document.getElementById('prevHole');
-  const next = document.getElementById('nextHole');
   if (prev) {
     prev.replaceWith(prev.cloneNode(true));
-    document.getElementById('prevHole').addEventListener('click', () => {
+    document.getElementById('prevHole').onclick = () => {
       if (currentHole > 1 && !isHoleInProgress) {
         currentHole--;
         updateHole();
         updateCourseInfoBar();
         logScreen(`PREV → HOLE ${currentHole}`);
       }
-    });
+    };
   }
+
+  // Next
+  const next = document.getElementById('nextHole');
   if (next) {
     next.replaceWith(next.cloneNode(true));
-    document.getElementById('nextHole').addEventListener('click', () => {
+    document.getElementById('nextHole').onclick = () => {
       if (currentHole < HOLES && !isHoleInProgress) {
         currentHole++;
         updateHole();
         updateCourseInfoBar();
         logScreen(`NEXT → HOLE ${currentHole}`);
       }
-    });
+    };
   }
+
+  // Finish Hole
+  const finish = document.getElementById('finishHole');
+  if (finish) {
+    finish.replaceWith(finish.cloneNode(true));
+    document.getElementById('finishHole').onclick = finishCurrentHole;
+  }
+
+  // Edit Hole — THIS WAS MISSING OR LOST
   const edit = document.getElementById('editHole');
   if (edit) {
     edit.replaceWith(edit.cloneNode(true));
-    document.getElementById('editHole').addEventListener('click', () => {
+    document.getElementById('editHole').onclick = () => {
       if (finishedHoles.has(currentHole)) {
         finishedHoles.delete(currentHole);
-        players.forEach(p => {
-          p._cachedHoleTotals = {};
-          p._cachedTotal = 0;
-        });
-        precomputeAllTotals();
-        save();
-        updateHole();
         isHoleInProgress = false;
-        unlockNavigation();
-        logScreen('EDIT MODE');
+        precomputeAllTotals();
+        updateHole();
+        logScreen('EDIT MODE — HOLE REOPENED');
       }
-    });
+    };
   }
 }
 
