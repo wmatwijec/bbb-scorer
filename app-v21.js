@@ -1126,21 +1126,7 @@ function attachNavListeners() {
 
 
 
-  els.editHole.addEventListener('click', () => {
-    if (!finishedHoles.has(currentHole)) return;
-    finishedHoles.delete(currentHole);
-    players.forEach(p => {
-      p._cachedHoleTotals = {};
-      p._cachedTotal = 0;
-    });
-    precomputeAllTotals();
-    save();
-    updateHole();
-    isHoleInProgress = false;  // ← ADD THIS
-    unlockNavigation();  // ← UNLOCK ON EDIT
-    logScreen('EDIT MODE');
-  });
-
+  
   
 
   els.backToSetup.forEach(btn => {
