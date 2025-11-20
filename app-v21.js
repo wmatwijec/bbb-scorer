@@ -318,96 +318,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     els.debugOutput.appendChild(hint);
   }
 
-  // ==== ROSTER, HISTORY, LOAD/SAVE ====
- /*  function saveRoster() {
-    localStorage.setItem('bbb_roster', JSON.stringify(roster));
-  } */
- /*  function renderRoster() {
-    els.rosterList.innerHTML = '';
-    roster.forEach((p, i) => {
-      const div = document.createElement('div');
-      div.className = 'player-tag';
-      div.innerHTML = `${p.name} <small>${p.phone || ''} ${p.email || ''}</small>`;
-      const del = document.createElement('button');
-      del.textContent = 'X'; del.style.marginLeft = '0.5rem';
-      del.onclick = () => { roster.splice(i, 1); saveRoster(); renderRoster(); renderPlayerSelect(); };
-      div.appendChild(del);
-      els.rosterList.appendChild(div);
-    });
-  } */
-  /* els.addToRoster.addEventListener('click', () => {
-    const name = els.rosterName.value.trim();
-    if (!name || roster.find(p => p.name === name)) return alert('Name required and unique');
-    roster.push({ name, phone: els.rosterPhone.value.trim(), email: els.rosterEmail.value.trim() });
-    els.rosterName.value = els.rosterPhone.value = els.rosterEmail.value = '';
-    saveRoster();
-    renderRoster();
-    renderPlayerSelect();
-  }); */
-
- /*  els.manageRosterBtn.addEventListener('click', () => {
-    if (inRound) return alert('Cannot edit players during round.');
-    hideAll();
-    els.roster.classList.remove('hidden');
-    logScreen('ROSTER');
-  }); */
-  /* els.backToCourseFromRoster.addEventListener('click', () => {
-    hideAll();
-    logScreen('COURSE SETUP');
-  }); */
-
- /*  function saveHistory() {
-    localStorage.setItem('bbb_history', JSON.stringify(roundHistory));
-  } */
-
- /*  function showHistory() {
-    hideAll();
-    els.history.classList.remove('hidden');
-    els.historyList.innerHTML = '';
-
-    if (roundHistory.length === 0) {
-      els.historyList.innerHTML = '<p>No rounds saved yet.</p>';
-      logScreen('HISTORY - EMPTY');
-      return;
-    }
-
-    roundHistory.forEach((round, i) => {
-      const div = document.createElement('div');
-      div.className = 'history-item';
-      div.innerHTML = `
-        <strong>${round.courseName}</strong> - ${round.date}<br>
-        ${round.players.map(p => p.name).join(', ')}<br>
-        Winner: ${round.winner} (${round.winnerPoints} pts)
-      `;
-      div.onclick = () => {
-        if (confirm(`Restore round from ${round.date}?`)) {
-          players = round.players.map(p => ({ 
-            ...p, 
-            scores: Array(HOLES).fill(null).map(() => ({})), 
-            gir: Array(HOLES).fill(false), 
-            _cachedTotal: 0,
-            _cachedHoleTotals: {}
-          }));
-          currentHole = round.currentHole;
-          currentCourse = round.currentCourse;
-          finishedHoles = new Set(round.finishedHoles || []);
-          inRound = true;
-          precomputeAllTotals();
-          save();
-          hideAll();
-          els.game.classList.remove('hidden');
-          els.manageRosterBtn.disabled = true;
-          els.historyBtn.disabled = true;
-          updateHole();
-          setupGameButtons();
-          logScreen('ROUND RESTORED');
-        }
-      };
-      els.historyList.appendChild(div);
-    });
-    logScreen('HISTORY');
-  } */
-
+  
   function save() {
     localStorage.setItem('bbb', JSON.stringify({ 
       players: players.map(p => ({ ...p, _cachedTotal: undefined, _cachedHoleTotals: undefined })), 
@@ -520,8 +431,6 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   els.game.classList.remove('hidden');
   attachFinishHoleListener();   // ← ADD THIS LINE
   attachNavListeners();   // ← ADD THIS LINE
-  /* els.manageRosterBtn.disabled = true;
-  els.historyBtn.disabled = true; */
   updateHole();
   setupGameButtons();
   updateCourseInfoBar()
@@ -1106,14 +1015,14 @@ function finishCurrentHole() {
       li.textContent = `${t.name}: ${t.points} pts`;
       els.leaderboard.appendChild(li);
     });
-    els.historyBtn.disabled = false;
+    
   }
 
   els.completeRound.addEventListener('click', () => {
     if (finishedHoles.size === HOLES) {
       precomputeAllTotals();
       showSummary();
-      els.historyBtn.disabled = false;
+      /* els.historyBtn.disabled = false; */
     } else {
       alert(`Finish all ${HOLES} holes.`);
     }
@@ -1122,7 +1031,7 @@ function finishCurrentHole() {
   els.exitRound.addEventListener('click', () => {
     if (confirm('Exit without saving?')) {
       resetRound();
-      els.historyBtn.disabled = false;
+      /* els.historyBtn.disabled = false; */
       location.reload();
     }
   });
@@ -1141,7 +1050,7 @@ function finishCurrentHole() {
     roundHistory.unshift(round);
     saveHistory();
     resetRound();
-    els.historyBtn.disabled = false;
+    /* els.historyBtn.disabled = false; */
     alert('Round saved!');
     location.reload();
   });
@@ -1236,13 +1145,7 @@ function attachNavListeners() {
     logScreen('EDIT MODE');
   });
 
-  /* els.historyBtn.addEventListener('click', () => {
-    if (inRound) {
-      alert('Cannot view History during active round.');
-      return;
-    }
-    showHistory();
-  }); */
+  
 
   els.backToSetup.forEach(btn => {
     btn.addEventListener('click', () => {
