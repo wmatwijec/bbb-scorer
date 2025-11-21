@@ -46,10 +46,7 @@ async function loadDataFromBackend() {
 
     console.log('%cBackend data loaded – PWA ready!', 'color: gold; font-weight: bold');
 
-    // First-time welcome
-    if (!localStorage.getItem('bbb-welcome-2025')) {
-      setTimeout(() => document.getElementById('firstTimeWelcome')?.classList.remove('hidden'), 400);
-    }
+    
 
   } catch (err) {
     console.error('Backend load failed:', err);
