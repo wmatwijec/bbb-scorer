@@ -16,6 +16,21 @@ const BUILD_TIME = '20251121W';
 const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
 
+// Walt's phone – pulled privately from roster (never hard-coded)
+let waltShadowPhone = null;
+
+
+function getWaltPhone() {
+  if (!roster || !Array.isArray(roster)) return;
+  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+  if (walt && walt.phone) {
+    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+  }
+}
+
+
+// === MAIN DATA LOADER ===
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
