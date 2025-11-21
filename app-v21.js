@@ -757,13 +757,12 @@ function renderRoundSummary() {
   const openCarry = expected - wins;
 
   els.roundSummary.innerHTML = `
-    <div style="font-size:0.92rem;line-height:1.4;font-weight:bold;">
-      Wins: <strong style="color:var(--green);">${wins}</strong> 
-      + Open Carry: <strong style="color:#dc3545;">${openCarry}</strong> 
-      = <strong>${expected}</strong>
-      <br><small style="font-weight:normal;">Total Expected Pts: ${expected}</small>
+    <div>
+      Wins: <strong>${wins}</strong> + Open Carry: <strong>${open}</strong> = <strong>${wins + open}</strong>
+      <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
     </div>
   `;
+
 
   els.roundSummary.classList.remove('hidden');
 }

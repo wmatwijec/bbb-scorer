@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112046-CLEAN'
-    const BUILD_TIME = '2025112046-CLEAN'
+    const VERSION = '2025112047-CLEAN'
+    const BUILD_TIME = '2025112047-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112046-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112047-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -523,30 +523,37 @@ body {
 }
 
 
-/* ONE-LINE LABELS — NO EXTRA VERTICAL SPACE */
+
+
+/* FINAL — HOLE & ROUND SUMMARIES: ALL RED, CLEAN, MATH VISIBLE */
 .holeSummary,
 #roundSummary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  font-size: 0.88rem !important;
   padding: 0.5rem 0.8rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  color: #dc3545 !important;           /* everything red */
+  background: #fff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border: 1px solid #f8d7da;
 }
 
-.holeSummary::before {
-  content: "This Hole:";
-  font-weight: bold;
-  color: var(--green);
-  white-space: nowrap;
+/* Only the numbers are bold */
+.holeSummary strong,
+#roundSummary strong {
+  font-weight: bold !important;
 }
 
-#roundSummary::before {
-  content: "Round:";
-  font-weight: bold;
-  color: var(--green);
-  white-space: nowrap;
+/* Expected line — smaller and shows the math */
+#roundSummary small {
+  display: block;
+  font-size: 0.78rem !important;
+  margin-top: 0.3rem !important;
+  color: #a00 !important;
 }
+
+
 
 
 </style>
@@ -792,7 +799,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112046-CLEAN"></script>
+  <script src="app-v21.js?v=2025112047-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
