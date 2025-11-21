@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112043-CLEAN'
-    const BUILD_TIME = '2025112043-CLEAN'
+    const VERSION = '2025112044-CLEAN'
+    const BUILD_TIME = '2025112044-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112043-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112044-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -443,6 +443,54 @@ body {
   }
 }
 
+/* FINAL — SCORING TABLE FITS EVERY PHONE, TOT ALWAYS VISIBLE */
+#scoreTable {
+  table-layout: fixed;            /* forces columns to respect widths */
+  width: 100% !important;
+  margin-top: 0.4rem !important;
+}
+
+#scoreTable th:nth-child(1),     /* Player name */
+#scoreTable td:nth-child(1) {
+  width: 28% !important;         /* gives names plenty of room */
+  text-align: left !important;
+  padding-left: 0.6rem !important;
+}
+
+#scoreTable th:nth-child(2),     /* FO/GR */
+#scoreTable td:nth-child(2),
+#scoreTable th:nth-child(3),     /* CL */
+#scoreTable td:nth-child(3),
+#scoreTable th:nth-child(4),     /* P */
+#scoreTable td:nth-child(4) {
+  width: 12% !important;         /* tiny columns for the 3 checkboxes */
+}
+
+#scoreTable th:nth-child(5),     /* H (hole points) */
+#scoreTable td:nth-child(5) {
+  width: 14% !important;
+}
+
+#scoreTable th:nth-child(6),     /* RUN */
+#scoreTable td:nth-child(6),
+#scoreTable th:nth-child(7),     /* TOT */
+#scoreTable td:nth-child(7) {
+  width: 17% !important;         /* gives RUN and TOT breathing room */
+  font-weight: bold !important;
+}
+
+/* Mobile — even tighter if needed */
+@media (max-width: 480px) {
+  #scoreTable th, #scoreTable td {
+    padding: 0.4rem 0.2rem !important;
+    font-size: 0.9rem !important;
+  }
+  #scoreTable th:nth-child(1), td:nth-child(1) {
+    font-size: 0.95rem !important;
+  }
+}
+
+
 </style>
 </head>
 
@@ -686,7 +734,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112043-CLEAN"></script>
+  <script src="app-v21.js?v=2025112044-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
