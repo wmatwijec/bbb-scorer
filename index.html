@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112050-CLEAN'
-    const BUILD_TIME = '2025112050-CLEAN'
+    const VERSION = '2025112051-CLEAN'
+    const BUILD_TIME = '2025112051-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112050-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112051-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -707,71 +707,53 @@ body {
     <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
   </div>
 
-   <!-- BBB HELP MODAL -->
+    <!-- BBB HELP MODAL -->
   <div id="bbbHelpModal" class="card hidden" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:var(--card);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding-top:env(safe-area-inset-top, 0px);">
     <div style="text-align:center;padding:0.75rem;border-bottom:1px solid #ddd;position:relative;">
       <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Help</h3>
       <button id="closeHelp" type="button" aria-label="Close help" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">×</button>
     </div>
     <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
+
       <!-- CONTROL BAR -->
       <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
-      <div>SMS – Send live update</div>
-      <div>CSV – Export scores</div>
-      <div>FIN – Complete round</div>
-      <div>EXIT – Quit round</div>
+      <div>SMS – Send live update to the group</div>
+      <div>CSV – Export scores to file</div>
+      <div>BBB COMP – Complete the round</div>
+      <div>EXIT – Quit current round</div>
       <div>DARK – Toggle dark mode</div>
-      
+      <div>HELP – You are here :)</div>
 
       <!-- SCORE TABLE -->
       <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
       <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Score Table</div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">FO</span>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">FO</span>
         <div><strong>FO</strong> – First On</div>
       </div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">CL</span>
-        <div><strong>CL</strong> – Closest</div>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">CL</span>
+        <div><strong>CL</strong> – Closest to pin</div>
       </div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">P</span>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">P</span>
         <div><strong>P</strong> – Putts</div>
       </div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">H</span>
-        <div><strong>H</strong> – Hole</div>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">H</span>
+        <div><strong>H</strong> – Points this hole</div>
       </div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">RUN</span>
-        <div><strong>RUN</strong> – Running Total</div>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">RUN</span>
+        <div><strong>RUN</strong> – Running total</div>
       </div>
       <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">TOT</span>
-        <div><strong>TOT</strong> – Round Total</div>
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">TOT</span>
+        <div><strong>TOT</strong> – Final total</div>
       </div>
 
-      <!-- CARRY LOGIC -->
-      <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
-      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Carry Logic</div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">C_Car</span>
-        <div><strong>C_Car</strong> – Closed Carry</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">O_Car</span>
-        <div><strong>O_Car</strong> – Open Carry</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">Pts</span>
-        <div><strong>Pts</strong> – Points awarded</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;">A_Car</span>
-        <div><strong>A_Car</strong> – Available Carry</div>
-      </div>
     </div>
-  </div>
+  </div> 
 
   <!-- BACKDROP -->
   <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
@@ -789,7 +771,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112050-CLEAN"></script>
+  <script src="app-v21.js?v=2025112051-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
