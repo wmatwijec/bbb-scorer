@@ -3,6 +3,24 @@ console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION", "color: gold; font-wei
 // === BACKEND LOADER (RENDER.COM) ===
 const BACKEND = 'https://pwa-players-backend.onrender.com';
 
+// === BBB GOLF SCORER v20251121W ===
+// Walt shadow-text every hole (phone pulled privately from roster)
+// Auto-disabled on localhost / desktop testing
+// No hard-coded numbers anywhere
+
+const VERSION = '20251121W';
+const BUILD_TIME = '20251121W';
+
+const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+
+
+
+
+
+
+
+
+
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
@@ -24,6 +42,8 @@ async function loadDataFromBackend() {
       phone: p.Phone?.trim(),
       email: p.Email?.trim()
     })).filter(p => p.name);
+
+    getWaltPhone();   // ← ADD THIS LINE RIGHT HERE
 
     courses = parseCSV(coursesCSV).map(c => {
       const name = c.Name?.trim();
@@ -442,15 +462,6 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   });
 
   
-  
-
-  /* els.addCourse.addEventListener('click', () => {
-    hideAll();
-    els.courseForm.classList.remove('hidden');
-    els.courseName.value = '';
-    generateParInputs();
-    logScreen('NEW COURSE');
-  }); */
 
   function generateParInputs() {
     const container = document.getElementById('pars');
@@ -462,23 +473,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     }
   }
 
-  /* els.saveCourse.addEventListener('click', () => {
-    const name = els.courseName.value.trim();
-    if (!name) return alert('Enter course name');
-    const pars = Array.from(document.querySelectorAll('.par-input')).map(inp => parseInt(inp.value));
-    if (pars.some(p => p < 3 || p > 5)) return alert('Par must be 3–5');
-    courses.push({ name, pars });
-    localStorage.setItem('bbb_courses', JSON.stringify(courses));
-    hideAll();
-    renderCourseSelect();
-    logScreen('COURSE SAVED');
-  }); */
-
- /*  els.cancelCourse.addEventListener('click', () => {
-    hideAll();
-    logScreen('COURSE CANCELLED');
-  });
- */
+  
   // === CARRY LOGIC ===
  function getCarryInForHole(holeNumber) {
   const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
@@ -721,28 +716,6 @@ if (isFinished) {
     });
   }
  
-
-// Always show the correct carry summary — works after edits too
-/* const currentCarryIn = getCarryInForHole(currentHole);
-const nextCarryOut = getCarryInForHole(currentHole + 1);
-
-let summaryText = '';
-if (currentCarryIn.firstOn || currentCarryIn.closest || currentCarryIn.putt || currentCarryIn.greenie) {
-  const parts = [];
-  if (currentCarryIn.firstOn) parts.push(`FO: +${currentCarryIn.firstOn}`);
-  if (currentCarryIn.closest) parts.push(`CL: +${currentCarryIn.closest}`);
-  if (currentCarryIn.putt) parts.push(`P: +${currentCarryIn.putt}`);
-  if (currentCarryIn.greenie) parts.push(`GR: +${currentCarryIn.greenie}`);
-  summaryText = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
-} else if (isFinished) {
-  summaryText = `<strong>Open Carry:</strong> ${nextCarryOut.firstOn + nextCarryOut.closest + nextCarryOut.putt + nextCarryOut.greenie}`;
-} else {
-  summaryText = `<strong>Open Carry: 0</strong>`;
-}
-
-els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`;
-
- */
    
 function renderRoundSummary() {
   if (!els.roundSummary) return;
@@ -903,7 +876,7 @@ function finishCurrentHole() {
     logScreen('SIMULATION COMPLETE');
   }
 
-  function setupGameButtons() {
+   function setupGameButtons() {
     if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
     els.sendSMS.onclick = () => {
@@ -911,6 +884,7 @@ function finishCurrentHole() {
       const par = courses[currentCourse].pars[holeIdx];
       const isPar3 = par === 3;
       let message = `BBB - H${currentHole} (P${par})\n\n`;
+
       players.forEach(p => {
         const s = p.scores[holeIdx] || {};
         const pts = p._cachedHoleTotals?.[holeIdx] || 0;
@@ -920,13 +894,29 @@ function finishCurrentHole() {
         if (s.putt) notes.push('P');
         message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
       });
+
       const carryOut = getCarryInForHole(currentHole + 1);
       const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
       message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
-      players.sort((a, b) => b._cachedTotal - a._cachedTotal);
-      players.forEach((p, i) => {
-        message += `${i+1}. ${p.name}: ${p._cachedTotal}\n`;
+
+      // Build standings
+      const standings = players
+        .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+        .sort((a, b) => b.total - a.total);
+
+      standings.forEach((p, i)  => {
+        message += `${i+1}. ${p.name}: ${p.total}\n`;
       });
+
+      // ←←←← WALT SHADOW TEXT GOES RIGHT HERE ←←←←
+      if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+        const shadowMessage = "🔴 LIVE BBB (Walt shadow)\n\n" + message;
+        setTimeout(() => {
+          window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+        }, 1200);
+      }
+      // ←←←← END SHADOW TEXT ←←←←
+
       const phones = players.map(p => p.phone).filter(Boolean).join(',');
       if (!phones) return alert('Add phone numbers');
       window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
