@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112045-CLEAN'
-    const BUILD_TIME = '2025112045-CLEAN'
+    const VERSION = '2025112046-CLEAN'
+    const BUILD_TIME = '2025112046-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112045-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112046-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -523,7 +523,30 @@ body {
 }
 
 
+/* ONE-LINE LABELS — NO EXTRA VERTICAL SPACE */
+.holeSummary,
+#roundSummary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-size: 0.88rem !important;
+  padding: 0.5rem 0.8rem !important;
+}
 
+.holeSummary::before {
+  content: "This Hole:";
+  font-weight: bold;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+#roundSummary::before {
+  content: "Round:";
+  font-weight: bold;
+  color: var(--green);
+  white-space: nowrap;
+}
 
 
 </style>
@@ -769,7 +792,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112045-CLEAN"></script>
+  <script src="app-v21.js?v=2025112046-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>

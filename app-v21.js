@@ -750,21 +750,18 @@ els.holeSummary.innerHTML = `<div class="summary-carry-in">${summaryText}</div>`
 function renderRoundSummary() {
   if (!els.roundSummary) return;
 
-  // Use the ONLY correct numbers — the ones already calculated in precomputeAllTotals()
-  let awarded = 0;
-  players.forEach(p => {
-    awarded += p._cachedTotal || 0;
-  });
+  let wins = 0;
+  players.forEach(p => wins += p._cachedTotal || 0);
 
   const expected = finishedHoles.size * 3;
-  const open = expected - awarded;   // this is the only correct way to calculate open carry
+  const openCarry = expected - wins;
 
   els.roundSummary.innerHTML = `
-    <div style="font-size:0.9rem;line-height:1.4;">
-      Wins: <strong>${awarded}</strong> | 
-      C_Car: <strong>${awarded - expected}</strong> | 
-      O_Car: <strong>${open}</strong> = <strong>${expected}</strong><br>
-      <small>Total Expected Pts: <strong>${expected}</strong></small>
+    <div style="font-size:0.92rem;line-height:1.4;font-weight:bold;">
+      Wins: <strong style="color:var(--green);">${wins}</strong> 
+      + Open Carry: <strong style="color:#dc3545;">${openCarry}</strong> 
+      = <strong>${expected}</strong>
+      <br><small style="font-weight:normal;">Total Expected Pts: ${expected}</small>
     </div>
   `;
 
