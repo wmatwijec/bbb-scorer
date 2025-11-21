@@ -1,4 +1,6 @@
-console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION", "color: gold; font-weight: bold");
+console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION - FIXED", "color: gold; font-weight: bold");
+
+
 
 // === BACKEND LOADER (RENDER.COM) ===
 const BACKEND = 'https://pwa-players-backend.onrender.com';
