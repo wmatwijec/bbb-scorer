@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112044-CLEAN'
-    const BUILD_TIME = '2025112044-CLEAN'
+    const VERSION = '2025112045-CLEAN'
+    const BUILD_TIME = '2025112045-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112044-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112045-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -490,6 +490,41 @@ body {
   }
 }
 
+/* TOP NAV BUTTONS — BIGGER AND BOLDER (Prev / Next / Edit / Finish) */
+#game > div:first-child > div > button {
+  height: 46px !important;
+  min-width: 80px !important;
+  padding: 0 1rem !important;
+  font-size: 1.05rem !important;
+  font-weight: bold !important;
+  border-radius: 12px !important;
+}
+
+/* CONTROL-BAR BUTTONS — ~30% SMALLER AND MORE SUBTLE */
+.control-bar {
+  padding: 0.4rem 0 !important;
+  gap: 0.5rem !important;
+  justify-content: center !important;
+}
+
+.control-bar button {
+  min-width: 62px !important;     /* was ~90px → now ~30% smaller */
+  height: 36px !important;        /* was 48px → now smaller */
+  padding: 0 0.6rem !important;
+  font-size: 0.78rem !important;  /* was 0.9rem */
+  font-weight: bold !important;
+  border-radius: 10px !important;
+  background: #00bb00 !important; /* slightly darker so they recede */
+}
+
+/* HELP button stays on the right */
+#bbbHelpBtn {
+  margin-left: auto !important;
+}
+
+
+
+
 
 </style>
 </head>
@@ -655,7 +690,7 @@ body {
    <!-- BBB HELP MODAL -->
   <div id="bbbHelpModal" class="card hidden" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:var(--card);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding-top:env(safe-area-inset-top, 0px);">
     <div style="text-align:center;padding:0.75rem;border-bottom:1px solid #ddd;position:relative;">
-      <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Golf Icons</h3>
+      <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Help</h3>
       <button id="closeHelp" type="button" aria-label="Close help" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">×</button>
     </div>
     <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
@@ -734,7 +769,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112044-CLEAN"></script>
+  <script src="app-v21.js?v=2025112045-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
