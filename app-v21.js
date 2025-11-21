@@ -14,13 +14,6 @@ const BUILD_TIME = '20251121W';
 const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
 
-
-
-
-
-
-
-
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
