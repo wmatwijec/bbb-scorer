@@ -1,4 +1,4 @@
-console.log("%cBBB PWA v21.3 — RENDER BACKEND EDITION - FIXED", "color: gold; font-weight: bold");
+console.log("%cBBB PWA v22.3 — RENDER BACKEND EDITION - FIXED", "color: gold; font-weight: bold");
 
 
 
