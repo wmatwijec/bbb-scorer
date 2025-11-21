@@ -754,15 +754,14 @@ function renderRoundSummary() {
   players.forEach(p => wins += p._cachedTotal || 0);
 
   const expected = finishedHoles.size * 3;
-  const openCarry = expected - wins;
+  const openCarry = expected - wins;   // ← correct variable name
 
   els.roundSummary.innerHTML = `
-    <div>
-      Wins: <strong>${wins}</strong> + Open Carry: <strong>${open}</strong> = <strong>${wins + open}</strong>
+    <div style="font-size:0.9rem;line-height:1.4;">
+      Wins: <strong>${wins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
       <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
     </div>
   `;
-
 
   els.roundSummary.classList.remove('hidden');
 }

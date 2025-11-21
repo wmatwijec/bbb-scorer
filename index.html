@@ -3,8 +3,8 @@
 <head>
   <script>
     // === DEFINE GLOBALS FOR app-v21.js ===  Test Edit Line for M again?
-    const VERSION = '2025112047-CLEAN'
-    const BUILD_TIME = '2025112047-CLEAN'
+    const VERSION = '2025112048-CLEAN'
+    const BUILD_TIME = '2025112048-CLEAN'
 
 </script>
   <meta charset="UTF-8" />
@@ -12,7 +12,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" />
-  <meta id="cacheBuster" name="version" content="2025112047-CLEAN">
+  <meta id="cacheBuster" name="version" content="2025112048-CLEAN">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -554,7 +554,12 @@ body {
 }
 
 
-
+/* HOLE COLUMN NUMBERS — SAME STYLE AS TOT COLUMN */
+#scoreTable td:nth-child(5) strong {   /* H column = 5th column */
+  color: inherit !important;           /* same as TOT (black in light mode, white in dark) */
+  font-weight: 600 !important;         /* same boldness as TOT */
+  font-size: 1.1em !important;
+}
 
 </style>
 </head>
@@ -799,7 +804,7 @@ body {
   </script>
 
   <!-- APP JS -->
-  <script src="app-v21.js?v=2025112047-CLEAN"></script>
+  <script src="app-v21.js?v=2025112048-CLEAN"></script>
 
     <!-- MODAL JS (DOM READY) -->
   <script>
