@@ -560,28 +560,6 @@ body {
 </head>
 
 
-<!-- ON-SCREEN DEBUG PANEL — iPhone only, remove later if you want -->
-<div id="debug" style="position:fixed; bottom:0; left:0; right:0; max-height:50vh; overflow:auto; background:rgba(0,0,0,0.9); color:#0f0; font-family:monospace; font-size:12px; padding:10px; z-index:99999; display:none;">
-  <button onclick="document.getElementById('debug').style.display='none'" style="float:right; color:white;">Close</button>
-  <pre id="debugLog"></pre>
-</div>
-
-<script>
-// Override console.log so it shows on screen too
-const oldLog = console.log;
-console.log = function(...args) {
-  oldLog(...args);
-  const log = document.getElementById('debugLog');
-  if (log) {
-    log.textContent += args.map(a => 
-      typeof a === 'object' ? JSON.stringify(a, null, 2) : a
-    ).join(' ') + '\n';
-    document.getElementById('debug').style.display = 'block';
-  }
-};
-</script>
-
-
 
 
 
