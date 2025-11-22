@@ -609,28 +609,25 @@ console.log = function(...args) {
 
   <!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER -->
   <script>
-    // Hide launch screen when we ARE the app
-    if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
-      document.getElementById('launchWrapper')?.remove();
-    }
-    // Auto-redirect repeat visitors
-    else if (localStorage.getItem('appLaunched')) {
-      window.location.href = '/bbb-scorer/';
-    }
+  // Hide launch screen when we ARE the app
+  if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
+    document.getElementById('launchWrapper')?.remove();
+  }
+  else if (localStorage.getItem('appLaunched')) {
+    window.location.href = '/bbb-scorer/';
+  }
 
-    // FINAL SPINNER KILLER — iOS can’t stop this
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const loader = document.getElementById('courseLoader');
-        const picker = document.getElementById('coursePicker');
-        if (loader && picker) {
-          loader.style.display = 'none';
-          picker.style.display = 'block';
-          console.log('SPINNER KILLED BY EMERGENCY SCRIPT');
-        }
-      }, 2500); // 2.5 seconds is more than enough
-    });
-  </script>
+  // FINAL UNSTOPPABLE SPINNER KILLER — iOS CANNOT IGNORE THIS
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const loader = document.getElementById('courseLoader');
+      const picker = document.getElementById('coursePicker');
+      if (loader) loader.remove();           // ← NUKES THE ENTIRE SPINNER ELEMENT
+      if (picker) picker.style.display = 'block';
+      console.log('SPINNER NUKED FROM ORBIT — IT’S GONE FOREVER');
+    }, 2500);
+  });
+</script>
 
 
 
