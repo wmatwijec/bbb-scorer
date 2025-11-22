@@ -627,8 +627,14 @@ console.log = function(...args) {
         picker.classList.remove('hidden');                 // ← REMOVE THE CLASS
         picker.style.display = 'block';                    // ← AND force display
       }
-      console.log('SPINNER NUKED FROM ORBIT — IT’S GONE FOREVER');
-    }, 2500);
+// THIS LINE IS THE FINAL PIECE — forces the course list to appear
+      if (typeof renderCourseSelect === 'function') {
+        renderCourseSelect();
+        console.log('COURSES RENDERED — YOU ARE NOW 100% LIVE!');
+      } else {
+        console.error('renderCourseSelect not found — check app-v23.js');
+      }
+    }, 2800); // 2.8s gives data time to finish parsing
   });
 </script>
 
