@@ -10,8 +10,8 @@ const BACKEND = 'https://pwa-players-backend.onrender.com';
 // Auto-disabled on localhost / desktop testing
 // No hard-coded numbers anywhere
 
-const VERSION = '20251124';
-const BUILD_TIME = '20251124';
+const VERSION = '20251121-final';
+const BUILD_TIME = '20251121-final';
 
 const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
