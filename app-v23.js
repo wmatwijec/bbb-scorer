@@ -29,18 +29,35 @@ function getWaltPhone() {
   }
 }
 
-// ————————————————————————
-// 1. EMERGENCY SPINNER KILLER — runs instantly on page load
-// ————————————————————————
-setTimeout(() => {
-  const loader = document.getElementById('courseLoader');
-  const picker = document.getElementById('coursePicker');
-  if (loader && picker) {
-    loader.style.display = 'none';
-    picker.style.display = 'block';        // ← change to 'flex' if your picker uses display:flex
-    console.log('Emergency fallback triggered — spinner killed after 2 seconds');
-  }
-}, 2000);
+// ENHANCED EMERGENCY SPINNER KILLER — polls until picker shows (iOS 18-proof)
+(function() {
+  let attempts = 0;
+  const maxAttempts = 30;  // 3 seconds max
+  const interval = setInterval(() => {
+    attempts++;
+    const loader = document.getElementById('courseLoader');
+    const picker = document.getElementById('coursePicker');
+    const error = document.getElementById('courseError');
+    
+    if (loader && picker) {
+      // Force-kill loader and error, force-show picker
+      loader.style.display = 'none !important';
+      if (error) error.style.display = 'none !important';
+      picker.style.display = 'block !important';  // or 'flex !important' if your CSS uses flex
+      
+      // Extra iOS reflow trigger
+      picker.offsetHeight;
+      
+      console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
+      clearInterval(interval);
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error('Emergency fallback timed out — manual intervention needed');
+      clearInterval(interval);
+    }
+  }, 100);  // Check every 100ms
+})();
 
 
 // === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone) ===
