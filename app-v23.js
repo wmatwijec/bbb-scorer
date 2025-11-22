@@ -29,9 +29,20 @@ function getWaltPhone() {
   }
 }
 
+// ————————————————————————
+// 1. EMERGENCY SPINNER KILLER — runs instantly on page load
+// ————————————————————————
+setTimeout(() => {
+  const loader = document.getElementById('courseLoader');
+  const picker = document.getElementById('coursePicker');
+  if (loader && picker) {
+    loader.style.display = 'none';
+    picker.style.display = 'block';        // ← change to 'flex' if your picker uses display:flex
+    console.log('Emergency fallback triggered — spinner killed after 2 seconds');
+  }
+}, 2000);
 
 
-// === MAIN DATA LOADER — DEBUG VERSION ===
 // === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone) ===
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
