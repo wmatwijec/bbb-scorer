@@ -30,30 +30,51 @@ function getWaltPhone() {
 }
 
 
-// === MAIN DATA LOADER ===
+// === MAIN DATA LOADER — iOS-PWA-PROOF VERSION ===
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
   const picker = document.getElementById('coursePicker');
 
+  // CRITICAL: Use the FULL absolute URL — never relative on iOS standalone
+  const BACKEND_URL = 'https://pwa-players-backend.onrender.com';
+
   try {
     const [playersRes, coursesRes] = await Promise.all([
-      fetch(`${BACKEND}/players`),
-      fetch(`${BACKEND}/courses`)
+      fetch(`${BACKEND_URL}/players`, {
+        method: 'GET',
+        // These two lines are the magic that fixes iOS Origin: null + pre-flight
+        mode: 'cors',
+        credentials: 'omit'   // safest for simple CSV fetches
+      }),
+      fetch(`${BACKEND_URL}/courses`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit'
+      })
     ]);
 
-    if (!playersRes.ok || !coursesRes.ok) throw new Error('Network error');
+    // Extra debugging — you’ll see this in DevTools if something goes wrong
+    if (!playersRes.ok) {
+      console.error('Players failed:', playersRes.status, playersRes.statusText);
+      throw new Error(`Players ${playersRes.status}`);
+    }
+    if (!coursesRes.ok) {
+      console.error('Courses failed:', coursesRes.status, coursesRes.statusText);
+      throw new Error(`Courses ${coursesRes.status}`);
+    }
 
     const playersCSV = await playersRes.text();
     const coursesCSV = await coursesRes.text();
 
+    // ———— rest of your parsing code stays 100% unchanged ————
     roster = parseCSV(playersCSV).map(p => ({
       name: p.Name?.trim(),
       phone: p.Phone?.trim(),
       email: p.Email?.trim()
     })).filter(p => p.name);
 
-    getWaltPhone();   // ← ADD THIS LINE RIGHT HERE
+    getWaltPhone();
 
     courses = parseCSV(coursesCSV).map(c => {
       const name = c.Name?.trim();
@@ -65,18 +86,16 @@ async function loadDataFromBackend() {
       return { name, pars };
     }).filter(c => c.name && c.pars.length === 18);
 
-    sortPlayersAlphabetically();   // ← ALPHABETIZES BOTH ROSTER AND FUTURE PLAYERS
+    sortPlayersAlphabetically();
 
     if (courses.length === 0) throw new Error('No courses returned');
 
-    // SUCCESS – SHOW PICKER
+    // SUCCESS
     loader.classList.add('hidden');
     picker.classList.remove('hidden');
-    renderCourseSelect(); // your existing function – works perfectly
+    renderCourseSelect();
 
-    console.log('%cBackend data loaded – PWA ready!', 'color: gold; font-weight: bold');
-
-    
+    console.log('%cBackend data loaded – PWA ready!', 'color: gold; font-weight: bold; font-size: 14px');
 
   } catch (err) {
     console.error('Backend load failed:', err);
