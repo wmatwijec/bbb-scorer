@@ -1,3 +1,6 @@
+
+console.log('app-v23.js LOADED SUCCESSFULLY — VERSION 20251122-WIN');
+
 console.log("%cBBB PWA v22.3 — RENDER BACKEND EDITION - FIXED", "color: gold; font-weight: bold");
 
 
