@@ -1580,14 +1580,15 @@ function finishCurrentHole() {
         message += `${i+1}. ${p.name}: ${p.total}\n`;
       });
 
-      // ←←←← WALT SHADOW TEXT GOES RIGHT HERE ←←←←
-      if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
-        const shadowMessage = "🔴 LIVE BBB (Walt shadow)\n\n" + message;
-        setTimeout(() => {
-          window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-        }, 1200);
-      }
-      // ←←←← END SHADOW TEXT ←←←←
+      // WALT SHADOW TEXT — NOW WORKS EVEN IF WALT IS NOT PLAYING
+if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+  const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+  setTimeout(() => {
+    // Opens SMS app silently with Walt's number + full message
+    window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+  }, 1200);
+}
+
 
       const phones = players.map(p => p.phone).filter(Boolean).join(',');
       if (!phones) return alert('Add phone numbers');
@@ -1859,7 +1860,7 @@ function attachNavListeners() {
   <!-- SUMMARY -->
   <section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
     <h2 id="summaryTitle" class="hidden">Summary</h2>
-    <button id="backToSetup">Setup</button>
+    <button id="backToSetup" onclick="resetRound(); hideAll(); document.getElementById('courseSetup').classList.remove('hidden');">Back to Setup</button>
     <h3>Final Leaderboard</h3>
     <ol id="leaderboard"></ol>    
   </section>
