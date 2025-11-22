@@ -30,22 +30,23 @@ function getWaltPhone() {
 }
 
 
-// === MAIN DATA LOADER — iOS-PWA-PROOF VERSION ===
+
+// === MAIN DATA LOADER — DEBUG VERSION ===
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
   const picker = document.getElementById('coursePicker');
 
-  // CRITICAL: Use the FULL absolute URL — never relative on iOS standalone
   const BACKEND_URL = 'https://pwa-players-backend.onrender.com';
 
   try {
+    console.log('🔄 Starting backend load...');  // ← Track entry
+
     const [playersRes, coursesRes] = await Promise.all([
       fetch(`${BACKEND_URL}/players`, {
         method: 'GET',
-        // These two lines are the magic that fixes iOS Origin: null + pre-flight
         mode: 'cors',
-        credentials: 'omit'   // safest for simple CSV fetches
+        credentials: 'omit'
       }),
       fetch(`${BACKEND_URL}/courses`, {
         method: 'GET',
@@ -54,7 +55,6 @@ async function loadDataFromBackend() {
       })
     ]);
 
-    // Extra debugging — you’ll see this in DevTools if something goes wrong
     if (!playersRes.ok) {
       console.error('Players failed:', playersRes.status, playersRes.statusText);
       throw new Error(`Players ${playersRes.status}`);
@@ -67,16 +67,32 @@ async function loadDataFromBackend() {
     const playersCSV = await playersRes.text();
     const coursesCSV = await coursesRes.text();
 
-    // ———— rest of your parsing code stays 100% unchanged ————
-    roster = parseCSV(playersCSV).map(p => ({
+    // ←←← NEW DEBUG LOGS ←←←
+    console.log('📄 Raw players CSV length:', playersCSV.length, 'bytes');
+    console.log('📄 First 200 chars of players CSV:', playersCSV.substring(0, 200));
+    console.log('📄 Raw courses CSV length:', coursesCSV.length, 'bytes');
+    console.log('📄 First 200 chars of courses CSV:', coursesCSV.substring(0, 200));
+
+    // Parse players
+    const rawPlayers = parseCSV(playersCSV);
+    console.log('👥 Raw parsed players array length:', rawPlayers.length);
+    console.log('👥 Sample player object:', rawPlayers[0] || 'EMPTY');
+
+    roster = rawPlayers.map(p => ({
       name: p.Name?.trim(),
       phone: p.Phone?.trim(),
       email: p.Email?.trim()
     })).filter(p => p.name);
+    console.log('👥 Filtered roster length:', roster.length);
 
     getWaltPhone();
 
-    courses = parseCSV(coursesCSV).map(c => {
+    // Parse courses
+    const rawCourses = parseCSV(coursesCSV);
+    console.log('🏌️ Raw parsed courses array length:', rawCourses.length);
+    console.log('🏌️ Sample course object:', rawCourses[0] || 'EMPTY');
+
+    courses = rawCourses.map(c => {
       const name = c.Name?.trim();
       const pars = [];
       for (let i = 1; i <= 18; i++) {
@@ -85,22 +101,29 @@ async function loadDataFromBackend() {
       }
       return { name, pars };
     }).filter(c => c.name && c.pars.length === 18);
+    console.log('🏌️ Filtered courses length:', courses.length);
 
     sortPlayersAlphabetically();
 
-    if (courses.length === 0) throw new Error('No courses returned');
+    if (courses.length === 0) {
+      console.error('❌ No valid courses after parsing — check CSV format');
+      throw new Error('No courses returned');
+    }
 
     // SUCCESS
     loader.classList.add('hidden');
     picker.classList.remove('hidden');
     renderCourseSelect();
 
-    console.log('%cBackend data loaded – PWA ready!', 'color: gold; font-weight: bold; font-size: 14px');
+    console.log('%c✅ Backend data loaded – PWA ready!', 'color: gold; font-weight: bold; font-size: 14px');
 
   } catch (err) {
-    console.error('Backend load failed:', err);
+    console.error('💥 Backend load failed:', err);
+    console.error('💥 Full error stack:', err.stack);  // ← More detail
     loader.classList.add('hidden');
     error.classList.remove('hidden');
+    // ←←← NEW: Show error text too
+    error.textContent = `Load failed: ${err.message}`;
   }
 }
 
