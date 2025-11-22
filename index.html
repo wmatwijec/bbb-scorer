@@ -623,7 +623,10 @@ console.log = function(...args) {
       const loader = document.getElementById('courseLoader');
       const picker = document.getElementById('coursePicker');
       if (loader) loader.remove();           // ← NUKES THE ENTIRE SPINNER ELEMENT
-      if (picker) picker.style.display = 'block';
+      if (picker) {
+        picker.classList.remove('hidden');                 // ← REMOVE THE CLASS
+        picker.style.display = 'block';                    // ← AND force display
+      }
       console.log('SPINNER NUKED FROM ORBIT — IT’S GONE FOREVER');
     }, 2500);
   });
