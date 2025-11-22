@@ -1,5 +1,5 @@
 // sw.js — FINAL BULLETPROOF VERSION (November 21, 2025)
-const CACHE_NAME = 'bbb-golf-20251121-final-v2';
+const CACHE_NAME = 'bbb-golf-20251121-v3-FORCE';
 
 const FILES_TO_CACHE = [
   '/',                          // root
