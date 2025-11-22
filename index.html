@@ -609,7 +609,7 @@ console.log = function(...args) {
 
   <!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER -->
   <script>
-  // Hide launch screen when we ARE the app
+  // Hide launch screen
   if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
     document.getElementById('launchWrapper')?.remove();
   }
@@ -617,27 +617,31 @@ console.log = function(...args) {
     window.location.href = '/bbb-scorer/';
   }
 
-  // FINAL UNSTOPPABLE SPINNER KILLER — iOS CANNOT IGNORE THIS
+  // FINAL DIAGNOSTIC — tells us exactly what’s happening
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const loader = document.getElementById('courseLoader');
       const picker = document.getElementById('coursePicker');
-      if (loader) loader.remove();           // ← NUKES THE ENTIRE SPINNER ELEMENT
+      if (loader) loader.remove();
       if (picker) {
-        picker.classList.remove('hidden');                 // ← REMOVE THE CLASS
-        picker.style.display = 'block';                    // ← AND force display
+        picker.classList.remove('hidden');
+        picker.style.display = 'block';
       }
-// THIS LINE IS THE FINAL PIECE — forces the course list to appear
+
+      // DIAGNOSTIC LINES — these will appear in your green debug panel
+      console.log('courses array length:', (window.courses || []).length);
+      console.log('courses array contents:', window.courses);
+      console.log('renderCourseSelect exists?', typeof renderCourseSelect);
+
       if (typeof renderCourseSelect === 'function') {
         renderCourseSelect();
-        console.log('COURSES RENDERED — YOU ARE NOW 100% LIVE!');
+        console.log('renderCourseSelect() FORCED — dropdown should now have courses');
       } else {
-        console.error('renderCourseSelect not found — check app-v23.js');
+        console.error('renderCourseSelect is missing — check app-v23.js');
       }
-    }, 2800); // 2.8s gives data time to finish parsing
+    }, 3000);
   });
 </script>
-
 
 
 
