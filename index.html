@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-FIX10-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-FIX11-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -911,8 +911,21 @@ function renderCourseSelect() {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
 
-await loadDataFromBackend();   // ← 
+// NUCLEAR: Force courses to load and show picker — NO ESCAPE
+  try {
+    await loadDataFromBackend();
+  } catch (e) {
+    console.error('loadDataFromBackend failed:', e);
+  }
 
+  // Force UI update — iOS cannot ignore this
+  const loader = document.getElementById('courseLoader');
+  const picker = document.getElementById('coursePicker');
+  if (loader) loader.classList.add('hidden');
+  if (picker) {
+    picker.classList.remove('hidden');
+    renderCourseSelect();
+  }
   // TRY TO RESUME SAVED ROUND FIRST
   const saved = await loadRoundLocal();
   if (saved && confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
