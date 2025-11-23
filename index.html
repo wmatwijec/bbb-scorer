@@ -939,10 +939,11 @@ await loadDataFromBackend();   // ←
     logScreen('RESUMED SAVED ROUND');
     return;
   }
-
-  // NO SAVED ROUND → NORMAL START
+// Fresh start — show course picker
   if (saved) await clearRoundLocal();
-  loadDataFromBackend();
+  document.getElementById('courseLoader')?.classList.add('hidden');
+  document.getElementById('coursePicker')?.classList.remove('hidden');
+  renderCourseSelect();
 
 // Prevent iOS from sleeping / killing the tab during a round
 let wakeLock = null;
