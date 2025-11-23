@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-15-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-16-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -786,8 +786,9 @@ async function loadDataFromBackend() {
   } catch (err) {
     console.error('Backend load failed:', err);
     loader.classList.add('hidden');
-    error.classList.remove('hidden');
-    error.textContent = `Load failed: ${err.message}`;
+  error.classList.remove('hidden');
+  error.textContent = `Load failed: ${err.message} (courses: ${courses.length})`;  // ← ADD THE LENGTH FOR DEBUG
+  error.style.display = 'block !important';  // ← FORCE VISIBLE
   }
 }
 
