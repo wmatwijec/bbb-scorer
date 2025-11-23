@@ -1416,7 +1416,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
         input.checked = !!s[point];
         input.disabled = isFinished;
         input.onclick = (e) => {
-           e.preventDefault(); // Stop double-tap zoom on iOS
+           // Remove preventDefault() - let iOS update the checkbox visually
            toggleScore(p, holeIdx, point);
     };
         cell.appendChild(input);
