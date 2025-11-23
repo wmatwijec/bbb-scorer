@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-NEXT-FIX">
+  <meta id="cacheBuster" name="version" content="20251123-FIX2">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -1544,21 +1544,18 @@ function renderHoleSummary() {
   isHoleInProgress = false;
 
   precomputeAllTotals();
-  updateHole();
+  
 
   // FULL iOS-PROOF REPAINT — this is the bulletproof version
   setTimeout(() => {
-    updateHole();           // Re-renders table + checkboxes
-    updateNavButtons();     // Enables Next button
-    renderTable(getCarryInForHole(currentHole), true);
+    updateHole();                    // Re-renders table + checkboxes
+    updateNavButtons();              // Enables Next/Prev buttons
+    renderTable(getCarryInForHole(currentHole), true);  // Final visual state
     console.log('Hole finished — Next should be enabled');
-  }, 50);
-
-
-
+  }, 80);
 
   logScreen('FINISHED HOLE ' + currentHole);
-  updateNavButtons  
+  
 
 
  // WALT SHADOW TEXT — 100% STEALTH VIA SERVER (NO POPUP EVER)
