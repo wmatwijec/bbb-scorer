@@ -627,7 +627,6 @@ body {
     let roundHistory = [];
     let finishedHoles = new Set();
     let inRound = false;
-    let isHoleInProgress = false;
     let els = {};
     let waltShadowPhone = null;
 
@@ -847,11 +846,11 @@ function sortPlayersAlphabetically() {
 
 function updateNavButtons() {
   console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
-  console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
+  
   
   const canPrev = currentHole > 1 
-  const canNext = currentHole < HOLES && !isHoleInProgress;
-  
+  const canNext = currentHole < HOLES; 
+
   console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
   
   els.prevHole.disabled = !canPrev;
@@ -1178,7 +1177,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   
   currentHole = 1;  // ← FORCE HOLE 1
   finishedHoles.clear();
-  isHoleInProgress = false;  // ← ENSURE
+  
 
   players.forEach(p => {
     p.scores = Array(HOLES).fill(null).map(() => ({}));
@@ -1536,7 +1535,7 @@ function renderHoleSummary() {
 
     function toggleScore(player, holeIdx, point) {
     const currentHoleIdx = currentHole - 1;
-    if (holeIdx === currentHoleIdx && !isHoleInProgress) {
+    if (holeIdx === currentHoleIdx) {
       const hasAnyScore = players.some(p => {
         const s = p.scores[holeIdx] || {};
         return s.firstOn || s.closest || s.putt;
@@ -1566,7 +1565,7 @@ function renderHoleSummary() {
 
   function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;
+  
 
   precomputeAllTotals();
   
@@ -1873,7 +1872,7 @@ function attachNavListeners() {
   if (prev) {
     prev.onclick = null;
     prev.addEventListener('click', () => {
-      if (currentHole > 1 && !isHoleInProgress) {
+      if (currentHole > 1) {
         currentHole--;
         updateHole();
         updateCourseInfoBar();
@@ -1887,7 +1886,7 @@ function attachNavListeners() {
   if (next) {
     next.onclick = null;
     next.addEventListener('click', () => {
-      if (currentHole < HOLES && !isHoleInProgress) {
+      if (currentHole < HOLES) {
         currentHole++;
         updateHole();
         updateCourseInfoBar();
@@ -1903,7 +1902,6 @@ function attachNavListeners() {
     edit.addEventListener('click', () => {
       if (finishedHoles.has(currentHole)) {
         finishedHoles.delete(currentHole);
-        isHoleInProgress = false;
         precomputeAllTotals();
         updateHole();
         logScreen('EDIT MODE');
