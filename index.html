@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-FIX6-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-FIX7-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -874,29 +874,38 @@ document.getElementById('nextHole')?.disabled = !canNext;
 // === RENDER COURSE SELECT ===
 function renderCourseSelect() {
   if (!els.courseSelect) return;
+  
   els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+  
   if (courses.length === 0) {
     els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
-    els.nextToPlayers.disabled = true;
+    document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
     return;
   }
+
   courses.forEach((c, i) => {
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = c.name;
     els.courseSelect.appendChild(opt);
   });
+
+  const nextBtn = document.getElementById('nextToPlayers');
+  if (!nextBtn) return;
+
   const saved = localStorage.getItem('bbb_currentCourse');
   const savedIdx = parseInt(saved);
+
   if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
     els.courseSelect.value = savedIdx;
     currentCourse = savedIdx;
-    els.nextToPlayers.disabled = false;
+    nextBtn.disabled = false;
   } else {
     currentCourse = null;
-    els.nextToPlayers.disabled = true;
+    nextBtn.disabled = true;
   }
 }
+
 
 // === DOM READY ===
 document.addEventListener('DOMContentLoaded', async () => {
