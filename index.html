@@ -906,6 +906,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // TRY TO RESUME SAVED ROUND FIRST
   const saved = await loadRoundLocal();
   if (saved && confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
+    await loadDataFromBackend();   // ← 
+    
     players = saved.players.map(p => ({
       ...p,
       scores: Array(18).fill(null).map(() => ({})),
