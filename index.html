@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-FIX3">
+  <meta id="cacheBuster" name="version" content="20251123-FIX4">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -1717,7 +1717,35 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
     };
 
     els.exportCSV.onclick = exportToCSV;
+    // ←←← ADD THIS BLOCK — FIXES NEXT/PREV FOREVER
+    const prevBtn = document.getElementById('prevHole');
+    const nextBtn = document.getElementById('nextHole');
+
+    if (prevBtn) {
+      prevBtn.replaceWith(prevBtn.cloneNode(true));
+      document.getElementById('prevHole').addEventListener('click', () => {
+        if (currentHole > 1) {
+          currentHole--;
+          updateHole();
+          updateCourseInfoBar();
+          logScreen(`PREV → HOLE ${currentHole}`);
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.replaceWith(nextBtn.cloneNode(true));
+      document.getElementById('nextHole').addEventListener('click', () => {
+        if (currentHole < HOLES) {
+          currentHole++;
+          updateHole();
+          updateCourseInfoBar();
+          logScreen(`NEXT → HOLE ${currentHole}`);
+        }
+      });
+    }
   }
+  
 
   function exportToCSV() {
     const course = courses[currentCourse];
