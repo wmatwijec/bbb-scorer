@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-14-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-15-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -759,7 +759,7 @@ async function loadDataFromBackend() {
     getWaltPhone();
 
     // Parse courses
-    courses = parseCSV(coursesCSV).map(c => {
+    let courses = parseCSV(coursesCSV).map(c => {
       const name = c.Name?.trim();
       const pars = [];
       for (let i = 1; i <= 18; i++) {
