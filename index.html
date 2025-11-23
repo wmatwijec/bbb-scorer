@@ -911,10 +911,12 @@ function renderCourseSelect() {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
 
+await loadDataFromBackend();   // ← 
+
   // TRY TO RESUME SAVED ROUND FIRST
   const saved = await loadRoundLocal();
   if (saved && confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
-    await loadDataFromBackend();   // ← 
+    
     
     players = saved.players.map(p => ({
       ...p,
