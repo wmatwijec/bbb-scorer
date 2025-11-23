@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-FIX11-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-12-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -954,7 +954,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 // Fresh start — show course picker
   if (saved) await clearRoundLocal();
-  renderCourseSelect();
+  
 
 // Prevent iOS from sleeping / killing the tab during a round
 let wakeLock = null;
