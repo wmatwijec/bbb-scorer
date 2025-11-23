@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-FIX9-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-FIX10-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -941,8 +941,6 @@ await loadDataFromBackend();   // ←
   }
 // Fresh start — show course picker
   if (saved) await clearRoundLocal();
-  document.getElementById('courseLoader')?.classList.add('hidden');
-  document.getElementById('coursePicker')?.classList.remove('hidden');
   renderCourseSelect();
 
 // Prevent iOS from sleeping / killing the tab during a round
