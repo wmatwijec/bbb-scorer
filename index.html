@@ -555,15 +555,8 @@ body {
 
 #courseSetup.hidden { height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
 
-
 </style>
 </head>
-
-
-
-
-
-
 
 <body>
 
@@ -640,9 +633,49 @@ body {
 
     
 
-const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+ 
+ // === INDEXEDDB PERSISTENCE — SURVIVES CRASHES & CLOSES ===
+const DB_NAME = 'bbb-golf';
+const STORE_NAME = 'round';
+let db = null;
 
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = e => reject(e);
+  });
+}
 
+async function saveRoundLocal(data) {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).put({ id: 'current', data, savedAt: Date.now() });
+  return tx.complete;
+}
+
+async function loadRoundLocal() {
+  if (!db) await openDB();
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get('current');
+    req.onsuccess = () => resolve(req.result?.data || null);
+  });
+}
+
+async function clearRoundLocal() {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).delete('current');
+  return tx.complete;
+}
 
 function getWaltPhone() {
   if (!roster || !Array.isArray(roster)) return;
@@ -879,8 +912,37 @@ function renderCourseSelect() {
 }
 
 // === DOM READY ===
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM ready — initializing app');
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('BBB Golf starting...');
+
+  // TRY TO RESUME SAVED ROUND FIRST
+  const saved = await loadRoundLocal();
+  if (saved && confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
+    players = saved.players.map(p => ({
+      ...p,
+      scores: Array(18).fill(null).map(() => ({})),
+      _cachedTotal: saved._cachedTotals?.[p.name] || 0
+    }));
+    Object.keys(saved.scores || {}).forEach(name => {
+      const player = players.find(p => p.name === name);
+      if (player) player.scores = saved.scores[name];
+    });
+
+    currentHole = saved.currentHole;
+    currentCourse = saved.currentCourse;
+    finishedHoles = new Set(saved.finishedHoles || []);
+    inRound = true;
+
+    hideAll();
+    els.game.classList.remove('hidden');
+    updateHole();
+    logScreen('RESUMED SAVED ROUND');
+    return;
+  }
+
+  // NO SAVED ROUND → NORMAL START
+  if (saved) await clearRoundLocal();
+  loadDataFromBackend();
 
 // Prevent iOS from sleeping / killing the tab during a round
 let wakeLock = null;
@@ -1007,13 +1069,37 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   }
 
   
-  function save() {
-    localStorage.setItem('bbb', JSON.stringify({ 
-      players: players.map(p => ({ ...p, _cachedTotal: undefined, _cachedHoleTotals: undefined })), 
-      currentHole, currentCourse,
-      finishedHoles: Array.from(finishedHoles), inRound
-    }));
-  }
+  async function saveRoundEverywhere() {
+  if (!inRound) return;
+
+  const roundData = {
+    matchId: `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    finishedHoles: Array.from(finishedHoles),
+    scores: players.reduce((acc, p, i) => {
+      acc[p.name] = p.scores;
+      return acc;
+    }, {}),
+    _cachedTotals: players.reduce((acc, p) => {
+      acc[p.name] = p._cachedTotal || 0;
+      return acc;
+    }, {})
+  };
+
+  // 1. Save locally (instant)
+  await saveRoundLocal(roundData).catch(() => {});
+
+  // 2. Save to cloud (fire-and-forget)
+  fetch('https://pwa-players-backend.onrender.com/save-round', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(roundData)
+  }).catch(() => {});
+}
 
   // ==== FLOW ====
  function hideAll() {
