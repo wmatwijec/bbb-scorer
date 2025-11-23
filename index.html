@@ -849,7 +849,7 @@ function updateNavButtons() {
   console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
   console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
   
-  const canPrev = currentHole > 1 && !isHoleInProgress;
+  const canPrev = currentHole > 1 
   const canNext = currentHole < HOLES && !isHoleInProgress;
   
   console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
