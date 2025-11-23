@@ -853,8 +853,8 @@ function updateNavButtons() {
 
   console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
   
-  els.prevHole.disabled = !canPrev;
-  els.nextHole.disabled = !canNext;
+  document.getElementById('prevHole')?.disabled = !canPrev;
+document.getElementById('nextHole')?.disabled = !canNext;
   
   console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
   
