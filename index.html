@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-12-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-14-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -921,7 +921,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Force UI update — iOS cannot ignore this
   const loader = document.getElementById('courseLoader');
   const picker = document.getElementById('coursePicker');
+  const error = document.getElementById('courseError');
+
   if (loader) loader.classList.add('hidden');
+  if (error) error.classList.add('hidden');
   if (picker) {
     picker.classList.remove('hidden');
     renderCourseSelect();
