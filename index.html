@@ -5,9 +5,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBB Golf</title>
-  <link rel="manifest" href="manifest.json?v=20251123-17-FINAL" />
+  <link rel="manifest" href="manifest.json?v=20251123-18-FINAL" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-17-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-18-FINAL">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -616,7 +619,7 @@ body {
     console.log('Inline script parsed successfully — functions loaded');
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
-    const VERSION = '20251123-VICTORY';
+    
 
     let roster = [];
     let players = [];
@@ -2167,9 +2170,7 @@ function attachNavListeners() {
 
   
 
-  <div id="versionWatermark" style="position:fixed;bottom:8px;left:8px;font-size:10px;color:#666;background:rgba(255,255,255,0.85);padding:2px 6px;border-radius:4px;z-index:100;pointer-events:none;opacity:0.8;">
-  v<script>document.write(VERSION)</script>
-</div>
+  
 
     <!-- MODAL JS (DOM READY) -->
   <script>
