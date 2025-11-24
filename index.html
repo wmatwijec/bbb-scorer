@@ -5,9 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBB Golf</title>
-  <link rel="manifest" href="manifest.json?v=20251123-18-FINAL" />
+  <link rel="manifest" href="manifest.json?v=20251123-19-FINAL" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-18-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-19-FINAL">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -754,7 +754,7 @@ async function loadDataFromBackend() {
     console.log('Raw courses CSV length:', coursesCSV.length);
 
     // Parse players
-let roster = parseCSV(playersCSV).map(p => ({
+  roster = parseCSV(playersCSV).map(p => ({
   name: p.Name?.trim(),
   phone: p.Phone?.trim(),
   email: p.Email?.trim()
@@ -763,7 +763,7 @@ let roster = parseCSV(playersCSV).map(p => ({
     getWaltPhone();
 
     // Parse courses
-    let courses = parseCSV(coursesCSV).map(c => {
+      courses = parseCSV(coursesCSV).map(c => {
       const name = c.Name?.trim();
       const pars = [];
       for (let i = 1; i <= 18; i++) {
