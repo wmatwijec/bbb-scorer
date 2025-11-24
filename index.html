@@ -5,9 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBB Golf</title>
-  <link rel="manifest" href="manifest.json?v=20251123-19-FINAL" />
+  <link rel="manifest" href="manifest.json?v=20251123-20-FINAL" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-19-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-20-FINAL">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -856,20 +856,15 @@ function updateNavButtons() {
 
   console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
   
-  document.getElementById('prevHole')?.disabled = !canPrev;
+document.getElementById('prevHole')?.disabled = !canPrev;
 document.getElementById('nextHole')?.disabled = !canNext;
   
-  console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
+ 
+ const prevBtn = document.getElementById('prevHole');
+const nextBtn = document.getElementById('nextHole');
+if (prevBtn) prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+if (nextBtn) nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1'; 
   
-  // Your existing visual feedback
-  [els.prevHole, els.nextHole].forEach(btn => {
-    if (btn.disabled) {
-      btn.style.opacity = '0.5';
-    } else {
-      btn.style.opacity = '1';
-      btn.style.cursor = 'pointer';
-    }
-  });
   
   console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
 }
