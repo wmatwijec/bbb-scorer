@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBB Golf</title>
-  <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest.json?v=20251123-17-FINAL" />
   <link rel="icon" href="icon.png" /> 
   <meta id="cacheBuster" name="version" content="20251123-17-FINAL">
 
@@ -613,6 +613,7 @@ body {
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
   <script>
     console.log('app-v23.js INLINED — LOADED 100% — 20251123-VICTORY');
+    console.log('Inline script parsed successfully — functions loaded');
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
     const VERSION = '20251123-VICTORY';
@@ -750,11 +751,11 @@ async function loadDataFromBackend() {
     console.log('Raw courses CSV length:', coursesCSV.length);
 
     // Parse players
-    roster = parseCSV(playersCSV).map(p => ({
-      name: p.Name?.trim(),
-      phone: p.Phone?.trim(),
-      email: p.Email?.trim()
-    })).filter(p => p.name);
+let roster = parseCSV(playersCSV).map(p => ({
+  name: p.Name?.trim(),
+  phone: p.Phone?.trim(),
+  email: p.Email?.trim()
+})).filter(p => p.name);
 
     getWaltPhone();
 
