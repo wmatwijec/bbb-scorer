@@ -7,7 +7,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251123-16-FINAL">
+  <meta id="cacheBuster" name="version" content="20251123-17-FINAL">
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -775,13 +775,11 @@ async function loadDataFromBackend() {
 
     console.log('%cBackend data loaded successfully!', 'color: gold; font-weight: bold');
 
-    // CRITICAL iOS repaint fix — this is what finally hides the spinner
-    setTimeout(() => {
-      loader.classList.add('hidden');
-      picker.classList.remove('hidden');
-      renderCourseSelect();
-      console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
-    }, 0);
+    // CRITICAL — show picker and render courses AFTER data is loaded
+loader.classList.add('hidden');
+picker.classList.remove('hidden');
+renderCourseSelect();
+console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
 
   } catch (err) {
     console.error('Backend load failed:', err);
