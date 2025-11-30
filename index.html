@@ -1050,12 +1050,15 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   // ==== FLOW ====
  function hideAll() {
   const screens = [
-    els.courseSetup,
-    els.playerSetup,
-    els.game,
-    els.summary
-    // roster, history, courseForm are gone — no longer referenced
+    document.getElementById('courseSetup'),
+    document.getElementById('playerSetup'),
+    document.getElementById('game'),
+    document.getElementById('summary')
   ];
+  screens.forEach(screen => {
+    if (screen) screen.classList.add('hidden');
+  });
+}
 
   screens.forEach(screen => {
     if (screen) screen.classList.add('hidden');
