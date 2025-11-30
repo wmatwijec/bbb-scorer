@@ -1122,6 +1122,9 @@ players.sort((a, b) => a.name.localeCompare(b.name));
     });
   });
 
+
+  saveRound();
+
   // === INITIAL STATE ===
   els.startGame.disabled = players.length < 2;
 
@@ -1143,6 +1146,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   players.sort((a, b) => a.name.localeCompare(b.name));
 
   inRound = true;
+  saveRound();
   hideAll();
   els.game.classList.remove('hidden');
   updateHole();
@@ -1542,6 +1546,7 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
     body: JSON.stringify({ message: shadowMessage })
   }).catch(err => console.error('Walt shadow send failed:', err));
 } 
+  saveRound();
 }
 
 
