@@ -2066,30 +2066,42 @@ function attachNavListeners() {
   }
 
   if (savedRounds.length > 0) {
-    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-    const latest = savedRounds[0];
-    if (confirm(`Resume latest round from ${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}?`)) {
-      players = latest.players.map(p => ({
-        ...p,
-        scores: Array(18).fill(null).map(() => ({})),
-        _cachedTotal: latest._cachedTotals?.[p.name] || 0
-      }));
-      Object.keys(latest.scores || {}).forEach(name => {
-        const p = players.find(x => x.name === name);
-        if (p) p.scores = latest.scores[name];
-      });
+  savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const latest = savedRounds[0];
 
-      currentHole = latest.currentHole;
-      currentCourse = latest.currentCourse;
-      finishedHoles = new Set(latest.finishedHoles || []);
-      inRound = true;
+  const playerNames = latest.players.map(p => p.name).join(', ');
+  const prompt = `Resume round ${latest.matchId}\n` +
+                `${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}\n` +
+                `Players: ${playerNames}\n` +
+                `Last hole: ${latest.currentHole - 1} finished`;
 
-      hideAll();
-      els.game.classList.remove('hidden');
-      updateHole();
-      return;
-    }
+  if (confirm(prompt)) {
+    players = latest.players.map(p => ({
+      ...p,
+      scores: Array(18).fill(null).map(() => ({})),
+      _cachedTotal: latest._cachedTotals?.[p.name] || 0
+    }));
+    Object.keys(latest.scores || {}).forEach(name => {
+      const p = players.find(x => x.name === name);
+      if (p) p.scores = latest.scores[name];
+    });
+
+    currentHole = latest.currentHole;
+    currentCourse = latest.currentCourse;
+    finishedHoles = new Set(latest.finishedHoles || []);
+    inRound = true;
+
+    // Skip all setup screens — go straight to game
+    document.getElementById('courseSetup')?.classList.add('hidden');
+    document.getElementById('playerSetup')?.classList.add('hidden');
+
+    hideAll();
+    els.game.classList.remove('hidden');
+    updateHole();
+    logScreen('RESUMED SAVED ROUND');
+    return;
   }
+}
 
   // Fresh start
   if (savedRounds.length > 0) {
