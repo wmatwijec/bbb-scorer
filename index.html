@@ -2094,13 +2094,7 @@ function attachNavListeners() {
   }
 }
 
-  // Fresh start
-  if (savedRounds.length > 0) {
-    if (confirm('Clear old rounds?')) {
-      savedRounds.forEach(r => localStorage.removeItem(r.key));
-    }
-  }
-});
+
   </script>
  </body>
 </html>
