@@ -8,7 +8,7 @@
   <title>BBB Golf</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.png" /> 
-  <meta id="cacheBuster" name="version" content="20251122-FORCE-LOAD" />
+  <meta id="cacheBuster" name="version" content="20251123-FORCE" />
 
   <style>
     /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
@@ -639,14 +639,16 @@ body {
     let els = {};
     let waltShadowPhone = null;
 
-    // === PERSISTENCE V1 ===
-let currentMatchId = localStorage.getItem('bbb_matchId') || 
-  `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
-localStorage.setItem('bbb_matchId', currentMatchId);
 
-    
 
-const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+    // === PERSISTENCE V2 — MULTIPLE ROUNDS + UNIQUE MATCH ID ===
+    let currentMatchId = localStorage.getItem('bbb_currentMatchId');
+    if (!currentMatchId) {
+      currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
+      localStorage.setItem('bbb_currentMatchId', currentMatchId);
+    }    
+
+    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
 
 
@@ -805,12 +807,12 @@ function parseCSV(text) {
 }
 
 async function saveRound() {
-  if (!inRound !== true) return;
+  if (!inRound) return;
 
-  const data = {
+  const roundData = {
     matchId: currentMatchId,
     date: new Date().toISOString(),
-    courseName: currentCourse !== null ? courses[currentCourse]?.name || null : null,
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
     players: players.map(p => ({ name: p.name, phone: p.phone })),
     currentHole,
     currentCourse,
@@ -819,14 +821,14 @@ async function saveRound() {
     _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
   };
 
-  // Local save (instant)
-  localStorage.setItem('bbb_round', JSON.stringify(data));
+  // Save locally with unique ID
+  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
 
   // Cloud backup (fire-and-forget)
   fetch('https://pwa-players-backend.onrender.com/save-round', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(roundData)
   }).catch(() => {});
 }
 
@@ -2046,46 +2048,55 @@ function attachNavListeners() {
 
     <!-- MODAL JS (DOM READY) -->
   <script>
-   document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
 
-  // 1. ALWAYS load courses first
   await loadDataFromBackend();
 
-  // 2. NOW try to resume (courses array is ready)
-  const saved = localStorage.getItem('bbb_round');
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      if (data && data.currentCourse !== null && confirm(`Resume round from ${new Date(data.date).toLocaleDateString()} at ${data.courseName || 'Unknown Course'}?`)) {
-        players = data.players.map(p => ({
-          ...p,
-          scores: Array(18).fill(null).map(() => ({})),
-          _cachedTotal: data._cachedTotals?.[p.name] || 0
-        }));
-        Object.keys(data.scores || {}).forEach(name => {
-          const p = players.find(x => x.name === name);
-          if (p) p.scores = data.scores[name];
-        });
+  // Find all saved rounds
+  const savedRounds = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bbb_round_BBB-')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        savedRounds.push({ ...data, key });
+      } catch (e) {}
+    }
+  }
 
-        currentHole = data.currentHole;
-        currentCourse = data.currentCourse;
-        finishedHoles = new Set(data.finishedHoles || []);
-        inRound = true;
+  if (savedRounds.length > 0) {
+    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const latest = savedRounds[0];
+    if (confirm(`Resume latest round from ${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}?`)) {
+      players = latest.players.map(p => ({
+        ...p,
+        scores: Array(18).fill(null).map(() => ({})),
+        _cachedTotal: latest._cachedTotals?.[p.name] || 0
+      }));
+      Object.keys(latest.scores || {}).forEach(name => {
+        const p = players.find(x => x.name === name);
+        if (p) p.scores = latest.scores[name];
+      });
 
-        hideAll();
-        els.game.classList.remove('hidden');
-        updateHole();
-        logScreen('RESUMED SAVED ROUND');
-        return;
-      }
-    } catch (e) {
-      console.error('Failed to parse saved round:', e);
+      currentHole = latest.currentHole;
+      currentCourse = latest.currentCourse;
+      finishedHoles = new Set(latest.finishedHoles || []);
+      inRound = true;
+
+      hideAll();
+      els.game.classList.remove('hidden');
+      updateHole();
+      return;
     }
   }
 
   // Fresh start
-  if (saved) localStorage.removeItem('bbb_round');
+  if (savedRounds.length > 0) {
+    if (confirm('Clear old rounds?')) {
+      savedRounds.forEach(r => localStorage.removeItem(r.key));
+    }
+  }
 });
   </script>
  </body>
