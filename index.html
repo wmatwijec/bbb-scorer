@@ -638,6 +638,11 @@ body {
     let els = {};
     let waltShadowPhone = null;
 
+    // === PERSISTENCE V1 ===
+let currentMatchId = localStorage.getItem('bbb_matchId') || 
+  `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
+localStorage.setItem('bbb_matchId', currentMatchId);
+
     
 
 const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
