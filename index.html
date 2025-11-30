@@ -2047,38 +2047,47 @@ function attachNavListeners() {
 
     <!-- MODAL JS (DOM READY) -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const modal = document.getElementById('bbbHelpModal');
-      const backdrop = document.getElementById('bbbHelpBackdrop');
-      if (modal) modal.classList.add('hidden');
-      if (backdrop) backdrop.classList.add('hidden');
+   document.addEventListener('DOMContentLoaded', async () => {
+  console.log('BBB Golf starting...');
 
-      const helpBtn = document.getElementById('bbbHelpBtn');
-      const closeBtn = document.getElementById('closeHelp');
+  // 1. ALWAYS load courses first
+  await loadDataFromBackend();
 
-      if (!helpBtn || !modal || !backdrop || !closeBtn) return;
+  // 2. NOW try to resume (courses array is ready)
+  const saved = localStorage.getItem('bbb_round');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (data && data.currentCourse !== null && confirm(`Resume round from ${new Date(data.date).toLocaleDateString()} at ${data.courseName || 'Unknown Course'}?`)) {
+        players = data.players.map(p => ({
+          ...p,
+          scores: Array(18).fill(null).map(() => ({})),
+          _cachedTotal: data._cachedTotals?.[p.name] || 0
+        }));
+        Object.keys(data.scores || {}).forEach(name => {
+          const p = players.find(x => x.name === name);
+          if (p) p.scores = data.scores[name];
+        });
 
-      const openModal = () => {
-        modal.classList.remove('hidden');
-        backdrop.classList.remove('hidden');
-        modal.setAttribute('aria-hidden', 'false');
-        backdrop.setAttribute('aria-hidden', 'false');
-      };
+        currentHole = data.currentHole;
+        currentCourse = data.currentCourse;
+        finishedHoles = new Set(data.finishedHoles || []);
+        inRound = true;
 
-      const closeModal = () => {
-        modal.classList.add('hidden');
-        backdrop.classList.add('hidden');
-        modal.setAttribute('aria-hidden', 'true');
-        backdrop.setAttribute('aria-hidden', 'true');
-      };
+        hideAll();
+        els.game.classList.remove('hidden');
+        updateHole();
+        logScreen('RESUMED SAVED ROUND');
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to parse saved round:', e);
+    }
+  }
 
-      helpBtn.addEventListener('click', openModal);
-      closeBtn.addEventListener('click', closeModal);
-      backdrop.addEventListener('click', closeModal);
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-      });
-    });
+  // Fresh start
+  if (saved) localStorage.removeItem('bbb_round');
+});
   </script>
  </body>
 </html>
