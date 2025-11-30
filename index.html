@@ -1060,23 +1060,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   });
 }
 
-  screens.forEach(screen => {
-    if (screen) screen.classList.add('hidden');
-  });
-}
 
-  els.courseSelect.addEventListener('change', () => {
-    const val = els.courseSelect.value;
-    if (val === '') {
-      currentCourse = null;
-      els.nextToPlayers.disabled = true;
-    } else {
-      currentCourse = parseInt(val);
-      localStorage.setItem('bbb_currentCourse', currentCourse);
-      els.nextToPlayers.disabled = false;
-    }
-    save();
-  });
 
 function renderPlayerSelect() {
   console.log('%cDEBUG: renderPlayerSelect() called', 'color: orange; font-weight: bold');
