@@ -1105,13 +1105,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   logScreen('GAME STARTED');
 };
 }
-  els.nextToPlayers.addEventListener('click', () => {
-    if (currentCourse === null) return alert('Select a course');
-    hideAll();
-    els.playerSetup.classList.remove('hidden');
-    renderPlayerSelect();
-    logScreen('PLAYER SETUP');
-  });
+  
 
   
 
@@ -2042,7 +2036,14 @@ function attachNavListeners() {
   simResult: document.getElementById('simResult')
 };
 
-
+ // === LOAD COURSE BUTTON LISTENER — MOVED HERE ===
+  document.getElementById('nextToPlayers')?.addEventListener('click', () => {
+    if (currentCourse === null) return alert('Select a course');
+    hideAll();
+    els.playerSetup.classList.remove('hidden');
+    renderPlayerSelect();
+    logScreen('PLAYER SETUP');
+  });
 
   // Find all saved rounds
   const savedRounds = [];
