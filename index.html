@@ -803,7 +803,31 @@ function parseCSV(text) {
   });
 }
 
+async function saveRound() {
+  if (!inRound !== true) return;
 
+  const data = {
+    matchId: currentMatchId,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || null : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    finishedHoles: Array.from(finishedHoles),
+    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
+  };
+
+  // Local save (instant)
+  localStorage.setItem('bbb_round', JSON.stringify(data));
+
+  // Cloud backup (fire-and-forget)
+  fetch('https://pwa-players-backend.onrender.com/save-round', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).catch(() => {});
+}
 
 function sortPlayersAlphabetically() {
   players.sort((a, b) => a.name.localeCompare(b.name));
