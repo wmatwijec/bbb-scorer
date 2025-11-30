@@ -1914,7 +1914,7 @@ function attachNavListeners() {
       <div>BBB COMP – Complete the round</div>
       <div>EXIT – Quit current round</div>
       <div>DARK – Toggle dark mode</div>
-      <div>HELP – You are here :)</div>
+      <div>HELP – You are here :</div>
 
       <!-- SCORE TABLE -->
       <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
@@ -1980,11 +1980,7 @@ function attachNavListeners() {
   }
 </script>  -->
 
-  
-
- 
-
-    <!-- MODAL JS (DOM READY) -->
+   <!-- MODAL JS (DOM READY) -->
   <script>
   document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
@@ -2057,6 +2053,8 @@ function attachNavListeners() {
     }
   }
 
+  
+  // Resume Block
   if (savedRounds.length > 0) {
   savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
   const latest = savedRounds[0];
@@ -2088,7 +2086,7 @@ function attachNavListeners() {
     document.getElementById('playerSetup')?.classList.add('hidden');
 
     hideAll();
-    els.game.classList.remove('hidden');
+   document.getElementById('game').classList.remove('hidden');
     updateHole();
     logScreen('RESUMED SAVED ROUND');
     return;
@@ -2097,5 +2095,9 @@ function attachNavListeners() {
 
   });
   </script>
+
+ 
+
+ 
  </body>
 </html>
