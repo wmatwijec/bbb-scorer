@@ -937,50 +937,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
 
 
 
-  // === BUILD ELS CACHE ===
-  els = {
-  courseSetup: document.getElementById('courseSetup'),
-  playerSetup: document.getElementById('playerSetup'),
-  game: document.getElementById('game'),
-  summary: document.getElementById('summary'),
-
-  darkModeToggle: document.getElementById('darkModeToggle'),
-  backToSetup: document.querySelectorAll('#backToSetup'),
-
-  courseSelect: document.getElementById('courseSelect'),
-  nextToPlayers: document.getElementById('nextToPlayers'),
-  playerSelect: document.getElementById('playerSelect'),
-  startGame: document.getElementById('startGame'),
-
-  holeDisplay: document.getElementById('holeDisplay'),
-  prevHole: document.getElementById('prevHole'),
-  nextHole: document.getElementById('nextHole'),
-  finishHole: document.getElementById('finishHole'),
-  editHole: document.getElementById('editHole'),
-  firstOnHeader: document.getElementById('firstOnHeader'),
-  scoreTable: document.getElementById('scoreTable'),
-  holeSummary: document.querySelector('.holeSummary'),
-  roundSummary: document.getElementById('roundSummary'),
-
-  sendSMS: document.getElementById('sendSMS'),
-  exportCSV: document.getElementById('exportCSV'),
-  completeRound: document.getElementById('completeRound'),
-  exitRound: document.getElementById('exitRound'),
- 
-  leaderboard: document.getElementById('leaderboard'),
-  restart: document.getElementById('restart'),
-
-  courseInfoBar: document.getElementById('courseInfoBar'),
-  infoCourseName: document.getElementById('infoCourseName'),
-  infoCurrentHole: document.getElementById('infoCurrentHole'),
-  infoPar: document.getElementById('infoPar'),
-
-  // Debug (optional — you can keep these if you ever use F2 or Ctrl+Shift+D)
-  debugPanel: document.getElementById('debugPanel'),
-  debugOutput: document.getElementById('debugOutput'),
-  closeDebug: document.getElementById('closeDebug'),
-  simResult: document.getElementById('simResult')
-};
+  
 
 
   loadDataFromBackend();
@@ -2039,6 +1996,53 @@ function attachNavListeners() {
   console.log('BBB Golf starting...');
 
   await loadDataFromBackend();
+
+  // === BUILD ELS CACHE ===
+  els = {
+  courseSetup: document.getElementById('courseSetup'),
+  playerSetup: document.getElementById('playerSetup'),
+  game: document.getElementById('game'),
+  summary: document.getElementById('summary'),
+
+  darkModeToggle: document.getElementById('darkModeToggle'),
+  backToSetup: document.querySelectorAll('#backToSetup'),
+
+  courseSelect: document.getElementById('courseSelect'),
+  nextToPlayers: document.getElementById('nextToPlayers'),
+  playerSelect: document.getElementById('playerSelect'),
+  startGame: document.getElementById('startGame'),
+
+  holeDisplay: document.getElementById('holeDisplay'),
+  prevHole: document.getElementById('prevHole'),
+  nextHole: document.getElementById('nextHole'),
+  finishHole: document.getElementById('finishHole'),
+  editHole: document.getElementById('editHole'),
+  firstOnHeader: document.getElementById('firstOnHeader'),
+  scoreTable: document.getElementById('scoreTable'),
+  holeSummary: document.querySelector('.holeSummary'),
+  roundSummary: document.getElementById('roundSummary'),
+
+  sendSMS: document.getElementById('sendSMS'),
+  exportCSV: document.getElementById('exportCSV'),
+  completeRound: document.getElementById('completeRound'),
+  exitRound: document.getElementById('exitRound'),
+ 
+  leaderboard: document.getElementById('leaderboard'),
+  restart: document.getElementById('restart'),
+
+  courseInfoBar: document.getElementById('courseInfoBar'),
+  infoCourseName: document.getElementById('infoCourseName'),
+  infoCurrentHole: document.getElementById('infoCurrentHole'),
+  infoPar: document.getElementById('infoPar'),
+
+  // Debug (optional — you can keep these if you ever use F2 or Ctrl+Shift+D)
+  debugPanel: document.getElementById('debugPanel'),
+  debugOutput: document.getElementById('debugOutput'),
+  closeDebug: document.getElementById('closeDebug'),
+  simResult: document.getElementById('simResult')
+};
+
+
 
   // Find all saved rounds
   const savedRounds = [];
