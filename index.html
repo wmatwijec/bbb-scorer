@@ -1846,16 +1846,27 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
   showSummary();
 
   // 2. Auto-email the CSV to you (Walt)
-  emailRoundToWalt();
+  // emailRoundToWalt();
 
   // 3. Optional: give them a second to read it, then offer New Round
   setTimeout(() => {
-    if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
-      resetRound();
+  if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
+    resetRound();
+    hideAll();
+    els.courseSetup.classList.remove('hidden');
+
+    // RE-ATTACH THE "Load Course →" BUTTON — THIS FIXES THE LOOP
+    els.nextToPlayers?.addEventListener('click', () => {
+      if (currentCourse === null || currentCourse === undefined) {
+        return alert('Please select a course first');
+      }
       hideAll();
-      els.courseSetup.classList.remove('hidden');
-    }
-  }, 500);
+      els.playerSetup.classList.remove('hidden');
+      renderPlayerSelect();
+      logScreen('PLAYER SETUP');
+    });
+  }
+}, 500);
 });
 
   els.exitRound.addEventListener('click', () => {
