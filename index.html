@@ -1014,24 +1014,6 @@ document.addEventListener('DOMContentLoaded',async () => {
 
 
 
-// ==============================================================
-  // 2. LOAD DATA + SHOW COURSE PICKER
-  // ==============================================================
-  await loadDataFromBackend();                     // ← really waits now
-
-  hideAll();
-  els.courseSetup.classList.remove('hidden');      // ← fresh load = course picker
-
-  // ==============================================================
-  // 3. NEXT → PLAYERS BUTTON (now works perfectly)
-  // ==============================================================
-  els.nextToPlayers?.addEventListener('click', () => {
-    if (currentCourse === null) return alert('Select a course first');
-    hideAll();
-    els.playerSetup.classList.remove('hidden');
-    renderPlayerSelect();
-    logScreen('PLAYER SETUP');
-  });
 
  
 
@@ -1855,7 +1837,7 @@ function attachNavListeners() {
     });
   }
 
-  // Edit
+   // Edit
   const edit = document.getElementById('editHole');
   if (edit) {
     edit.onclick = null;
@@ -1868,11 +1850,13 @@ function attachNavListeners() {
         logScreen('EDIT MODE');
       }
     });
-  }
+    }
 }
 
+// This closes the DOMContentLoaded callback
+});
 
- 
+
 
 </script>
 
