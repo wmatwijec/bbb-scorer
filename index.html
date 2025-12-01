@@ -810,6 +810,7 @@ async function saveRound() {
     players: players.map(p => ({ name: p.name, phone: p.phone })),
     currentHole,
     currentCourse,
+    currentCourseIndex: currentCourse,
     finishedHoles: Array.from(finishedHoles),
     scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
     _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
@@ -1224,7 +1225,8 @@ const savedRounds = [];
       });
 
       currentHole = selected.currentHole;
-      currentCourse = selected.currentCourse;
+      currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
+      if (currentCourse === -1) currentCourse = 0; // fallback
       finishedHoles = new Set(selected.finishedHoles || []);
       inRound = true;
 
