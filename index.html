@@ -1549,7 +1549,12 @@ els.startGame.onclick = () => {
   if (debugMode) renderDebugCarryTable();
 
   // Force repaint
-  document.getElementById('game')?.offsetHeight;
+  const gameEl = document.getElementById('game');
+  if (gameEl) {
+    gameEl.style.display = 'none';
+    gameEl.offsetHeight; // trigger reflow
+    gameEl.style.display = '';
+  }
 }
 
  
