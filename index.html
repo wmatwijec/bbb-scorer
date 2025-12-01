@@ -1493,6 +1493,11 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   }
 
  function updateHole() {
+  console.log('updateHole() called — currentHole:', currentHole);
+  console.log('courses[currentCourse]:', courses[currentCourse]);
+  console.log('finishedHoles:', Array.from(finishedHoles));
+
+
   if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
   precomputeAllTotals();  // always fresh totals
