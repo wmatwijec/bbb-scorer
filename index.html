@@ -1078,50 +1078,50 @@ function setupGameButtons() {
 
 
 function attachNavListeners() {
-  // FULL iOS-PROOF RESET — this is the nuclear option that works 100%
-  const ids = ['prevHole', 'nextHole', 'editHole', 'finishHole'];
-  ids.forEach(id => {
-    const oldBtn = document.getElementById(id);
-    if (!oldBtn) return;
-
-    // Clone + replace = forces iOS to forget everything and treat as brand new
-    const newBtn = oldBtn.cloneNode(true);
-    newBtn.id = id; // keep ID
-    newBtn.style.cursor = 'pointer';
-    newBtn.style.touchAction = 'manipulation'; // critical for iOS
-    oldBtn.replaceWith(newBtn);
+  // FULL iOS/PC-PROOF RESET
+  ['prevHole', 'nextHole', 'editHole', 'finishHole'].forEach(id => {
+    const old = document.getElementById(id);
+    if (old) {
+      const clone = old.cloneNode(true);
+      clone.id = id;
+      clone.style.cursor = 'pointer';
+      clone.style.touchAction = 'manipulation';
+      old.replaceWith(clone);
+    }
   });
 
-  // NOW RE-ATTACH CLEAN LISTENERS
+  // PREV
   document.getElementById('prevHole')?.addEventListener('click', () => {
     if (currentHole > 1 && !isHoleInProgress) {
       currentHole--;
-      updateHole();
+      updateHole();           // ← THIS WAS MISSING
       updateCourseInfoBar();
       logScreen(`PREV → HOLE ${currentHole}`);
     }
   });
 
+  // NEXT
   document.getElementById('nextHole')?.addEventListener('click', () => {
     if (currentHole < HOLES && !isHoleInProgress) {
       currentHole++;
-      updateHole();
+      updateHole();           // ← THIS WAS MISSING
       updateCourseInfoBar();
       logScreen(`NEXT → HOLE ${currentHole}`);
     }
   });
 
+  // EDIT
   document.getElementById('editHole')?.addEventListener('click', () => {
     if (finishedHoles.has(currentHole)) {
       finishedHoles.delete(currentHole);
       isHoleInProgress = false;
       precomputeAllTotals();
-      updateHole();
+      updateHole();           // ← THIS WAS MISSING
       logScreen('EDIT MODE');
     }
   });
 
-  // Also re-attach Finish Hole (you already have this function)
+  // FINISH HOLE
   document.getElementById('finishHole')?.addEventListener('click', finishCurrentHole);
 }
 
