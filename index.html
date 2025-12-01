@@ -945,7 +945,109 @@ document.addEventListener('DOMContentLoaded',async () => {
 
 
 
+function setupGameButtons() {
+  if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
+  // CLEAR ANY OLD LISTENERS — prevents double prompts
+  const clearButtons = [els.sendSMS, els.completeRound, els.exitRound, els.darkModeToggle, els.bbbHelpBtn];
+  clearButtons.forEach(btn => {
+    if (btn) btn.onclick = null;
+  });
+
+  // SMS BUTTON
+  els.sendSMS.onclick = () => {
+    const holeIdx = currentHole - 1;
+    const par = courses[currentCourse].pars[holeIdx];
+    const isPar3 = par === 3;
+    let message = `BBB - H${currentHole} (P${par})\n\n`;
+
+    players.forEach(p => {
+      const s = p.scores[holeIdx] || {};
+      const pts = p._cachedHoleTotals?.[holeIdx] || 0;
+      const notes = [];
+      if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
+      if (s.closest) notes.push('CL');
+      if (s.putt) notes.push('P');
+      message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+    });
+
+    const carryOut = getCarryInForHole(currentHole + 1);
+    const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
+    message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
+
+    const standings = players
+      .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+      .sort((a, b) => b.total - a.total);
+
+    standings.forEach((p, i) => {
+      message += `${i + 1}. ${p.name}: ${p.total}\n`;
+    });
+
+    // Walt shadow text
+    if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+      const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+      setTimeout(() => {
+        window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+      }, 1200);
+    }
+
+    const phones = players.map(p => p.phone).filter(Boolean).join(',');
+    if (!phones) return alert('Add phone numbers');
+    window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
+  };
+
+  // BBB COMP (FINISH ROUND)
+  els.completeRound.onclick = () => {
+    if (finishedHoles.size !== HOLES) {
+      alert(`Finish all ${HOLES} holes first.`);
+      return;
+    }
+    precomputeAllTotals();
+    showSummary();
+    setTimeout(() => {
+      if (confirm('Round complete!\n\nStart a new round?')) {
+        resetRound();
+        hideAll();
+        els.courseSetup.classList.remove('hidden');
+      }
+    }, 500);
+  };
+
+  // EXIT ROUND — ONE PROMPT ONLY
+  els.exitRound.onclick = () => {
+    if (confirm('Exit round and lose all progress?')) {
+      resetRound();
+      location.reload();
+    }
+  };
+
+  // DARK MODE TOGGLE
+  if (els.darkModeToggle) {
+    els.darkModeToggle.onclick = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      localStorage.setItem('bbb_dark', !isDark);
+    };
+  }
+
+  // HELP BUTTON — OPEN MODAL
+  if (els.bbbHelpBtn) {
+    els.bbbHelpBtn.onclick = () => {
+      document.getElementById('bbbHelpModal')?.classList.remove('hidden');
+      document.getElementById('bbbHelpBackdrop')?.classList.remove('hidden');
+    };
+  }
+
+  // CLOSE HELP MODAL — X button + backdrop click
+  const closeHelp = () => {
+    document.getElementById('bbbHelpModal')?.classList.add('hidden');
+    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
+  };
+
+  document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
+  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
+}
+  
 
 
 function attachNavListeners() {
@@ -1735,108 +1837,6 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
     logScreen('SIMULATION COMPLETE');
   }
 
-  function setupGameButtons() {
-  if (!inRound || currentCourse === null || !courses[currentCourse]) return;
-
-  // CLEAR ANY OLD LISTENERS — prevents double prompts
-  const clearButtons = [els.sendSMS, els.completeRound, els.exitRound, els.darkModeToggle, els.bbbHelpBtn];
-  clearButtons.forEach(btn => {
-    if (btn) btn.onclick = null;
-  });
-
-  // SMS BUTTON
-  els.sendSMS.onclick = () => {
-    const holeIdx = currentHole - 1;
-    const par = courses[currentCourse].pars[holeIdx];
-    const isPar3 = par === 3;
-    let message = `BBB - H${currentHole} (P${par})\n\n`;
-
-    players.forEach(p => {
-      const s = p.scores[holeIdx] || {};
-      const pts = p._cachedHoleTotals?.[holeIdx] || 0;
-      const notes = [];
-      if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
-      if (s.closest) notes.push('CL');
-      if (s.putt) notes.push('P');
-      message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
-    });
-
-    const carryOut = getCarryInForHole(currentHole + 1);
-    const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
-    message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
-
-    const standings = players
-      .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
-      .sort((a, b) => b.total - a.total);
-
-    standings.forEach((p, i) => {
-      message += `${i + 1}. ${p.name}: ${p.total}\n`;
-    });
-
-    // Walt shadow text
-    if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
-      const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
-      setTimeout(() => {
-        window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-      }, 1200);
-    }
-
-    const phones = players.map(p => p.phone).filter(Boolean).join(',');
-    if (!phones) return alert('Add phone numbers');
-    window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
-  };
-
-  // BBB COMP (FINISH ROUND)
-  els.completeRound.onclick = () => {
-    if (finishedHoles.size !== HOLES) {
-      alert(`Finish all ${HOLES} holes first.`);
-      return;
-    }
-    precomputeAllTotals();
-    showSummary();
-    setTimeout(() => {
-      if (confirm('Round complete!\n\nStart a new round?')) {
-        resetRound();
-        hideAll();
-        els.courseSetup.classList.remove('hidden');
-      }
-    }, 500);
-  };
-
-  // EXIT ROUND — ONE PROMPT ONLY
-  els.exitRound.onclick = () => {
-    if (confirm('Exit round and lose all progress?')) {
-      resetRound();
-      location.reload();
-    }
-  };
-
-  // DARK MODE TOGGLE
-  if (els.darkModeToggle) {
-    els.darkModeToggle.onclick = () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      localStorage.setItem('bbb_dark', !isDark);
-    };
-  }
-
-  // HELP BUTTON — OPEN MODAL
-  if (els.bbbHelpBtn) {
-    els.bbbHelpBtn.onclick = () => {
-      document.getElementById('bbbHelpModal')?.classList.remove('hidden');
-      document.getElementById('bbbHelpBackdrop')?.classList.remove('hidden');
-    };
-  }
-
-  // CLOSE HELP MODAL — X button + backdrop click
-  const closeHelp = () => {
-    document.getElementById('bbbHelpModal')?.classList.add('hidden');
-    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
-  };
-
-  document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
-  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
-}
   
 
   function showSummary() {
