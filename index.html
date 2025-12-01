@@ -954,8 +954,10 @@ document.addEventListener('DOMContentLoaded',async () => {
   // ==============================================================
   // 3. NEXT → PLAYERS BUTTON (now works perfectly)
   // ==============================================================
-  els.nextToPlayers?.addEventListener('click', () => {
-    if (currentCourse === null) return alert('Select a course first');
+   els.nextToPlayers?.addEventListener('click', () => {
+    if (currentCourse === null || currentCourse === undefined) {
+      return alert('Please select a course first');
+    }
     hideAll();
     els.playerSetup.classList.remove('hidden');
     renderPlayerSelect();
@@ -1869,13 +1871,6 @@ function attachNavListeners() {
   }
 }
 
-  els.backToSetup.forEach(btn => {
-    btn.addEventListener('click', () => {
-      hideAll();
-      logScreen('BACK TO SETUP');
-    });
-  });
-});
 
  
 
