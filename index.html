@@ -850,32 +850,7 @@ function unlockNavigation() {
   if ('ontouchstart' in window) setTimeout(updateNavButtons, 0);
 }
 
-function updateNavButtons() {
-  console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
-  console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
-  
-  const canPrev = currentHole > 1 && !isHoleInProgress;
-  const canNext = currentHole < HOLES && !isHoleInProgress;
-  
-  console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
-  
-  els.prevHole.disabled = !canPrev;
-  els.nextHole.disabled = !canNext;
-  
-  console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
-  
-  // Your existing visual feedback
-  [els.prevHole, els.nextHole].forEach(btn => {
-    if (btn.disabled) {
-      btn.style.opacity = '0.5';
-    } else {
-      btn.style.opacity = '1';
-      btn.style.cursor = 'pointer';
-    }
-  });
-  
-  console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
-}
+
 
 // === RENDER COURSE SELECT ===
 function renderCourseSelect() {
@@ -942,8 +917,33 @@ document.addEventListener('DOMContentLoaded',async () => {
     simResult: document.getElementById('simResult')
   };
 
-
-  // DEBUG BLOCK
+function updateNavButtons() {
+  console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
+  console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
+  
+  const canPrev = currentHole > 1 && !isHoleInProgress;
+  const canNext = currentHole < HOLES && !isHoleInProgress;
+  
+  console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
+  
+  els.prevHole.disabled = !canPrev;
+  els.nextHole.disabled = !canNext;
+  
+  console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
+  
+  // Your existing visual feedback
+  [els.prevHole, els.nextHole].forEach(btn => {
+    if (btn.disabled) {
+      btn.style.opacity = '0.5';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+    }
+  });
+  
+  console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
+}
+  // DEBUG B
 
   let debugMode = false;
   document.addEventListener('keydown', (e) => {
