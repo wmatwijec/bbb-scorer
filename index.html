@@ -1735,10 +1735,16 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
     logScreen('SIMULATION COMPLETE');
   }
 
-function setupGameButtons() {
+  function setupGameButtons() {
   if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-  // SMS — keep exactly as you have it
+  // CLEAR ANY OLD LISTENERS — prevents double prompts
+  const clearButtons = [els.sendSMS, els.completeRound, els.exitRound, els.darkModeToggle, els.bbbHelpBtn];
+  clearButtons.forEach(btn => {
+    if (btn) btn.onclick = null;
+  });
+
+  // SMS BUTTON
   els.sendSMS.onclick = () => {
     const holeIdx = currentHole - 1;
     const par = courses[currentCourse].pars[holeIdx];
@@ -1767,6 +1773,7 @@ function setupGameButtons() {
       message += `${i + 1}. ${p.name}: ${p.total}\n`;
     });
 
+    // Walt shadow text
     if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
       const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
       setTimeout(() => {
@@ -1779,7 +1786,7 @@ function setupGameButtons() {
     window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
   };
 
-  // BBB COMP
+  // BBB COMP (FINISH ROUND)
   els.completeRound.onclick = () => {
     if (finishedHoles.size !== HOLES) {
       alert(`Finish all ${HOLES} holes first.`);
@@ -1796,7 +1803,7 @@ function setupGameButtons() {
     }, 500);
   };
 
-  // EXIT — ONE CLICK ONLY
+  // EXIT ROUND — ONE PROMPT ONLY
   els.exitRound.onclick = () => {
     if (confirm('Exit round and lose all progress?')) {
       resetRound();
@@ -1804,7 +1811,7 @@ function setupGameButtons() {
     }
   };
 
-
+  // DARK MODE TOGGLE
   if (els.darkModeToggle) {
     els.darkModeToggle.onclick = () => {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1813,7 +1820,7 @@ function setupGameButtons() {
     };
   }
 
-  // HELP + BACKDROP + CLOSE BUTTON
+  // HELP BUTTON — OPEN MODAL
   if (els.bbbHelpBtn) {
     els.bbbHelpBtn.onclick = () => {
       document.getElementById('bbbHelpModal')?.classList.remove('hidden');
@@ -1821,19 +1828,16 @@ function setupGameButtons() {
     };
   }
 
-  // Close Help Modal (X button and backdrop click)
-  document.getElementById('closeHelp')?.addEventListener('click', () => {
+  // CLOSE HELP MODAL — X button + backdrop click
+  const closeHelp = () => {
     document.getElementById('bbbHelpModal')?.classList.add('hidden');
     document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
-  });
+  };
 
-  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', () => {
-    document.getElementById('bbbHelpModal')?.classList.add('hidden');
-    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
-  });
+  document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
+  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
 }
-
-
+  
 
   function showSummary() {
     hideAll();
