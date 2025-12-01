@@ -908,6 +908,143 @@ function renderCourseSelect() {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready — initializing app');
 
+ els = {
+    courseSetup: document.getElementById('courseSetup'),
+    playerSetup: document.getElementById('playerSetup'),
+    game: document.getElementById('game'),
+    summary: document.getElementById('summary'),
+    darkModeToggle: document.getElementById('darkModeToggle'),
+    courseSelect: document.getElementById('courseSelect'),
+    nextToPlayers: document.getElementById('nextToPlayers'),
+    playerSelect: document.getElementById('playerSelect'),
+    startGame: document.getElementById('startGame'),
+    holeDisplay: document.getElementById('holeDisplay'),
+    prevHole: document.getElementById('prevHole'),
+    nextHole: document.getElementById('nextHole'),
+    finishHole: document.getElementById('finishHole'),
+    editHole: document.getElementById('editHole'),
+    firstOnHeader: document.getElementById('firstOnHeader'),
+    scoreTable: document.getElementById('scoreTable'),
+    holeSummary: document.querySelector('.holeSummary'),
+    roundSummary: document.getElementById('roundSummary'),
+    sendSMS: document.getElementById('sendSMS'),
+    exportCSV: document.getElementById('exportCSV'),
+    completeRound: document.getElementById('completeRound'),
+    exitRound: document.getElementById('exitRound'),
+    leaderboard: document.getElementById('leaderboard'),
+    courseInfoBar: document.getElementById('courseInfoBar'),
+    infoCourseName: document.getElementById('infoCourseName'),
+    infoCurrentHole: document.getElementById('infoCurrentHole'),
+    infoPar: document.getElementById('infoPar'),
+    debugPanel: document.getElementById('debugPanel'),
+    debugOutput: document.getElementById('debugOutput'),
+    closeDebug: document.getElementById('closeDebug'),
+    simResult: document.getElementById('simResult')
+  };
+
+
+// ==============================================================
+  // 2. LOAD DATA + SHOW COURSE PICKER
+  // ==============================================================
+  await loadDataFromBackend();                     // ← really waits now
+
+  hideAll();
+  els.courseSetup.classList.remove('hidden');      // ← fresh load = course picker
+
+  // ==============================================================
+  // 3. NEXT → PLAYERS BUTTON (now works perfectly)
+  // ==============================================================
+  els.nextToPlayers?.addEventListener('click', () => {
+    if (currentCourse === null) return alert('Select a course first');
+    hideAll();
+    els.playerSetup.classList.remove('hidden');
+    renderPlayerSelect();
+    logScreen('PLAYER SETUP');
+  });
+
+  // ==============================================================
+  // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
+  // ==============================================================
+  const savedRounds = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bbb_round_BBB-')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        savedRounds.push({ ...data, key });
+      } catch (e) {}
+    }
+  }
+
+// ==============================================================
+  // 2. LOAD DATA + SHOW COURSE PICKER
+  // ==============================================================
+  await loadDataFromBackend();                     // ← really waits now
+
+  hideAll();
+  els.courseSetup.classList.remove('hidden');      // ← fresh load = course picker
+
+  // ==============================================================
+  // 3. NEXT → PLAYERS BUTTON (now works perfectly)
+  // ==============================================================
+  els.nextToPlayers?.addEventListener('click', () => {
+    if (currentCourse === null) return alert('Select a course first');
+    hideAll();
+    els.playerSetup.classList.remove('hidden');
+    renderPlayerSelect();
+    logScreen('PLAYER SETUP');
+  });
+
+  // ==============================================================
+  // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
+  // ==============================================================
+  const savedRounds = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bbb_round_BBB-')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        savedRounds.push({ ...data, key });
+      } catch (e) {}
+    }
+  }
+
+ if (savedRounds.length > 0) {
+    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const latest = savedRounds[0];
+
+    const playerNames = latest.players.map(p => p.name).join(', ');
+    const prompt = `Resume round ${latest.matchId}\n` +
+                  `${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}\n` +
+                  `Players: ${playerNames}\n` +
+                  `Last hole: ${latest.currentHole - 1} finished`;
+
+    if (confirm(prompt)) {
+      players = latest.players.map(p => ({
+        ...p,
+        scores: Array(18).fill(null).map(() => ({})),
+        _cachedTotal: latest._cachedTotals?.[p.name] || 0
+      }));
+      Object.keys(latest.scores || {}).forEach(name => {
+        const p = players.find(x => x.name === name);
+        if (p) p.scores = latest.scores[name];
+      });
+
+      currentHole = latest.currentHole;
+      currentCourse = latest.currentCourse;
+      finishedHoles = new Set(latest.finishedHoles || []);
+      inRound = true;
+
+      hideAll();
+      els.game.classList.remove('hidden');
+      updateHole();
+      logScreen('RESUMED SAVED ROUND');
+      return;
+    }
+  }
+
+
+
 // Prevent iOS from sleeping / killing the tab during a round
 let wakeLock = null;
 
@@ -1970,125 +2107,6 @@ function attachNavListeners() {
     });
   }
 </script>  -->
-
-   <!-- MODAL JS (DOM READY) -->
-  <script>
-  document.addEventListener('DOMContentLoaded', async () => {
-  console.log('BBB Golf starting...');
-
-  await loadDataFromBackend();
-
-  // === BUILD ELS CACHE ===
-  els = {
-  courseSetup: document.getElementById('courseSetup'),
-  playerSetup: document.getElementById('playerSetup'),
-  game: document.getElementById('game'),
-  summary: document.getElementById('summary'),
-
-  darkModeToggle: document.getElementById('darkModeToggle'),
-  backToSetup: document.querySelectorAll('#backToSetup'),
-
-  courseSelect: document.getElementById('courseSelect'),
-  nextToPlayers: document.getElementById('nextToPlayers'),
-  playerSelect: document.getElementById('playerSelect'),
-  startGame: document.getElementById('startGame'),
-
-  holeDisplay: document.getElementById('holeDisplay'),
-  prevHole: document.getElementById('prevHole'),
-  nextHole: document.getElementById('nextHole'),
-  finishHole: document.getElementById('finishHole'),
-  editHole: document.getElementById('editHole'),
-  firstOnHeader: document.getElementById('firstOnHeader'),
-  scoreTable: document.getElementById('scoreTable'),
-  holeSummary: document.querySelector('.holeSummary'),
-  roundSummary: document.getElementById('roundSummary'),
-
-  sendSMS: document.getElementById('sendSMS'),
-  exportCSV: document.getElementById('exportCSV'),
-  completeRound: document.getElementById('completeRound'),
-  exitRound: document.getElementById('exitRound'),
- 
-  leaderboard: document.getElementById('leaderboard'),
-  restart: document.getElementById('restart'),
-
-  courseInfoBar: document.getElementById('courseInfoBar'),
-  infoCourseName: document.getElementById('infoCourseName'),
-  infoCurrentHole: document.getElementById('infoCurrentHole'),
-  infoPar: document.getElementById('infoPar'),
-
-  // Debug (optional — you can keep these if you ever use F2 or Ctrl+Shift+D)
-  debugPanel: document.getElementById('debugPanel'),
-  debugOutput: document.getElementById('debugOutput'),
-  closeDebug: document.getElementById('closeDebug'),
-  simResult: document.getElementById('simResult')
-};
-
- // === LOAD COURSE BUTTON LISTENER — MOVED HERE ===
-  document.getElementById('nextToPlayers')?.addEventListener('click', () => {
-    if (currentCourse === null) return alert('Select a course');
-    hideAll();
-    els.playerSetup.classList.remove('hidden');
-    renderPlayerSelect();
-    logScreen('PLAYER SETUP');
-  });
-
-  // Find all saved rounds
-  const savedRounds = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('bbb_round_BBB-')) {
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        savedRounds.push({ ...data, key });
-      } catch (e) {}
-    }
-  }
-
-  
-  // Resume Block
-  if (savedRounds.length > 0) {
-  savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-  const latest = savedRounds[0];
-
-  const playerNames = latest.players.map(p => p.name).join(', ');
-  const prompt = `Resume round ${latest.matchId}\n` +
-                `${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}\n` +
-                `Players: ${playerNames}\n` +
-                `Last hole: ${latest.currentHole - 1} finished`;
-
-  if (confirm(prompt)) {
-    players = latest.players.map(p => ({
-      ...p,
-      scores: Array(18).fill(null).map(() => ({})),
-      _cachedTotal: latest._cachedTotals?.[p.name] || 0
-    }));
-    Object.keys(latest.scores || {}).forEach(name => {
-      const p = players.find(x => x.name === name);
-      if (p) p.scores = latest.scores[name];
-    });
-
-    currentHole = latest.currentHole;
-    currentCourse = latest.currentCourse;
-    finishedHoles = new Set(latest.finishedHoles || []);
-    inRound = true;
-
-    // Skip all setup screens — go straight to game
-    document.getElementById('courseSetup')?.classList.add('hidden');
-    document.getElementById('playerSetup')?.classList.add('hidden');
-
-    // hideAll();  GROK says remove this line to fix the bug - okay.
-   document.getElementById('game').classList.remove('hidden');
-    updateHole();
-    logScreen('RESUMED SAVED ROUND');
-    return;
-  }
-}
-
-  });
-  </script>
-
- 
-
  
  </body>
 </html>
