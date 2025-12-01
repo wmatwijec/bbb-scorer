@@ -1510,49 +1510,48 @@ els.startGame.onclick = () => {
   }
 
  function updateHole() {
-  console.log('updateHole() called — currentHole:', currentHole);
-  console.log('courses[currentCourse]:', courses[currentCourse]);
-  console.log('finishedHoles:', Array.from(finishedHoles));
-
-
   if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
-  precomputeAllTotals();  // always fresh totals
+  precomputeAllTotals();
 
   const holeIdx = currentHole - 1;
-  const par = courses[currentCourse].pars[holeIdx];
+
+  // SAFE COURSE ACCESS — THIS WAS THE FINAL BUG
+  const courseObj = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
+  if (!courseObj || !courseObj.pars) {
+    console.error('Invalid course:', currentCourse, courses[currentCourse]);
+    return;
+  }
+  const par = courseObj.pars[holeIdx];
   const isPar3 = par === 3;
 
-  const courseName = courses[currentCourse].name;
+  const courseName = courseObj.name || 'Unknown';
   els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
 
   els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
 
   const isFinished = finishedHoles.has(currentHole);
 
-  // ---- SHOW / HIDE BUTTONS (using direct DOM so they’re never stale) ----
   const finishBtn = document.getElementById('finishHole');
   const editBtn   = document.getElementById('editHole');
-
   if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
   if (editBtn)   editBtn.classList.toggle('hidden', !isFinished);
 
-    const carryIn = getCarryInForHole(currentHole);
+  const carryIn = getCarryInForHole(currentHole);
   renderTable(carryIn, isFinished);
 
-  // ---- HOLE & ROUND SUMMARIES — ALWAYS CORRECT AFTER EDITS ----
-  renderHoleSummary();      // ← current hole carry summary
-  renderRoundSummary();     // ← bottom round summary (Wins / C_Car / O_Car)
+  renderHoleSummary();
+  renderRoundSummary();
 
   updateCourseInfoBar();
   updateNavButtons();
-  renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
   save();
   if (debugMode) renderDebugCarryTable();
- 
-  document.getElementById('game')?.offsetHeight; // triggers reflow/repaint
-  
+
+  // Force repaint
+  document.getElementById('game')?.offsetHeight;
 }
+
  
   function updateCourseInfoBar() {
   if (!inRound || !currentCourse) {
