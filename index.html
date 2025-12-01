@@ -1251,36 +1251,6 @@ requestWakeLock();
 // In completeRound, saveRound, exitRound, etc.:
 if (wakeLock) wakeLock.release().then(() => wakeLock = null);
 
-
-
- 
-
-  // === DARK MODE ===
-  function initDarkMode() {
-    const saved = localStorage.getItem('bbb_dark');
-    const isDark = saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }
-  initDarkMode();
-  els.darkModeToggle.addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const newMode = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newMode);
-    localStorage.setItem('bbb_dark', newMode === 'dark');
-  });
-
-  // === COLORBLIND MODE ===
- /*  let colorblindMode = localStorage.getItem('bbb_cb') === 'true';
-  document.body.classList.toggle('cb-mode', colorblindMode);
-  els.cbToggle.addEventListener('click', () => {
-    colorblindMode = !colorblindMode;
-    localStorage.setItem('bbb_cb', colorblindMode);
-    document.body.classList.toggle('cb-mode', colorblindMode);
-  }); */
-
-
-
-
   
   function save() {
     localStorage.setItem('bbb', JSON.stringify({ 
