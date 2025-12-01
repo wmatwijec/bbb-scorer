@@ -1211,35 +1211,48 @@ const savedRounds = [];
 
     const choice = prompt(message);
 
-    if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
-      const selected = savedRounds[choice - 1];
+if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
+  const selected = savedRounds[choice - 1];
 
-      // RESUME THE SELECTED ROUND
-      players = selected.players.map(p => ({
-        ...p,
-        scores: Array(18).fill(null).map(() => ({})),
-        _cachedTotal: selected._cachedTotals?.[p.name] || 0
-      }));
-      Object.keys(selected.scores || {}).forEach(name => {
-        const p = players.find(x => x.name === name);
-        if (p) p.scores = selected.scores[name];
-      });
+  // Restore players
+  players = selected.players.map(p => ({
+    ...p,
+    scores: Array(18).fill(null).map(() => ({})),
+    _cachedTotal: selected._cachedTotals?.[p.name] || 0
+  }));
+  Object.keys(selected.scores || {}).forEach(name => {
+    const p = players.find(x => x.name === name);
+    if (p) p.scores = selected.scores[name];
+  });
 
-      currentHole = selected.currentHole;
-      currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
-      if (currentCourse === -1) currentCourse = 0; // fallback
-      finishedHoles = new Set(selected.finishedHoles || []);
-      inRound = true;
+  currentHole = selected.currentHole;
+  currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
+  if (currentCourse === -1) currentCourse = 0;
+  finishedHoles = new Set(selected.finishedHoles || []);
+  inRound = true;
 
-      hideAll();
-      els.game.classList.remove('hidden');
+  hideAll();
+  els.game.classList.remove('hidden');
+
+  // CRITICAL: Wait for courses to load before updating hole
+  const checkCourses = () => {
+    if (courses.length > 0 && courses[currentCourse]) {
       updateHole();
       attachFinishHoleListener();
       attachNavListeners();
+      setupGameButtons();
       updateCourseInfoBar();
-      setupGameButtons();   
       logScreen('RESUMED SAVED ROUND');
-      return;
+    } else {
+      setTimeout(checkCourses, 50);
+    }
+  };
+  checkCourses();
+
+  return;
+}
+    
+
     }
     // If they cancel or pick nothing → fall through to normal course picker
   }  
