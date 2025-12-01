@@ -903,7 +903,6 @@ document.addEventListener('DOMContentLoaded',async () => {
     holeSummary: document.querySelector('.holeSummary'),
     roundSummary: document.getElementById('roundSummary'),
     sendSMS: document.getElementById('sendSMS'),
-    exportCSV: document.getElementById('exportCSV'),
     completeRound: document.getElementById('completeRound'),
     exitRound: document.getElementById('exitRound'),
     leaderboard: document.getElementById('leaderboard'),
@@ -1781,8 +1780,7 @@ function setupGameButtons() {
     window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
   };
 
-  // CSV BUTTON — you already have this
-  els.exportCSV.onclick = exportToCSV;
+
 
   // ADD THESE 4 LINES — THIS IS WHAT WAS MISSING
   els.completeRound.onclick = () => {
@@ -1825,30 +1823,7 @@ function setupGameButtons() {
   // END OF ADDED LINES
 }
 
-  function exportToCSV() {
-    const course = courses[currentCourse];
-    let csv = `Hole,Par,Player,FO,CL,P,GR,GIR,HolePts,Run,Tot\n`;
-    for (let h = 0; h < HOLES; h++) {
-      if (!finishedHoles.has(h+1)) continue;
-      const par = course.pars[h];
-      const isPar3 = par === 3;
-      players.forEach(p => {
-        const s = p.scores[h] || {};
-        const gir = p.gir[h] ? 1 : 0;
-        const holePts = p._cachedHoleTotals?.[h] || 0;
-        const run = getRunningTotal(p);
-        const tot = p._cachedTotal || 0;
-        csv += `${h+1},${par},${p.name},${s.firstOn||0},${s.closest||0},${s.putt||0},${isPar3 && s.firstOn ? 1 : 0},${gir},${holePts},${run},${tot}\n`;
-      });
-    }
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `BBB_${course.name.replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+
 
   function showSummary() {
     hideAll();
@@ -2075,7 +2050,6 @@ function attachFinishHoleListener() {
       <!-- CONTROL BAR -->
       <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
       <div>SMS – Send live update to the group</div>
-      <div>CSV – Export scores to file</div>
       <div>BBB COMP – Complete the round</div>
       <div>EXIT – Quit current round</div>
       <div>DARK – Toggle dark mode</div>
