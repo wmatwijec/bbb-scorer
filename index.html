@@ -943,6 +943,40 @@ document.addEventListener('DOMContentLoaded',async () => {
   };
 
 
+  // DEBUG BLOCK
+
+  let debugMode = false;
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      debugMode = !debugMode;
+      els.debugPanel.classList.toggle('hidden', !debugMode);
+      if (debugMode) updateDebugPanel();
+    }
+    if (e.keyCode === 113) {
+      e.preventDefault();
+      if (confirm('Run full 18-hole simulation?')) {
+        simulateRound();
+      }
+    }
+  });
+  els.closeDebug.addEventListener('click', () => {
+    debugMode = false;
+    els.debugPanel.classList.add('hidden');
+  });
+
+  function updateDebugPanel() {
+    els.debugOutput.innerHTML = '';
+    renderDebugCarryTable();
+    const hint = document.createElement('div');
+    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
+    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
+    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
+    els.debugOutput.appendChild(hint);
+  }
+
+
+
+
 // ==============================================================
   // 2. LOAD DATA + SHOW COURSE PICKER
   // ==============================================================
@@ -1068,34 +1102,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   }); */
 
 
-  let debugMode = false;
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      debugMode = !debugMode;
-      els.debugPanel.classList.toggle('hidden', !debugMode);
-      if (debugMode) updateDebugPanel();
-    }
-    if (e.keyCode === 113) {
-      e.preventDefault();
-      if (confirm('Run full 18-hole simulation?')) {
-        simulateRound();
-      }
-    }
-  });
-  els.closeDebug.addEventListener('click', () => {
-    debugMode = false;
-    els.debugPanel.classList.add('hidden');
-  });
 
-  function updateDebugPanel() {
-    els.debugOutput.innerHTML = '';
-    renderDebugCarryTable();
-    const hint = document.createElement('div');
-    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
-    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
-    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
-    els.debugOutput.appendChild(hint);
-  }
 
   
   function save() {
