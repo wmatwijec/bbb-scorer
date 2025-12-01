@@ -1049,7 +1049,7 @@ function updateNavButtons() {
   // ==============================================================
   // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
   // ==============================================================
-  const savedRounds = [];
+const savedRounds = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key?.startsWith('bbb_round_BBB-')) {
@@ -1060,43 +1060,52 @@ function updateNavButtons() {
     }
   }
 
-   if (savedRounds.length > 0) {
+  if (savedRounds.length > 0) {
+    // Sort newest first for display
     savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-    const latest = savedRounds[0];
 
-    const playerNames = latest.players.map(p => p.name).join(', ');
-    const prompt = `Resume round ${latest.matchId}\n` +
-                  `${new Date(latest.date).toLocaleDateString()} at ${latest.courseName || 'Unknown'}\n` +
-                  `Players: ${playerNames}\n` +
-                  `Last hole: ${latest.currentHole - 1} finished`;
+    let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+    savedRounds.forEach((r, i) => {
+      message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+      message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+      message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
+    });
+    message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
 
-    if (confirm(prompt)) {
-      players = latest.players.map(p => ({
+    const choice = prompt(message);
+
+    if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
+      const selected = savedRounds[choice - 1];
+
+      // RESUME THE SELECTED ROUND
+      players = selected.players.map(p => ({
         ...p,
         scores: Array(18).fill(null).map(() => ({})),
-        _cachedTotal: latest._cachedTotals?.[p.name] || 0
+        _cachedTotal: selected._cachedTotals?.[p.name] || 0
       }));
-      Object.keys(latest.scores || {}).forEach(name => {
+      Object.keys(selected.scores || {}).forEach(name => {
         const p = players.find(x => x.name === name);
-        if (p) p.scores = latest.scores[name];
+        if (p) p.scores = selected.scores[name];
       });
 
-      currentHole = latest.currentHole;
-      currentCourse = latest.currentCourse;
-      finishedHoles = new Set(latest.finishedHoles || []);
+      currentHole = selected.currentHole;
+      currentCourse = selected.currentCourse;
+      finishedHoles = new Set(selected.finishedHoles || []);
       inRound = true;
 
       hideAll();
       els.game.classList.remove('hidden');
       updateHole();
-      attachFinishHoleListener();       // re-attach Finish Hole button
-      attachNavListeners();             // re-attach Prev/Next/Edit buttons
+      attachFinishHoleListener();
+      attachNavListeners();
+      setupGameButtons();   
+      updateCourseInfoBar();
+
       logScreen('RESUMED SAVED ROUND');
       return;
     }
-  }
-
-
+    // If they cancel or pick nothing → fall through to normal course picker
+  }  
 
 
  
