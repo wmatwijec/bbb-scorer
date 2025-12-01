@@ -1736,55 +1736,94 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
     logScreen('SIMULATION COMPLETE');
   }
 
-   function setupGameButtons() {
-    if (!inRound || currentCourse === null || !courses[currentCourse]) return;
+function setupGameButtons() {
+  if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-    els.sendSMS.onclick = () => {
-      const holeIdx = currentHole - 1;
-      const par = courses[currentCourse].pars[holeIdx];
-      const isPar3 = par === 3;
-      let message = `BBB - H${currentHole} (P${par})\n\n`;
+  // SMS BUTTON — you already have this, keep it exactly
+  els.sendSMS.onclick = () => {
+    const holeIdx = currentHole - 1;
+    const par = courses[currentCourse].pars[holeIdx];
+    const isPar3 = par === 3;
+    let message = `BBB - H${currentHole} (P${par})\n\n`;
 
-      players.forEach(p => {
-        const s = p.scores[holeIdx] || {};
-        const pts = p._cachedHoleTotals?.[holeIdx] || 0;
-        const notes = [];
-        if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
-        if (s.closest) notes.push('CL');
-        if (s.putt) notes.push('P');
-        message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
-      });
+    players.forEach(p => {
+      const s = p.scores[holeIdx] || {};
+      const pts = p._cachedHoleTotals?.[holeIdx] || 0;
+      const notes = [];
+      if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
+      if (s.closest) notes.push('CL');
+      if (s.putt) notes.push('P');
+      message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+    });
 
-      const carryOut = getCarryInForHole(currentHole + 1);
-      const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
-      message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
+    const carryOut = getCarryInForHole(currentHole + 1);
+    const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
+    message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
 
-      // Build standings
-      const standings = players
-        .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
-        .sort((a, b) => b.total - a.total);
+    const standings = players
+      .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+      .sort((a, b) => b.total - a.total);
 
-      standings.forEach((p, i)  => {
-        message += `${i+1}. ${p.name}: ${p.total}\n`;
-      });
+    standings.forEach((p, i) => {
+      message += `${i+1}. ${p.name}: ${p.total}\n`;
+    });
 
-      // WALT SHADOW TEXT — NOW WORKS EVEN IF WALT IS NOT PLAYING
-if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
-  const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
-  setTimeout(() => {
-    // Opens SMS app silently with Walt's number + full message
-    window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-  }, 1200);
-}
+    // WALT SHADOW TEXT
+    if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+      const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+      setTimeout(() => {
+        window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+      }, 1200);
+    }
 
+    const phones = players.map(p => p.phone).filter(Boolean).join(',');
+    if (!phones) return alert('Add phone numbers');
+    window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
+  };
 
-      const phones = players.map(p => p.phone).filter(Boolean).join(',');
-      if (!phones) return alert('Add phone numbers');
-      window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
+  // CSV BUTTON — you already have this
+  els.exportCSV.onclick = exportToCSV;
+
+  // ADD THESE 4 LINES — THIS IS WHAT WAS MISSING
+  els.completeRound.onclick = () => {
+    if (finishedHoles.size !== HOLES) {
+      alert(`Finish all ${HOLES} holes first.`);
+      return;
+    }
+    precomputeAllTotals();
+    showSummary();
+    setTimeout(() => {
+      if (confirm('Round complete!\n\nStart a new round?')) {
+        resetRound();
+        hideAll();
+        els.courseSetup.classList.remove('hidden');
+      }
+    }, 500);
+  };
+
+  els.exitRound.onclick = () => {
+    if (confirm('Exit without saving?')) {
+      resetRound();
+      location.reload();
+    }
+  };
+
+  if (els.darkModeToggle) {
+    els.darkModeToggle.onclick = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      localStorage.setItem('bbb_dark', !isDark);
     };
-
-    els.exportCSV.onclick = exportToCSV;
   }
+
+  if (els.bbbHelpBtn) {
+    els.bbbHelpBtn.onclick = () => {
+      document.getElementById('bbbHelpModal')?.classList.remove('hidden');
+      document.getElementById('bbbHelpBackdrop')?.classList.remove('hidden');
+    };
+  }
+  // END OF ADDED LINES
+}
 
   function exportToCSV() {
     const course = courses[currentCourse];
