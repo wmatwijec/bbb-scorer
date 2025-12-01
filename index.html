@@ -1524,8 +1524,8 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   updateNavButtons();
   save();
   if (debugMode) renderDebugCarryTable();
-
-  
+ 
+  document.getElementById('game')?.offsetHeight; // triggers reflow/repaint
   
 }
  
