@@ -1738,7 +1738,7 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
 function setupGameButtons() {
   if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-  // SMS BUTTON — you already have this, keep it exactly
+  // SMS — keep exactly as you have it
   els.sendSMS.onclick = () => {
     const holeIdx = currentHole - 1;
     const par = courses[currentCourse].pars[holeIdx];
@@ -1764,10 +1764,9 @@ function setupGameButtons() {
       .sort((a, b) => b.total - a.total);
 
     standings.forEach((p, i) => {
-      message += `${i+1}. ${p.name}: ${p.total}\n`;
+      message += `${i + 1}. ${p.name}: ${p.total}\n`;
     });
 
-    // WALT SHADOW TEXT
     if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
       const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
       setTimeout(() => {
@@ -1780,9 +1779,7 @@ function setupGameButtons() {
     window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
   };
 
-
-
-  // ADD THESE 4 LINES — THIS IS WHAT WAS MISSING
+  // BBB COMP
   els.completeRound.onclick = () => {
     if (finishedHoles.size !== HOLES) {
       alert(`Finish all ${HOLES} holes first.`);
@@ -1799,13 +1796,15 @@ function setupGameButtons() {
     }, 500);
   };
 
+  // EXIT — ONE CLICK ONLY
   els.exitRound.onclick = () => {
-    if (confirm('Exit without saving?')) {
+    if (confirm('Exit round and lose all progress?')) {
       resetRound();
       location.reload();
     }
   };
 
+ 5. DARK MODE
   if (els.darkModeToggle) {
     els.darkModeToggle.onclick = () => {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1814,13 +1813,24 @@ function setupGameButtons() {
     };
   }
 
+  // HELP + BACKDROP + CLOSE BUTTON
   if (els.bbbHelpBtn) {
     els.bbbHelpBtn.onclick = () => {
       document.getElementById('bbbHelpModal')?.classList.remove('hidden');
       document.getElementById('bbbHelpBackdrop')?.classList.remove('hidden');
     };
   }
-  // END OF ADDED LINES
+
+  // Close Help Modal (X button and backdrop click)
+  document.getElementById('closeHelp')?.addEventListener('click', () => {
+    document.getElementById('bbbHelpModal')?.classList.add('hidden');
+    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
+  });
+
+  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', () => {
+    document.getElementById('bbbHelpModal')?.classList.add('hidden');
+    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
+  });
 }
 
 
@@ -2000,7 +2010,6 @@ function attachFinishHoleListener() {
 
    <div class="control-bar">
   <button id="sendSMS" title="Send live update to group">SMS</button>
-  <button id="exportCSV" title="Download CSV">CSV</button>
   <button id="completeRound" title="Finish round & email Walt">BBB COMP</button>
   <button id="exitRound" title="Quit without saving">EXIT</button>
   <button id="darkModeToggle" title="Toggle dark mode">DARK</button>
