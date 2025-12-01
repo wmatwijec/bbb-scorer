@@ -918,6 +918,37 @@ document.addEventListener('DOMContentLoaded',async () => {
   };
 
 
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  // CRITICAL: updateNavButtons() MUST BE HERE
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  function updateNavButtons() {
+    console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
+    console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
+    
+    const canPrev = currentHole > 1 && !isHoleInProgress;
+    const canNext = currentHole < HOLES && !isHoleInProgress;
+    
+    if (els.prevHole) els.prevHole.disabled = !canPrev;
+    if (els.nextHole) els.nextHole.disabled = !canNext;
+    
+    [els.prevHole, els.nextHole].forEach(btn => {
+      if (!btn) return;
+      btn.style.opacity = btn.disabled ? '0.5' : '1';
+      btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+    });
+    
+    console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
+  }
+
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+  // NOW lockNavigation() can safely call it
+  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+
+
+
+
+
 function attachNavListeners() {
   // Prev
   const prev = document.getElementById('prevHole');
@@ -965,32 +996,7 @@ function attachNavListeners() {
 
 
 
-function updateNavButtons() {
-  console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
-  console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
-  
-  const canPrev = currentHole > 1 && !isHoleInProgress;
-  const canNext = currentHole < HOLES && !isHoleInProgress;
-  
-  console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
-  
-  els.prevHole.disabled = !canPrev;
-  els.nextHole.disabled = !canNext;
-  
-  console.log('Set: prev.disabled=', els.prevHole.disabled, 'next.disabled=', els.nextHole.disabled);
-  
-  // Your existing visual feedback
-  [els.prevHole, els.nextHole].forEach(btn => {
-    if (btn.disabled) {
-      btn.style.opacity = '0.5';
-    } else {
-      btn.style.opacity = '1';
-      btn.style.cursor = 'pointer';
-    }
-  });
-  
-  console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
-}
+
   // DEBUG B
 
   let debugMode = false;
