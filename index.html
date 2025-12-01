@@ -946,6 +946,17 @@ document.addEventListener('DOMContentLoaded',async () => {
 
 
 function setupGameButtons() {
+
+   console.log('setupGameButtons() CALLED — inRound:', inRound);
+  console.log('els.sendSMS:', !!els.sendSMS);
+  console.log('els.completeRound:', !!els.completeRound);
+  console.log('els.exitRound:', !!els.exitRound);
+  console.log('els.darkModeToggle:', !!els.darkModeToggle);
+  console.log('els.bbbHelpBtn:', !!els.bbbHelpBtn);
+
+
+
+
   if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
   // CLEAR ANY OLD LISTENERS — prevents double prompts
