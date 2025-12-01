@@ -1524,6 +1524,7 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
   updateCourseInfoBar();
   updateNavButtons();
+  renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
   save();
   if (debugMode) renderDebugCarryTable();
  
