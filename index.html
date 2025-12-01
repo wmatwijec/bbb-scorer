@@ -836,20 +836,7 @@ function sortPlayersAlphabetically() {
 
 
 
-// === NAVIGATION LOCK ===
-function lockNavigation() {
-  isHoleInProgress = true;
-  // Force immediate disable on mobile
-  if ('ontouchstart' in window) setTimeout(() => updateNavButtons(), 0);
-  else updateNavButtons();
-}
 
-function unlockNavigation() {
-  isHoleInProgress = false;
-  // Force immediate enable + double-call for mobile async
-  updateNavButtons();
-  if ('ontouchstart' in window) setTimeout(updateNavButtons, 0);
-}
 
 
 
