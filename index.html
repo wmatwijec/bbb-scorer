@@ -917,6 +917,54 @@ document.addEventListener('DOMContentLoaded',async () => {
     simResult: document.getElementById('simResult')
   };
 
+
+function attachNavListeners() {
+  // Prev
+  const prev = document.getElementById('prevHole');
+  if (prev) {
+    prev.onclick = null;
+    prev.addEventListener('click', () => {
+      if (currentHole > 1 && !isHoleInProgress) {
+        currentHole--;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`PREV → HOLE ${currentHole}`);
+      }
+    });
+  }
+
+  // Next
+  const next = document.getElementById('nextHole');
+  if (next) {
+    next.onclick = null;
+    next.addEventListener('click', () => {
+      if (currentHole < HOLES && !isHoleInProgress) {
+        currentHole++;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`NEXT → HOLE ${currentHole}`);
+      }
+    });
+  }
+
+   // Edit
+  const edit = document.getElementById('editHole');
+  if (edit) {
+    edit.onclick = null;
+    edit.addEventListener('click', () => {
+      if (finishedHoles.has(currentHole)) {
+        finishedHoles.delete(currentHole);
+        isHoleInProgress = false;
+        precomputeAllTotals();
+        updateHole();
+        logScreen('EDIT MODE');
+      }
+    });
+    }
+}
+
+
+
 function updateNavButtons() {
   console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
   console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
@@ -1041,6 +1089,8 @@ function updateNavButtons() {
       hideAll();
       els.game.classList.remove('hidden');
       updateHole();
+      attachFinishHoleListener();       // re-attach Finish Hole button
+      attachNavListeners();             // re-attach Prev/Next/Edit buttons
       logScreen('RESUMED SAVED ROUND');
       return;
     }
@@ -1815,50 +1865,7 @@ function attachFinishHoleListener() {
   btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
 
-function attachNavListeners() {
-  // Prev
-  const prev = document.getElementById('prevHole');
-  if (prev) {
-    prev.onclick = null;
-    prev.addEventListener('click', () => {
-      if (currentHole > 1 && !isHoleInProgress) {
-        currentHole--;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`PREV → HOLE ${currentHole}`);
-      }
-    });
-  }
 
-  // Next
-  const next = document.getElementById('nextHole');
-  if (next) {
-    next.onclick = null;
-    next.addEventListener('click', () => {
-      if (currentHole < HOLES && !isHoleInProgress) {
-        currentHole++;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`NEXT → HOLE ${currentHole}`);
-      }
-    });
-  }
-
-   // Edit
-  const edit = document.getElementById('editHole');
-  if (edit) {
-    edit.onclick = null;
-    edit.addEventListener('click', () => {
-      if (finishedHoles.has(currentHole)) {
-        finishedHoles.delete(currentHole);
-        isHoleInProgress = false;
-        precomputeAllTotals();
-        updateHole();
-        logScreen('EDIT MODE');
-      }
-    });
-    }
-}
 
 // This closes the DOMContentLoaded callback
 });
