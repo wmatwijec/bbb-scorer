@@ -1077,10 +1077,19 @@ function setupGameButtons() {
 
 
 function attachNavListeners() {
-  // Prev
+  // NUCLEAR RESET — fixes dead buttons on iOS after resume
+  ['prevHole', 'nextHole', 'editHole'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      const newBtn = btn.cloneNode(true);
+      newBtn.style.cursor = 'pointer'; // forces iOS to make it tappable
+      btn.replaceWith(newBtn);
+    }
+  });
+
+  // RE-ATTACH FRESH LISTENERS
   const prev = document.getElementById('prevHole');
   if (prev) {
-    prev.onclick = null;
     prev.addEventListener('click', () => {
       if (currentHole > 1 && !isHoleInProgress) {
         currentHole--;
@@ -1091,10 +1100,8 @@ function attachNavListeners() {
     });
   }
 
-  // Next
   const next = document.getElementById('nextHole');
   if (next) {
-    next.onclick = null;
     next.addEventListener('click', () => {
       if (currentHole < HOLES && !isHoleInProgress) {
         currentHole++;
@@ -1105,10 +1112,8 @@ function attachNavListeners() {
     });
   }
 
-   // Edit
   const edit = document.getElementById('editHole');
   if (edit) {
-    edit.onclick = null;
     edit.addEventListener('click', () => {
       if (finishedHoles.has(currentHole)) {
         finishedHoles.delete(currentHole);
@@ -1118,9 +1123,8 @@ function attachNavListeners() {
         logScreen('EDIT MODE');
       }
     });
-    }
+  }
 }
-
 
 
 
