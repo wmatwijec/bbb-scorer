@@ -1077,53 +1077,51 @@ function setupGameButtons() {
 
 
 function attachNavListeners() {
-  // NUCLEAR RESET — fixes dead buttons on iOS after resume
-  ['prevHole', 'nextHole', 'editHole'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      const newBtn = btn.cloneNode(true);
-      newBtn.style.cursor = 'pointer'; // forces iOS to make it tappable
-      btn.replaceWith(newBtn);
+  // FULL iOS-PROOF RESET — this is the nuclear option that works 100%
+  const ids = ['prevHole', 'nextHole', 'editHole', 'finishHole'];
+  ids.forEach(id => {
+    const oldBtn = document.getElementById(id);
+    if (!oldBtn) return;
+
+    // Clone + replace = forces iOS to forget everything and treat as brand new
+    const newBtn = oldBtn.cloneNode(true);
+    newBtn.id = id; // keep ID
+    newBtn.style.cursor = 'pointer';
+    newBtn.style.touchAction = 'manipulation'; // critical for iOS
+    oldBtn.replaceWith(newBtn);
+  });
+
+  // NOW RE-ATTACH CLEAN LISTENERS
+  document.getElementById('prevHole')?.addEventListener('click', () => {
+    if (currentHole > 1 && !isHoleInProgress) {
+      currentHole--;
+      updateHole();
+      updateCourseInfoBar();
+      logScreen(`PREV → HOLE ${currentHole}`);
     }
   });
 
-  // RE-ATTACH FRESH LISTENERS
-  const prev = document.getElementById('prevHole');
-  if (prev) {
-    prev.addEventListener('click', () => {
-      if (currentHole > 1 && !isHoleInProgress) {
-        currentHole--;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`PREV → HOLE ${currentHole}`);
-      }
-    });
-  }
+  document.getElementById('nextHole')?.addEventListener('click', () => {
+    if (currentHole < HOLES && !isHoleInProgress) {
+      currentHole++;
+      updateHole();
+      updateCourseInfoBar();
+      logScreen(`NEXT → HOLE ${currentHole}`);
+    }
+  });
 
-  const next = document.getElementById('nextHole');
-  if (next) {
-    next.addEventListener('click', () => {
-      if (currentHole < HOLES && !isHoleInProgress) {
-        currentHole++;
-        updateHole();
-        updateCourseInfoBar();
-        logScreen(`NEXT → HOLE ${currentHole}`);
-      }
-    });
-  }
+  document.getElementById('editHole')?.addEventListener('click', () => {
+    if (finishedHoles.has(currentHole)) {
+      finishedHoles.delete(currentHole);
+      isHoleInProgress = false;
+      precomputeAllTotals();
+      updateHole();
+      logScreen('EDIT MODE');
+    }
+  });
 
-  const edit = document.getElementById('editHole');
-  if (edit) {
-    edit.addEventListener('click', () => {
-      if (finishedHoles.has(currentHole)) {
-        finishedHoles.delete(currentHole);
-        isHoleInProgress = false;
-        precomputeAllTotals();
-        updateHole();
-        logScreen('EDIT MODE');
-      }
-    });
-  }
+  // Also re-attach Finish Hole (you already have this function)
+  document.getElementById('finishHole')?.addEventListener('click', finishCurrentHole);
 }
 
 
