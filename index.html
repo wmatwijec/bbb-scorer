@@ -2085,7 +2085,7 @@ function attachNavListeners() {
     document.getElementById('courseSetup')?.classList.add('hidden');
     document.getElementById('playerSetup')?.classList.add('hidden');
 
-    hideAll();
+    // hideAll();  GROK says remove this line to fix the bug - okay.
    document.getElementById('game').classList.remove('hidden');
     updateHole();
     logScreen('RESUMED SAVED ROUND');
