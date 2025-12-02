@@ -1763,7 +1763,7 @@ function renderHoleSummary() {
   logScreen('FINISHED HOLE ' + currentHole);
 
  // WALT SHADOW TEXT — 100% STEALTH VIA SERVER (NO POPUP EVER)
-if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
+if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
   const holeIdx = currentHole - 1;
   const par = courses[currentCourse].pars[holeIdx];
   const isPar3 = par === 3;
@@ -1779,28 +1779,40 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
     message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
   });
 
+  // DETAILED CARRY BREAKDOWN
   const carryOut = getCarryInForHole(currentHole + 1);
-  const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
-  message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
+  const carryParts = [];
+  if (carryOut.firstOn) carryParts.push(`FO: ${carryOut.firstOn}`);
+  if (carryOut.closest) carryParts.push(`CL: ${carryOut.closest}`);
+  if (carryOut.putt) carryParts.push(`P: ${carryOut.putt}`);
+  if (carryOut.greenie) carryParts.push(`GR: ${carryOut.greenie}`);
+  const carryText = carryParts.length > 0 ? carryParts.join(' • ') : '0';
+  message += `\nCarry: ${carryText}\n\nStandings:\n`;
 
   const standings = players
     .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
     .sort((a, b) => b.total - a.total);
 
   standings.forEach((p, i) => {
-    message += `${i+1}. ${p.name}: ${p.total}\n`;
+    message += `${i + 1}. ${p.name}: ${p.total}\n`;
   });
 
   const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
 
-  // THIS IS THE ONLY LINE THAT CHANGED — silent server fetch instead of sms:
+  // 1. SEND SMS (opens Messages app)
+  setTimeout(() => {
+    window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+  }, 1200);
+
+  // 2. SEND TO SERVER (silent backup — never fails the app)
   fetch('https://pwa-players-backend.onrender.com/send-walt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: shadowMessage })
   }).catch(err => console.error('Walt shadow send failed:', err));
-} 
-  saveRound();
+}
+
+saveRound();
 }
 
 
