@@ -1516,7 +1516,7 @@ console.log('=== UPDATEHOLE DEBUG START ===');
   
   
   
-  if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
+ if (!inRound || players.length === 0 || currentCourse === null || currentCourse === undefined || !courses[currentCourse]) return;
 
   precomputeAllTotals();
 
