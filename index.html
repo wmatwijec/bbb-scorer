@@ -1568,9 +1568,13 @@ console.log('=== UPDATEHOLE DEBUG START ===');
 
   // FORCE currentCourse to be a number
   const courseIndex = Number(currentCourse);
-  const course = courses[courseIndex];
+  if (isNaN(courseIndex) || !courses[courseIndex]) {
+    els.courseInfoBar.style.display = 'none';
+    return;
+  }
 
-  if (!course || !course.pars || !course.pars[currentHole - 1]) {
+  const course = courses[courseIndex];
+  if (!course.pars || course.pars[currentHole - 1] === undefined) {
     els.courseInfoBar.style.display = 'none';
     return;
   }
@@ -1580,7 +1584,6 @@ console.log('=== UPDATEHOLE DEBUG START ===');
   els.infoPar.textContent = `Par ${course.pars[currentHole - 1]}`;
   els.courseInfoBar.style.display = 'block';
 }
-  
 
 
 
