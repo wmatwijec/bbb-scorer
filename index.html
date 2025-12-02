@@ -11,8 +11,7 @@
   <meta id="cacheBuster" name="version" content="20251123-FORCE-CACHE" />
 
   <style>
-    /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
- /* Enable full scroll + safe area */
+ 
 html, body {
   margin: 0;
   padding: 0;
@@ -571,11 +570,31 @@ body {
 
 #courseSetup.hidden { height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
 
+/* Push content down when banner is visible */
+body.practice-mode {
+  padding-top: 50px !important;
+}
+
 
 </style>
 </head>
 
 <body>
+
+  <!-- PRACTICE MODE BANNER -->
+<div id="practiceBanner" class="hidden" style="
+  position:fixed;top:0;left:0;width:100%;background:#ffeb3b;color:#b71c1c;
+  padding:0.6rem 1rem;font-weight:bold;text-align:center;
+  z-index:9999;font-size:0.9rem;display:flex;justify-content:center;align-items:center;gap:1rem;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+">
+  <span>PRACTICE MODE (No SMS)</span>
+  <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+    <input type="checkbox" id="practiceToggle"> <span style="font-size:0.85rem;">ON</span>
+  </label>
+</div>
+
+
 
    <!-- 1. LAUNCH SCREEN (only shows on root page) -->
   <div id="launchWrapper" style="text-align:center; padding:40px 20px; background:#f9f9f9; min-height:100vh; display:flex; flex-direction:column; justify-content:center;">
@@ -647,6 +666,7 @@ body {
     let isHoleInProgress = false;
     let els = {};
     let waltShadowPhone = null;
+    let practiceMode = false;
 
 
 
@@ -826,6 +846,7 @@ async function saveRound() {
     currentHole,
     currentCourse,
     currentCourseIndex: currentCourse,
+    practiceMode: practiceMode,
     finishedHoles: Array.from(finishedHoles),
     scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
     _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
@@ -986,6 +1007,10 @@ function setupGameButtons() {
 
   // SMS BUTTON
   els.sendSMS.onclick = () => {
+    if (practiceMode) {
+      alert('SMS disabled in Practice Mode');
+    return;
+}
     const holeIdx = currentHole - 1;
     const par = courses[currentCourse].pars[holeIdx];
     const isPar3 = par === 3;
@@ -1054,6 +1079,41 @@ function setupGameButtons() {
       hideAll();
       els.courseSetup.classList.remove('hidden');
     }
+
+   // === PRACTICE MODE TOGGLE ===
+function updatePracticeMode() {
+  const banner = document.getElementById('practiceBanner');
+  const toggle = document.getElementById('practiceToggle');
+  const body = document.body;
+
+  if (practiceMode) {
+    banner.classList.remove('hidden');
+    toggle.checked = true;
+    body.classList.add('practice-mode');
+  } else {
+    banner.classList.add('hidden');
+    toggle.checked = false;
+    body.classList.remove('practice-mode');
+  }
+
+  // Save to localStorage
+  localStorage.setItem('bbb_practiceMode', practiceMode);
+}
+
+// Load on startup
+practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
+updatePracticeMode();
+
+// Toggle listener
+document.getElementById('practiceToggle')?.addEventListener('change', (e) => {
+  practiceMode = e.target.checked;
+  updatePracticeMode();
+  saveRound(); // persist immediately
+}); 
+
+
+
+
   });
 
 
@@ -1288,6 +1348,8 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
   if (currentCourse === -1) currentCourse = 0;
   finishedHoles = new Set(selected.finishedHoles || []);
   inRound = true;
+  practiceMode = selected.practiceMode || false;
+  pdatePracticeMode();
 
   hideAll();
   els.game.classList.remove('hidden');
@@ -1842,7 +1904,7 @@ function renderHoleSummary() {
   logScreen('FINISHED HOLE ' + currentHole);
 
  // WALT SHADOW TEXT — 100% STEALTH VIA SERVER (NO POPUP EVER)
-if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+if (!practiceMode && ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
   const holeIdx = currentHole - 1;
   const par = courses[currentCourse].pars[holeIdx];
   const isPar3 = par === 3;
