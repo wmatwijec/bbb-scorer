@@ -2156,11 +2156,9 @@ function attachFinishHoleListener() {
     });
 
     window.pm = { practiceMode, apply };
-  })();
+   })();   // ← ADD () HERE — CALLS THE IIFE
 
-// This closes the DOMContentLoaded callback
-});
-
+});       // ← CLOSES DOMContentLoaded
 
 
 </script>
