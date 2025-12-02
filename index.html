@@ -1552,7 +1552,7 @@ els.startGame.onclick = () => {
   // Force repaint
   const gameEl = document.getElementById('game');
   if (gameEl) {
-    gameEl.style.transform = 'translateZ(0)';
+    gameEl.style.cssText += ''; // triggers full repaint
   }
     
   
