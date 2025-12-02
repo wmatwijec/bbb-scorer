@@ -1066,51 +1066,43 @@ function setupGameButtons() {
 
 
 function attachNavListeners() {
-  // FULL iOS/PC-PROOF RESET
-  ['prevHole', 'nextHole', 'editHole', 'finishHole'].forEach(id => {
-    const old = document.getElementById(id);
-    if (old) {
-      const clone = old.cloneNode(true);
-      clone.id = id;
-      clone.style.cursor = 'pointer';
-      clone.style.touchAction = 'manipulation';
-      old.replaceWith(clone);
+  const add = (id, handler) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.onclick = null;           // clear old
+      btn.onclick = handler;        // attach fresh
     }
-  });
+  };
 
-  // PREV
-  document.getElementById('prevHole')?.addEventListener('click', () => {
+  add('prevHole', () => {
     if (currentHole > 1 && !isHoleInProgress) {
       currentHole--;
-      updateHole();           // ← THIS WAS MISSING
+      updateHole();
       updateCourseInfoBar();
       logScreen(`PREV → HOLE ${currentHole}`);
     }
   });
 
-  // NEXT
-  document.getElementById('nextHole')?.addEventListener('click', () => {
+  add('nextHole', () => {
     if (currentHole < HOLES && !isHoleInProgress) {
       currentHole++;
-      updateHole();           // ← THIS WAS MISSING
+      updateHole();
       updateCourseInfoBar();
       logScreen(`NEXT → HOLE ${currentHole}`);
     }
   });
 
-  // EDIT
-  document.getElementById('editHole')?.addEventListener('click', () => {
+  add('editHole', () => {
     if (finishedHoles.has(currentHole)) {
       finishedHoles.delete(currentHole);
       isHoleInProgress = false;
       precomputeAllTotals();
-      updateHole();           // ← THIS WAS MISSING
+      updateHole();
       logScreen('EDIT MODE');
     }
   });
 
-  // FINISH HOLE
-  document.getElementById('finishHole')?.addEventListener('click', finishCurrentHole);
+  add('finishHole', finishCurrentHole);
 }
 
 
@@ -1538,6 +1530,7 @@ els.startGame.onclick = () => {
   renderRoundSummary();
   updateCourseInfoBar();
   updateNavButtons();
+  attachNavListeners();
   save();
   if (debugMode) renderDebugCarryTable();
 
