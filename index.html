@@ -1550,7 +1550,9 @@ els.startGame.onclick = () => {
 
   // Force repaint
   const gameEl = document.getElementById('game');
-  if (gameEl) gameEl.scrollTop = 1; 
+  if (gameEl) {
+    gameEl.style.transform = 'translateZ(0)';
+  }
     
   
 }
