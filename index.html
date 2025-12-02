@@ -2040,13 +2040,21 @@ saveRound();
  
 
   function resetRound() {
-    localStorage.removeItem('bbb');
-    inRound = false;
-    players = [];
-    currentCourse = null;
-    currentHole = 1;
-    finishedHoles.clear();
+  localStorage.removeItem('bbb');
+  inRound = false;
+  players = [];
+  currentCourse = null;
+  currentHole = 1;
+  finishedHoles.clear();
+
+  // === RESET BBB COMP BUTTON ===
+  const compBtn = document.getElementById('completeRound');
+  if (compBtn) {
+    compBtn.classList.remove('pulsing');
+    compBtn.textContent = 'BBB COMP';
+    compBtn.title = 'Finish round';
   }
+}
 
   
 
