@@ -293,6 +293,15 @@ body {
   to { transform: rotate(360deg); }
 }
 
+.control-bar button.pulsing {
+  animation: pulse 1.5s infinite;
+  background: #00ff00 !important;
+  font-weight: bold;
+}
+
+
+
+
 /* ABSOLUTE FINAL KILL ALL TOP SPACE — PLAYER SETUP & GAME */
 #playerSetup,
 #game {
@@ -1010,6 +1019,55 @@ function setupGameButtons() {
     if (!phones) return alert('Add phone numbers');
     window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
   };
+
+  // === FINAL BBB COMP BUTTON IN SUMMARY ===
+  document.getElementById('finalBBBComp')?.addEventListener('click', () => {
+    if (finishedHoles.size !== HOLES) {
+      alert(`Finish all ${HOLES} holes first.`);
+      return;
+    }
+    precomputeAllTotals();
+    if (confirm('Round complete!\n\nStart a new round?')) {
+      resetRound();
+      hideAll();
+      els.courseSetup.classList.remove('hidden');
+      // Re-attach course → players flow
+      els.nextToPlayers?.addEventListener('click', () => {
+        if (currentCourse === null) return alert('Select a course');
+        hideAll();
+        els.playerSetup.classList.remove('hidden');
+        renderPlayerSelect();
+      });
+    }
+  });
+
+  // === BACK TO SETUP (from summary) ===
+  document.getElementById('backToSetup')?.addEventListener('click', () => {
+    if (confirm('Leave summary and start over?')) {
+      resetRound();
+      hideAll();
+      els.courseSetup.classList.remove('hidden');
+    }
+  });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // BBB COMP (FINISH ROUND)
   els.completeRound.onclick = () => {
@@ -1812,6 +1870,18 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
   }).catch(err => console.error('Walt shadow send failed:', err));
 }
 
+// Auto-pulse BBB COMP when last hole is finished
+  if (currentHole === HOLES && finishedHoles.size === HOLES) {
+    setTimeout(() => {
+      const btn = document.getElementById('completeRound');
+      if (btn && !btn.classList.contains('pulsing')) {
+        btn.classList.add('pulsing');
+        btn.textContent = 'BBB COMP (READY!)';
+        btn.title = 'Tap to view final leaderboard';
+      }
+    }, 400);
+  }
+
 saveRound();
 }
 
@@ -2086,12 +2156,27 @@ function attachFinishHoleListener() {
   </section>
 
   <!-- SUMMARY -->
-  <section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
-    <h2 id="summaryTitle" class="hidden">Summary</h2>
-    <button id="backToSetup" onclick="resetRound(); hideAll(); document.getElementById('courseSetup').classList.remove('hidden');">Back to Setup</button>
-    <h3>Final Leaderboard</h3>
-    <ol id="leaderboard"></ol>    
-  </section>
+<section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
+  <h2 id="summaryTitle" class="hidden">Summary</h2>
+
+  <!-- BIG GREEN CALL-TO-ACTION -->
+  <div style="text-align:center; margin:1.5rem 0;">
+    <button id="finalBBBComp" style="
+      background:#0a0; color:#000; font-weight:bold; font-size:1.3rem;
+      padding:1rem 2rem; border-radius:12px; width:90%; max-width:400px;
+    ">
+      BBB COMP – Round Complete!
+    </button>
+  </div>
+
+  <!-- Smaller back button -->
+  <button id="backToSetup" style="margin-top:0.5rem; opacity:0.7; font-size:0.9rem;">
+    ← Back to Setup
+  </button>
+
+  <h3 style="margin-top:1.5rem;">Final Leaderboard</h3>
+  <ol id="leaderboard"></ol>
+</section>
 
   
 
