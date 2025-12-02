@@ -2078,36 +2078,42 @@ function attachFinishHoleListener() {
   btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
 
-   // === PRACTICE MODE TOGGLE ===
-function updatePracticeMode() {
-  const banner = document.getElementById('practiceBanner');
-  const toggle = document.getElementById('practiceToggle');
-  const body = document.body;
+  // === PRACTICE MODE: FINAL, NO GLOBAL FUNCTION ===
+  (function () {
+    'use strict';
 
-  if (practiceMode) {
-    banner.classList.remove('hidden');
-    toggle.checked = true;
-    body.classList.add('practice-mode');
-  } else {
-    banner.classList.add('hidden');
-    toggle.checked = false;
-    body.classList.remove('practice-mode');
-  }
+    const banner = document.getElementById('practiceBanner');
+    const toggle = document.getElementById('practiceToggle');
 
-  // Save to localStorage
-  localStorage.setItem('bbb_practiceMode', practiceMode);
-}
+    if (!banner || !toggle) {
+      console.error('Practice Mode: banner or toggle missing in DOM');
+      return;
+    }
 
-// Load on startup
-practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
-updatePracticeMode();
+    // Load saved state
+    practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
 
-// Toggle listener
-document.getElementById('practiceToggle')?.addEventListener('change', (e) => {
-  practiceMode = e.target.checked;
-  updatePracticeMode();
-  saveRound(); // persist immediately
-}); 
+    // Apply state
+    function apply() {
+      banner.classList.toggle('hidden', !practiceMode);
+      toggle.checked = practiceMode;
+      document.body.classList.toggle('practice-mode', practiceMode);
+      localStorage.setItem('bbb_practiceMode', practiceMode);
+    }
+
+    // Run on load
+    apply();
+
+    // Toggle
+    toggle.addEventListener('change', () => {
+      practiceMode = toggle.checked;
+      apply();
+      if (inRound) saveRound();
+    });
+
+    // Debug: expose to console
+    window.pm = { practiceMode, apply };
+  })();
 
 
 // This closes the DOMContentLoaded callback
