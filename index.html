@@ -1503,13 +1503,16 @@ els.startGame.onclick = () => {
   }
 
 function updateHole() {
-  console.log('updateHole() START — currentHole:', currentHole);
+console.log('=== UPDATEHOLE DEBUG START ===');
+  console.log('currentHole:', currentHole);
+  console.log('currentCourse (raw):', currentCourse);
+  console.log('typeof currentCourse:', typeof currentCourse);
+  console.log('courses array length:', courses.length);
   console.log('courses[currentCourse]:', courses[currentCourse]);
-  console.log('players:', players);
-  console.log('finishedHoles:', Array.from(finishedHoles));
-  console.log('els.game:', els.game);
-  console.log('document.getElementById("game"):', document.getElementById('game'));
-  console.log('scoreTable tbody:', document.querySelector('#scoreTable tbody'));
+  console.log('courses[0]:', courses[0]);
+  console.log('courses[1]:', courses[1]);
+  console.log('courses[2]:', courses[2]);
+  console.log('=== UPDATEHOLE DEBUG END ===');
   
   
   
