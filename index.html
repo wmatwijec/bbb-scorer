@@ -1066,13 +1066,11 @@ function setupGameButtons() {
     precomputeAllTotals();
     if (confirm('Round complete!\n\nStart a new round?')) {
       resetRound();
-      hideAll();
-      els.courseSetup.classList.remove('hidden');
+      showScreen('playerSetup');
       // Re-attach course → players flow
       els.nextToPlayers?.addEventListener('click', () => {
         if (currentCourse === null) return alert('Select a course');
-        hideAll();
-        els.playerSetup.classList.remove('hidden');
+        showScreen('playerSetup');
         renderPlayerSelect();
       });
     }
@@ -1082,8 +1080,7 @@ function setupGameButtons() {
   document.getElementById('backToSetup')?.addEventListener('click', () => {
     if (confirm('Leave summary and start over?')) {
       resetRound();
-      hideAll();
-      els.courseSetup.classList.remove('hidden');
+      showScreen('playerSetup');
     }
   });
 
@@ -1100,7 +1097,7 @@ function setupGameButtons() {
     setTimeout(() => {
       if (confirm('Round complete!\n\nStart a new round?')) {
         resetRound();
-        hideAll();
+        showScreen('courseSetup');
         els.courseSetup.classList.remove('hidden');
       }
     }, 500);
@@ -1224,8 +1221,7 @@ function attachNavListeners() {
   // ==============================================================
   await loadDataFromBackend();                     // ← really waits now
 
-  hideAll();
-  els.courseSetup.classList.remove('hidden');      // ← fresh load = course picker
+  showScreen('playerSetup');      // ← fresh load = course picker
 
   // ==============================================================
   // 3. NEXT → PLAYERS BUTTON (now works perfectly)
@@ -1234,16 +1230,14 @@ function attachNavListeners() {
     if (currentCourse === null || currentCourse === undefined) {
       return alert('Please select a course first');
     }
-    hideAll();
-    els.playerSetup.classList.remove('hidden');
+    showScreen('playerSetup');
     renderPlayerSelect();
     logScreen('PLAYER SETUP');
   });
   
   // === BACK TO COURSE FROM PLAYER SETUP ===
   document.getElementById('backToCourse')?.addEventListener('click', () => {
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
+    showScreen('courseSetup');
     logScreen('BACK TO COURSE SELECT');
   });
 
@@ -1305,8 +1299,7 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
   practiceMode = selected.practiceMode || false;
   pdatePracticeMode();
 
-  hideAll();
-  els.game.classList.remove('hidden');
+ showScreen('playerSetup');
 
   // CRITICAL: Wait for courses to load before updating hole
   const checkCourses = () => {
@@ -1376,6 +1369,16 @@ function hideAll() {
   // NEVER hide practice banner
   const banner = document.getElementById('practiceBanner');
   if (banner) banner.classList.remove('hidden');
+}
+
+
+function showScreen(id) {
+  hideAll();
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
+
+  // RE-APPLY PRACTICE MODE AFTER EVERY SCREEN CHANGE
+  if (window.pm) window.pm.apply();
 }
 
 
@@ -1469,8 +1472,7 @@ els.startGame.onclick = () => {
   inRound = true;
   saveRound();
 
-  hideAll();
-  els.game.classList.remove('hidden');
+  showScreen('playerSetup');
 
  if (window.pm) {
   window.pm.apply();
@@ -1999,8 +2001,7 @@ saveRound();
   
 
   function showSummary() {
-    hideAll();
-    els.summary.classList.remove('hidden');
+    showScreen('summary');
     const totals = players.map(p => ({ name: p.name, points: p._cachedTotal || 0 }));
     totals.sort((a,b) => b.points - a.points);
     els.leaderboard.innerHTML = '';
@@ -2030,16 +2031,14 @@ saveRound();
   setTimeout(() => {
   if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
     resetRound();
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
+    showScreen('courseSetup');
 
     // RE-ATTACH THE "Load Course →" BUTTON — THIS FIXES THE LOOP
     els.nextToPlayers?.addEventListener('click', () => {
       if (currentCourse === null || currentCourse === undefined) {
         return alert('Please select a course first');
       }
-      hideAll();
-      els.playerSetup.classList.remove('hidden');
+       showScreen('playerSetup');
       renderPlayerSelect();
       logScreen('PLAYER SETUP');
     });
