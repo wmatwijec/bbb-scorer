@@ -333,7 +333,13 @@ body {
   margin-top: 0.3rem !important;
 }
 
-
+#backToCourse {
+  background: #ccc;
+  color: #000;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
 
 /* FINAL CONTROL BAR — SMALLER, SUBTLE, CENTERED */
 .control-bar {
@@ -1219,6 +1225,21 @@ function attachNavListeners() {
     renderPlayerSelect();
     logScreen('PLAYER SETUP');
   });
+  
+  // === BACK TO COURSE FROM PLAYER SETUP ===
+  document.getElementById('backToCourse')?.addEventListener('click', () => {
+    hideAll();
+    els.courseSetup.classList.remove('hidden');
+    logScreen('BACK TO COURSE SELECT');
+  });
+
+
+
+
+
+
+
+
 
   // ==============================================================
   // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
