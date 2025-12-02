@@ -1503,7 +1503,7 @@ els.startGame.onclick = () => {
   }
 
 function updateHole() {
-console.log('=== UPDATEHOLE DEBUG START ===');
+  console.log('=== UPDATEHOLE DEBUG START ===');
   console.log('currentHole:', currentHole);
   console.log('currentCourse (raw):', currentCourse);
   console.log('typeof currentCourse:', typeof currentCourse);
@@ -1513,15 +1513,21 @@ console.log('=== UPDATEHOLE DEBUG START ===');
   console.log('courses[1]:', courses[1]);
   console.log('courses[2]:', courses[2]);
   console.log('=== UPDATEHOLE DEBUG END ===');
-  
-  
-  
- if (!inRound || players.length === 0 || currentCourse === null || currentCourse === undefined || !courses[currentCourse]) return;
+
+  // FINAL SAFETY NET — currentCourse MUST be a valid number
+  if (currentCourse === null || currentCourse === undefined || isNaN(Number(currentCourse))) {
+    console.log('currentCourse is invalid — FORCING to 0');
+    currentCourse = 0;
+  } else {
+    currentCourse = Number(currentCourse);
+  }
+
+  if (!inRound || players.length === 0 || !courses[currentCourse]) return;
 
   precomputeAllTotals();
 
   const holeIdx = currentHole - 1;
-  const courseObj = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
+  const courseObj = courses[currentCourse];
   if (!courseObj || !courseObj.pars) return;
 
   const par = courseObj.pars[holeIdx];
