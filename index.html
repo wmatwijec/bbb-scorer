@@ -1089,7 +1089,7 @@ function setupGameButtons() {
     precomputeAllTotals();
     if (confirm('Round complete!\n\nStart a new round?')) {
       resetRound();
-      showScreen('playerSetup');
+      showScreen('courseSetup');
       // Re-attach course → players flow
       els.nextToPlayers?.addEventListener('click', () => {
         if (currentCourse === null) return alert('Select a course');
@@ -1103,7 +1103,7 @@ function setupGameButtons() {
   document.getElementById('backToSetup')?.addEventListener('click', () => {
     if (confirm('Leave summary and start over?')) {
       resetRound();
-      showScreen('playerSetup');
+      showScreen('courseSetup');
     }
   });
 
@@ -1121,9 +1121,7 @@ function setupGameButtons() {
       if (confirm('Round complete!\n\nStart a new round?')) {
         resetRound();
         showScreen('courseSetup');
-        els.courseSetup.classList.remove('hidden');
-      }
-    }, 500);
+       
   };
 
   // EXIT ROUND — ONE PROMPT ONLY
@@ -1239,32 +1237,56 @@ function attachNavListeners() {
 
 
 
+// ==============================================================// ==============================================================
+// 2. LOAD DATA + SHOW COURSE PICKER
 // ==============================================================
+await loadDataFromBackend();
+
+// SHOW COURSE SETUP ON FRESH LOAD
+showScreen('courseSetup');  // ← FIXED
+
+// ==============================================================
+// 3. NEXT → PLAYERS BUTTON
+// ==============================================================
+els.nextToPlayers?.addEventListener('click', () => {
+  if (currentCourse === null || currentCourse === undefined) {
+    return alert('Please select a course first');
+  }
+  showScreen('playerSetup');  // ← CORRECT
+  renderPlayerSelect();
+  logScreen('PLAYER SETUP');
+});
+
+// === BACK TO COURSE FROM PLAYER SETUP ===
+document.getElementById('backToCourse')?.addEventListener('click', () => {
+  showScreen('courseSetup');  // ← CORRECT
+  logScreen('BACK TO COURSE SELECT');
+});
+
+
   // 2. LOAD DATA + SHOW COURSE PICKER
-  // ==============================================================
-  await loadDataFromBackend();                     // ← really waits now
+// ==============================================================
+await loadDataFromBackend();                     // ← really waits now
 
-  showScreen('playerSetup');      // ← fresh load = course picker
+showScreen('courseSetup');  // ← FIXED: show course picker on fresh load
 
-  // ==============================================================
-  // 3. NEXT → PLAYERS BUTTON (now works perfectly)
-  // ==============================================================
-   els.nextToPlayers?.addEventListener('click', () => {
-    if (currentCourse === null || currentCourse === undefined) {
-      return alert('Please select a course first');
-    }
-    showScreen('playerSetup');
-    renderPlayerSelect();
-    logScreen('PLAYER SETUP');
-  });
-  
-  // === BACK TO COURSE FROM PLAYER SETUP ===
-  document.getElementById('backToCourse')?.addEventListener('click', () => {
-    showScreen('courseSetup');
-    logScreen('BACK TO COURSE SELECT');
-  });
+// ==============================================================
+// 3. NEXT → PLAYERS BUTTON
+// ==============================================================
+els.nextToPlayers?.addEventListener('click', () => {
+  if (currentCourse === null || currentCourse === undefined) {
+    return alert('Please select a course first');
+  }
+  showScreen('playerSetup');  // ← CORRECT
+  renderPlayerSelect();
+  logScreen('PLAYER SETUP');
+});
 
-
+// === BACK TO COURSE FROM PLAYER SETUP ===
+document.getElementById('backToCourse')?.addEventListener('click', () => {
+  showScreen('courseSetup');  // ← CORRECT
+  logScreen('BACK TO COURSE SELECT');
+});
 
 
 
@@ -1321,9 +1343,14 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
   finishedHoles = new Set(selected.finishedHoles || []);
   inRound = true;
   practiceMode = selected.practiceMode || false;
-  pdatePracticeMode();
+ 
 
- showScreen('playerSetup');
+// FIXED: Use window.pm.apply()
+  showScreen('game');  // Show game screen
+  updateHole();
+  if (window.pm) window.pm.apply();  // ← RE-APPLY PRACTICE MODE
+  return;
+
 
   // CRITICAL: Wait for courses to load before updating hole
   const checkCourses = () => {
@@ -1342,7 +1369,8 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
   checkCourses();
 
   return;
-}
+  }
+} 
     
 
     
@@ -1476,7 +1504,7 @@ els.startGame.onclick = () => {
   inRound = true;
   saveRound();
 
-  showScreen('playerSetup');
+  showScreen('game');
 
  if (window.pm) {
   window.pm.apply();
