@@ -1079,59 +1079,7 @@ function setupGameButtons() {
       hideAll();
       els.courseSetup.classList.remove('hidden');
     }
-
-   // === PRACTICE MODE TOGGLE ===
-function updatePracticeMode() {
-  const banner = document.getElementById('practiceBanner');
-  const toggle = document.getElementById('practiceToggle');
-  const body = document.body;
-
-  if (practiceMode) {
-    banner.classList.remove('hidden');
-    toggle.checked = true;
-    body.classList.add('practice-mode');
-  } else {
-    banner.classList.add('hidden');
-    toggle.checked = false;
-    body.classList.remove('practice-mode');
-  }
-
-  // Save to localStorage
-  localStorage.setItem('bbb_practiceMode', practiceMode);
-}
-
-// Load on startup
-practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
-updatePracticeMode();
-
-// Toggle listener
-document.getElementById('practiceToggle')?.addEventListener('change', (e) => {
-  practiceMode = e.target.checked;
-  updatePracticeMode();
-  saveRound(); // persist immediately
-}); 
-
-
-
-
   });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2130,6 +2078,36 @@ function attachFinishHoleListener() {
   btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
 
+   // === PRACTICE MODE TOGGLE ===
+function updatePracticeMode() {
+  const banner = document.getElementById('practiceBanner');
+  const toggle = document.getElementById('practiceToggle');
+  const body = document.body;
+
+  if (practiceMode) {
+    banner.classList.remove('hidden');
+    toggle.checked = true;
+    body.classList.add('practice-mode');
+  } else {
+    banner.classList.add('hidden');
+    toggle.checked = false;
+    body.classList.remove('practice-mode');
+  }
+
+  // Save to localStorage
+  localStorage.setItem('bbb_practiceMode', practiceMode);
+}
+
+// Load on startup
+practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
+updatePracticeMode();
+
+// Toggle listener
+document.getElementById('practiceToggle')?.addEventListener('change', (e) => {
+  practiceMode = e.target.checked;
+  updatePracticeMode();
+  saveRound(); // persist immediately
+}); 
 
 
 // This closes the DOMContentLoaded callback
