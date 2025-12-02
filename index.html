@@ -1799,10 +1799,10 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
 
   const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
 
-  // 1. SEND SMS (opens Messages app)
+  /* // 1. SEND SMS (opens Messages app)
   setTimeout(() => {
     window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-  }, 1200);
+  }, 1200); */
 
   // 2. SEND TO SERVER (silent backup — never fails the app)
   fetch('https://pwa-players-backend.onrender.com/send-walt', {
