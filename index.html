@@ -1368,20 +1368,15 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
   }
 
 function hideAll() {
-  const screens = [
-    'courseSetup', 'playerSetup', 'game', 'summary'
-  ];
-  screens.forEach(id => {
+  ['courseSetup', 'playerSetup', 'game', 'summary'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
 
-  // ALWAYS keep practice banner visible if active
+  // NEVER hide practice banner
   const banner = document.getElementById('practiceBanner');
-  if (banner && practiceMode) {
-    banner.classList.remove('hidden');
-  }
-} 
+  if (banner) banner.classList.remove('hidden');
+}
 
 
 
@@ -1477,7 +1472,7 @@ els.startGame.onclick = () => {
   hideAll();
   els.game.classList.remove('hidden');
 
- if (typeof window.pm === 'object') {
+ if (window.pm) {
   window.pm.apply();
 }
 
