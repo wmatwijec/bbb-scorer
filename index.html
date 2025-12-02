@@ -2078,43 +2078,46 @@ function attachFinishHoleListener() {
   btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
 
-  // === PRACTICE MODE: FINAL, NO GLOBAL FUNCTION ===
+    // === PRACTICE MODE: FINAL, WORKING ===
   (function () {
     'use strict';
 
     const banner = document.getElementById('practiceBanner');
     const toggle = document.getElementById('practiceToggle');
+    const body = document.body;
 
     if (!banner || !toggle) {
-      console.error('Practice Mode: banner or toggle missing in DOM');
+      console.error('Practice Mode: DOM missing');
       return;
     }
 
-    // Load saved state
+    // Load saved
     practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
 
-    // Apply state
+    // Apply
     function apply() {
-      banner.classList.toggle('hidden', !practiceMode);
-      toggle.checked = practiceMode;
-      document.body.classList.toggle('practice-mode', practiceMode);
+      if (practiceMode) {
+        banner.classList.remove('hidden');  // ← FORCE REMOVE
+        toggle.checked = true;
+        body.classList.add('practice-mode');
+      } else {
+        banner.classList.add('hidden');     // ← FORCE ADD
+        toggle.checked = false;
+        body.classList.remove('practice-mode');
+      }
       localStorage.setItem('bbb_practiceMode', practiceMode);
     }
 
-    // Run on load
-    apply();
+    apply(); // run now
 
-    // Toggle
     toggle.addEventListener('change', () => {
       practiceMode = toggle.checked;
       apply();
       if (inRound) saveRound();
     });
 
-    // Debug: expose to console
     window.pm = { practiceMode, apply };
   })();
-
 
 // This closes the DOMContentLoaded callback
 });
