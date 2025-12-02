@@ -1226,6 +1226,7 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
     if (courses.length > 0 && courses[currentCourse]) {
       updateHole();
       attachFinishHoleListener();
+      renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
       attachNavListeners();
       setupGameButtons();
       updateCourseInfoBar();
