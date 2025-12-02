@@ -1503,6 +1503,16 @@ els.startGame.onclick = () => {
   }
 
 function updateHole() {
+  console.log('updateHole() START — currentHole:', currentHole);
+  console.log('courses[currentCourse]:', courses[currentCourse]);
+  console.log('players:', players);
+  console.log('finishedHoles:', Array.from(finishedHoles));
+  console.log('els.game:', els.game);
+  console.log('document.getElementById("game"):', document.getElementById('game'));
+  console.log('scoreTable tbody:', document.querySelector('#scoreTable tbody'));
+  
+  
+  
   if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
   precomputeAllTotals();
@@ -1535,11 +1545,15 @@ function updateHole() {
   if (debugMode) renderDebugCarryTable();
 
   // FINAL FIX — FORCES FULL SCREEN REPAINT ON iOS/PC AFTER RESUME
+  console.log('updateHole() END — about to repaint');
   const table = document.querySelector('#scoreTable');
   if (table) {
+    console.log('Table found — forcing repaint');
     table.style.display = 'none';
-    void table.offsetHeight; // force reflow
+    void table.offsetHeight;
     table.style.display = '';
+  } else {
+    console.log('TABLE NOT FOUND IN DOM');
   }
 }
  
