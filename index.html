@@ -1502,7 +1502,7 @@ els.startGame.onclick = () => {
     return sum;
   }
 
- function updateHole() {
+function updateHole() {
   if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
 
   precomputeAllTotals();
@@ -1534,12 +1534,12 @@ els.startGame.onclick = () => {
   save();
   if (debugMode) renderDebugCarryTable();
 
-  // NUCLEAR REPAINT — WORKS ON EVERY iPHONE AND PC
-  const gameEl = document.getElementById('game');
-  if (gameEl) {
-    gameEl.style.display = 'none';
-    gameEl.offsetHeight; // trigger reflow
-    gameEl.style.display = '';
+  // FINAL FIX — FORCES FULL SCREEN REPAINT ON iOS/PC AFTER RESUME
+  const table = document.querySelector('#scoreTable');
+  if (table) {
+    table.style.display = 'none';
+    void table.offsetHeight; // force reflow
+    table.style.display = '';
   }
 }
  
