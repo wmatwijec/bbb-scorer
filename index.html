@@ -1716,8 +1716,9 @@ function renderHoleSummary() {
         return s.firstOn || s.closest || s.putt;
       });
       if (!hasAnyScore) {
-        lockNavigation();
-      }
+      isHoleInProgress = true;   // ← this + updateNavButtons() is enough
+      updateNavButtons();        // ← call it directly
+    }
     }
 
     const score = player.scores[holeIdx];
