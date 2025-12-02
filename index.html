@@ -1561,14 +1561,15 @@ console.log('=== UPDATEHOLE DEBUG START ===');
 }
  
   function updateCourseInfoBar() {
-  if (!inRound || !currentCourse) {
+  if (!inRound || currentCourse === null || currentCourse === undefined) {
     els.courseInfoBar.style.display = 'none';
     return;
   }
 
-  // NEW: Safely get the course object (works whether currentCourse is object or old index)
-  const course = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
-  
+  // FORCE currentCourse to be a number
+  const courseIndex = Number(currentCourse);
+  const course = courses[courseIndex];
+
   if (!course || !course.pars || !course.pars[currentHole - 1]) {
     els.courseInfoBar.style.display = 'none';
     return;
@@ -1577,7 +1578,6 @@ console.log('=== UPDATEHOLE DEBUG START ===');
   els.infoCourseName.textContent = course.name;
   els.infoCurrentHole.textContent = currentHole;
   els.infoPar.textContent = `Par ${course.pars[currentHole - 1]}`;
-
   els.courseInfoBar.style.display = 'block';
 }
   
