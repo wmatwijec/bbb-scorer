@@ -962,6 +962,29 @@ document.addEventListener('DOMContentLoaded',async () => {
     simResult: document.getElementById('simResult')
   };
 
+  
+
+   function hideAll() {
+  ['courseSetup', 'playerSetup', 'game', 'summary'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+
+  // NEVER hide practice banner
+  const banner = document.getElementById('practiceBanner');
+  if (banner) banner.classList.remove('hidden');
+}
+
+
+function showScreen(id) {
+  hideAll();
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('hidden');
+
+  // RE-APPLY PRACTICE MODE AFTER EVERY SCREEN CHANGE
+  if (window.pm) window.pm.apply();
+}
+
 
   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
   // CRITICAL: updateNavButtons() MUST BE HERE
@@ -1269,10 +1292,11 @@ const savedRounds = [];
 
     let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
     savedRounds.forEach((r, i) => {
-      message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-      message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-      message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
-    });
+  message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+  message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+  message += `    ${new Date(r.date).toLocaleDateString()}`;
+  message += ` (${r.practiceMode ? 'Practice' : 'Live'} Round)\n\n`;  // ← ADD THIS
+});
     message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
 
     const choice = prompt(message);
@@ -1360,26 +1384,6 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     }));
   }
 
-function hideAll() {
-  ['courseSetup', 'playerSetup', 'game', 'summary'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
-  });
-
-  // NEVER hide practice banner
-  const banner = document.getElementById('practiceBanner');
-  if (banner) banner.classList.remove('hidden');
-}
-
-
-function showScreen(id) {
-  hideAll();
-  const el = document.getElementById(id);
-  if (el) el.classList.remove('hidden');
-
-  // RE-APPLY PRACTICE MODE AFTER EVERY SCREEN CHANGE
-  if (window.pm) window.pm.apply();
-}
 
 
 
