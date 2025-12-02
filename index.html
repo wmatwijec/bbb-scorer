@@ -1516,48 +1516,39 @@ els.startGame.onclick = () => {
   precomputeAllTotals();
 
   const holeIdx = currentHole - 1;
-
-  // SAFE COURSE ACCESS — THIS WAS THE FINAL BUG
   const courseObj = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
-  if (!courseObj || !courseObj.pars) {
-    console.error('Invalid course:', currentCourse, courses[currentCourse]);
-    return;
-  }
+  if (!courseObj || !courseObj.pars) return;
+
   const par = courseObj.pars[holeIdx];
   const isPar3 = par === 3;
-
   const courseName = courseObj.name || 'Unknown';
-  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
 
+  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
   els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
 
   const isFinished = finishedHoles.has(currentHole);
-
   const finishBtn = document.getElementById('finishHole');
-  const editBtn   = document.getElementById('editHole');
+  const editBtn = document.getElementById('editHole');
   if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
-  if (editBtn)   editBtn.classList.toggle('hidden', !isFinished);
+  if (editBtn) editBtn.classList.toggle('hidden', !isFinished);
 
   const carryIn = getCarryInForHole(currentHole);
   renderTable(carryIn, isFinished);
-
   renderHoleSummary();
   renderRoundSummary();
-
   updateCourseInfoBar();
   updateNavButtons();
   save();
   if (debugMode) renderDebugCarryTable();
 
-  // Force repaint
+  // NUCLEAR REPAINT — WORKS ON EVERY iPHONE AND PC
   const gameEl = document.getElementById('game');
   if (gameEl) {
-    gameEl.style.cssText += ''; // triggers full repaint
+    gameEl.style.display = 'none';
+    gameEl.offsetHeight; // trigger reflow
+    gameEl.style.display = '';
   }
-    
-  
 }
-
  
   function updateCourseInfoBar() {
   if (!inRound || !currentCourse) {
