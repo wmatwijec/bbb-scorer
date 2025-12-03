@@ -2076,7 +2076,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Call in startGame and resume
   // (already in startGame.onclick and resume above)
 
-  // === PRACTICE MODE IIFE ===
+    // === PRACTICE MODE IIFE ===
   (function () {
     'use strict';
     const banner = document.getElementById('practiceBanner');
@@ -2094,19 +2094,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       localStorage.setItem('bbb_practiceMode', practiceMode);
     }
 
-    apply();
+    apply();   ← **ADD `)` HERE**
 
-   toggle.addEventListener('change', () => {
+    toggle.addEventListener('change', () => {
       practiceMode = toggle.checked;
       apply();
       if (inRound) saveRound();
     });
 
     window.pm = { practiceMode, apply };
-    })();
+  })();
 
-});
-
+});   // closes DOMContentLoaded
 
 </script>
 
