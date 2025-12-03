@@ -693,9 +693,7 @@ function onChange(id, handler) {
   //  Async functions here
 
    // === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone)/
-
-
- async function loadDataFromBackend() {
+async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
   const picker = document.getElementById('coursePicker');
@@ -717,6 +715,9 @@ function onChange(id, handler) {
         credentials: 'omit'
       })
     ]);
+
+    console.log('Players response status:', playersRes.status);
+    console.log('Courses response status:', coursesRes.status);
 
     if (!playersRes.ok) throw new Error(`Players ${playersRes.status}`);
     if (!coursesRes.ok) throw new Error(`Courses ${coursesRes.status}`);
@@ -755,19 +756,26 @@ function onChange(id, handler) {
 
     // CRITICAL iOS repaint fix — this is what finally hides the spinner
     setTimeout(() => {
-      loader.classList.add('hidden');
-      picker.classList.remove('hidden');
+      if (loader) loader.classList.add('hidden');
+      if (picker) {
+        picker.classList.remove('hidden');
+        picker.style.display = 'block';
+      }
       renderCourseSelect();
       console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
     }, 0);
 
   } catch (err) {
-    console.error('Backend load failed:', err);
-    loader.classList.add('hidden');
-    error.classList.remove('hidden');
-    error.textContent = `Load failed: ${err.message}`;
+    console.error('BACKEND ERROR:', err);
+    if (loader) loader.classList.add('hidden');
+    if (error) {
+      error.classList.remove('hidden');
+      error.textContent = `Load failed: ${err.message}`;
+    }
   }
 }
+
+
 
   async function saveRound() {
   if (!inRound) return;
