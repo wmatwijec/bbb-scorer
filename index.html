@@ -1099,7 +1099,8 @@ function setupGameButtons() {
       if (confirm('Round complete!\n\nStart a new round?')) {
         resetRound();
         showScreen('courseSetup');
-       
+      }
+    }, 500);
   };
 
   // EXIT ROUND — ONE PROMPT ONLY
@@ -1135,8 +1136,8 @@ function setupGameButtons() {
 
   document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
   document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
-})
-  }  
+}  
+    
 
 
 function attachNavListeners() {
