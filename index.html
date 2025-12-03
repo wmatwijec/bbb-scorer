@@ -674,7 +674,23 @@ body.practice-mode {
     let practiceMode = false;
 
 
-    //  Async functions here
+
+
+// === SAFE EVENT LISTENER HELPER ===
+function onClick(id, handler) {
+  const el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (el) el.addEventListener('click', handler);
+}
+
+
+// === SAFE ON CHANGE LISTENER HELPER ===
+function onChange(id, handler) {
+  const el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (el) el.addEventListener('change', handler);
+}
+
+
+  //  Async functions here
 
    // === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone)/
 
@@ -935,7 +951,7 @@ function renderCourseSelect() {
   updateButton();
 
   // And also run every time the select changes (mobile-safe)
-  els.courseSelect.addEventListener('change', updateButton);
+ onChange(els.courseSelect, updateButton);
 
   // iOS sometimes needs a tiny delay — this covers all edge cases
   setTimeout(updateButton, 100);
@@ -1059,7 +1075,7 @@ function setupGameButtons() {
   };
 
   // === FINAL BBB COMP BUTTON IN SUMMARY ===
-  document.getElementById('finalBBBComp')?.addEventListener('click', () => {
+  onClick('finalBBBComp', () => {
     if (finishedHoles.size !== HOLES) {
       alert(`Finish all ${HOLES} holes first.`);
       return;
@@ -1069,7 +1085,7 @@ function setupGameButtons() {
       resetRound();
       showScreen('courseSetup');
       // Re-attach course → players flow
-      els.nextToPlayers?.addEventListener('click', () => {
+      onClick(els.nextToPlayers, () => {
         if (currentCourse === null) return alert('Select a course');
         showScreen('playerSetup');
         renderPlayerSelect();
@@ -1078,7 +1094,7 @@ function setupGameButtons() {
   });
 
   // === BACK TO SETUP (from summary) ===
-  document.getElementById('backToSetup')?.addEventListener('click', () => {
+  onClick('backToSetup', () => {
     if (confirm('Leave summary and start over?')) {
       resetRound();
       showScreen('courseSetup');
@@ -1134,8 +1150,8 @@ function setupGameButtons() {
     document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
   };
 
-  document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
-  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
+  onClick('closeHelp', closeHelp);
+  onClick('bbbHelpBackdrop', closeHelp);
 }  
     
 
@@ -1218,7 +1234,9 @@ function renderPlayerSelect() {
   els.playerSetup.classList.remove('hidden');  // Remove hidden class
 
   // === ATTACH CHECKBOX LISTENERS ===
-  els.playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+ const checkboxes = els.playerSelect?.querySelectorAll('input[type="checkbox"]');
+if (checkboxes) {
+  checkboxes.forEach(chk => {
     chk.addEventListener('change', () => {
       const idx = parseInt(chk.dataset.index);
       const player = roster[idx];
@@ -1821,7 +1839,7 @@ saveRound();
     
   }
 
- els.completeRound.addEventListener('click', () => {
+ onClick(els.completeRound, () => {
   if (finishedHoles.size !== HOLES) {
     alert(`Finish all ${HOLES} holes first.`);
     return;
@@ -1842,7 +1860,7 @@ saveRound();
     showScreen('courseSetup');
 
     // RE-ATTACH THE "Load Course →" BUTTON — THIS FIXES THE LOOP
-    els.nextToPlayers?.addEventListener('click', () => {
+    onClick(els.nextToPlayers, () => {
       if (currentCourse === null || currentCourse === undefined) {
         return alert('Please select a course first');
       }
@@ -1854,7 +1872,7 @@ saveRound();
 }, 500);
 });
 
-  els.exitRound.addEventListener('click', () => {
+  onClick(els.exitRound, () => {
     if (confirm('Exit without saving?')) {
       resetRound();
       /* els.historyBtn.disabled = false; */
@@ -1908,7 +1926,7 @@ function attachFinishHoleListener() {
       }
     }
   });
-  els.closeDebug.addEventListener('click', () => {
+  onClick(els.closeDebug, () => {
     debugMode = false;
     els.debugPanel.classList.add('hidden');
   });
@@ -1967,7 +1985,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   showScreen('courseSetup');
 
   // === NEXT → PLAYERS BUTTON ===
-  els.nextToPlayers?.addEventListener('click', () => {
+  onClick(els.nextToPlayers, () => {
     if (!currentCourse) return alert('Please select a course first');
     showScreen('playerSetup');
     renderPlayerSelect();
@@ -1975,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // === BACK TO COURSE FROM PLAYER SETUP ===
-  document.getElementById('backToCourse')?.addEventListener('click', () => {
+  onClick('backToCourse', () => {
     showScreen('courseSetup');
     logScreen('BACK TO COURSE SELECT');
   });
@@ -2070,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     apply();
 
-    toggle.addEventListener('change', () => {
+   onChange
       practiceMode = toggle.checked;
       apply();
       if (inRound) saveRound();
