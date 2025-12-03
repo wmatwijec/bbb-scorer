@@ -652,7 +652,7 @@ body.practice-mode {
   }); */
 </script>
 
-<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+<!-- YOUR ENTIRE APP CODE INLINED BELOW   SCRIPT START-->  
   <script>
     console.log('app-v23.js INLINED — LOADED 100% — 20251122-FINAL-WIN');
 
@@ -675,60 +675,12 @@ body.practice-mode {
     let practiceMode = false;
 
 
+    //  Async functions here
 
-    // === PERSISTENCE V2 — MULTIPLE ROUNDS + UNIQUE MATCH ID ===
-    let currentMatchId = localStorage.getItem('bbb_currentMatchId');
-    if (!currentMatchId) {
-      currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
-      localStorage.setItem('bbb_currentMatchId', currentMatchId);
-    }    
-
-    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+   / === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone)/
 
 
-
-function getWaltPhone() {
-  if (!roster || !Array.isArray(roster)) return;
-  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
-  if (walt && walt.phone) {
-    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
-    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
-  }
-}
-
-// ENHANCED EMERGENCY SPINNER KILLER — polls until picker shows (iOS 18-proof)
-(function() {
-  let attempts = 0;
-  const maxAttempts = 30;  // 3 seconds max
-  const interval = setInterval(() => {
-    attempts++;
-    const loader = document.getElementById('courseLoader');
-    const picker = document.getElementById('coursePicker');
-    const error = document.getElementById('courseError');
-    
-    if (loader && picker) {
-      // Force-kill loader and error, force-show picker
-      loader.style.display = 'none !important';
-      if (error) error.style.display = 'none !important';
-      picker.style.display = 'block !important';  // or 'flex !important' if your CSS uses flex
-      
-      // Extra iOS reflow trigger
-      picker.offsetHeight;
-      
-      console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
-      clearInterval(interval);
-    }
-    
-    if (attempts >= maxAttempts) {
-      console.error('Emergency fallback timed out — manual intervention needed');
-      clearInterval(interval);
-    }
-  }, 100);  // Check every 100ms
-})();
-
-
-// === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone) ===
-async function loadDataFromBackend() {
+ async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
   const picker = document.getElementById('coursePicker');
@@ -802,6 +754,104 @@ async function loadDataFromBackend() {
   }
 }
 
+  async function saveRound() {
+  if (!inRound) return;
+
+  const roundData = {
+    matchId: currentMatchId,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    currentCourseIndex: currentCourse,
+    practiceMode: practiceMode,
+    finishedHoles: Array.from(finishedHoles),
+    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
+  };
+
+  // Save locally with unique ID
+  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
+
+  // Cloud backup (fire-and-forget)
+  fetch('https://pwa-players-backend.onrender.com/save-round', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(roundData)
+  }).catch(() => {});
+}
+ 
+
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator && inRound) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock active — screen stays awake during round');
+    } catch (err) {
+      console.log('Wake Lock failed (iOS ignores it anyway)', err);
+    }
+  }
+}
+
+
+
+
+
+
+    // === PERSISTENCE V2 — MULTIPLE ROUNDS + UNIQUE MATCH ID ===
+    let currentMatchId = localStorage.getItem('bbb_currentMatchId');
+    if (!currentMatchId) {
+      currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
+      localStorage.setItem('bbb_currentMatchId', currentMatchId);
+    }    
+
+    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+
+
+
+function getWaltPhone() {
+  if (!roster || !Array.isArray(roster)) return;
+  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+  if (walt && walt.phone) {
+    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+  }
+}
+
+// ENHANCED EMERGENCY SPINNER KILLER — polls until picker shows (iOS 18-proof)
+(function() {
+  let attempts = 0;
+  const maxAttempts = 30;  // 3 seconds max
+  const interval = setInterval(() => {
+    attempts++;
+    const loader = document.getElementById('courseLoader');
+    const picker = document.getElementById('coursePicker');
+    const error = document.getElementById('courseError');
+    
+    if (loader && picker) {
+      // Force-kill loader and error, force-show picker
+      loader.style.display = 'none !important';
+      if (error) error.style.display = 'none !important';
+      picker.style.display = 'block !important';  // or 'flex !important' if your CSS uses flex
+      
+      // Extra iOS reflow trigger
+      picker.offsetHeight;
+      
+      console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
+      clearInterval(interval);
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error('Emergency fallback timed out — manual intervention needed');
+      clearInterval(interval);
+    }
+  }, 100);  // Check every 100ms
+})();
+
+
+/
 function logScreen(msg) {
   console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
 }
@@ -841,45 +891,13 @@ function parseCSV(text) {
   });
 }
 
-async function saveRound() {
-  if (!inRound) return;
 
-  const roundData = {
-    matchId: currentMatchId,
-    date: new Date().toISOString(),
-    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
-    players: players.map(p => ({ name: p.name, phone: p.phone })),
-    currentHole,
-    currentCourse,
-    currentCourseIndex: currentCourse,
-    practiceMode: practiceMode,
-    finishedHoles: Array.from(finishedHoles),
-    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
-    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
-  };
-
-  // Save locally with unique ID
-  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
-
-  // Cloud backup (fire-and-forget)
-  fetch('https://pwa-players-backend.onrender.com/save-round', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(roundData)
-  }).catch(() => {});
-}
 
 function sortPlayersAlphabetically() {
   players.sort((a, b) => a.name.localeCompare(b.name));
   // Also keep roster sorted for consistency in player select screen
   roster.sort((a, b) => a.name.localeCompare(b.name));
 }
-
-
-
-
-
-
 
 
 // === RENDER COURSE SELECT ===
@@ -924,45 +942,6 @@ function renderCourseSelect() {
   setTimeout(updateButton, 100);
 }
 
-// === DOM READY ===
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DOM ready — initializing app');
-
- els = {
-    courseSetup: document.getElementById('courseSetup'),
-    playerSetup: document.getElementById('playerSetup'),
-    game: document.getElementById('game'),
-    summary: document.getElementById('summary'),
-    darkModeToggle: document.getElementById('darkModeToggle'),
-    bbbHelpBtn: document.getElementById('bbbHelpBtn'),  
-    courseSelect: document.getElementById('courseSelect'),
-    nextToPlayers: document.getElementById('nextToPlayers'),
-    playerSelect: document.getElementById('playerSelect'),
-    startGame: document.getElementById('startGame'),
-    holeDisplay: document.getElementById('holeDisplay'),
-    prevHole: document.getElementById('prevHole'),
-    nextHole: document.getElementById('nextHole'),
-    finishHole: document.getElementById('finishHole'),
-    editHole: document.getElementById('editHole'),
-    firstOnHeader: document.getElementById('firstOnHeader'),
-    scoreTable: document.getElementById('scoreTable'),
-    holeSummary: document.querySelector('.holeSummary'),
-    roundSummary: document.getElementById('roundSummary'),
-    sendSMS: document.getElementById('sendSMS'),
-    completeRound: document.getElementById('completeRound'),
-    exitRound: document.getElementById('exitRound'),
-    leaderboard: document.getElementById('leaderboard'),
-    courseInfoBar: document.getElementById('courseInfoBar'),
-    infoCourseName: document.getElementById('infoCourseName'),
-    infoCurrentHole: document.getElementById('infoCurrentHole'),
-    infoPar: document.getElementById('infoPar'),
-    debugPanel: document.getElementById('debugPanel'),
-    debugOutput: document.getElementById('debugOutput'),
-    closeDebug: document.getElementById('closeDebug'),
-    simResult: document.getElementById('simResult')
-  };
-
-  
 
    function hideAll() {
   ['courseSetup', 'playerSetup', 'game', 'summary'].forEach(id => {
@@ -1158,7 +1137,7 @@ function setupGameButtons() {
   document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
   document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
 })
-  
+  }  
 
 
 function attachNavListeners() {
@@ -1202,207 +1181,6 @@ function attachNavListeners() {
 }
 
 
-
-  // DEBUG B
-
-  let debugMode = false;
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      debugMode = !debugMode;
-      els.debugPanel.classList.toggle('hidden', !debugMode);
-      if (debugMode) updateDebugPanel();
-    }
-    if (e.keyCode === 113) {
-      e.preventDefault();
-      if (confirm('Run full 18-hole simulation?')) {
-        simulateRound();
-      }
-    }
-  });
-  els.closeDebug.addEventListener('click', () => {
-    debugMode = false;
-    els.debugPanel.classList.add('hidden');
-  });
-
-  function updateDebugPanel() {
-    els.debugOutput.innerHTML = '';
-    renderDebugCarryTable();
-    const hint = document.createElement('div');
-    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
-    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
-    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
-    els.debugOutput.appendChild(hint);
-  }
-
-
-
-
-// ==============================================================// ==============================================================
-// 2. LOAD DATA + SHOW COURSE PICKER
-// ==============================================================
-await loadDataFromBackend();
-
-// SHOW COURSE SETUP ON FRESH LOAD
-showScreen('courseSetup');  // ← FIXED
-
-// ==============================================================
-// 3. NEXT → PLAYERS BUTTON
-// ==============================================================
-els.nextToPlayers?.addEventListener('click', () => {
-  if (currentCourse === null || currentCourse === undefined) {
-    return alert('Please select a course first');
-  }
-  showScreen('playerSetup');  // ← CORRECT
-  renderPlayerSelect();
-  logScreen('PLAYER SETUP');
-});
-
-// === BACK TO COURSE FROM PLAYER SETUP ===
-document.getElementById('backToCourse')?.addEventListener('click', () => {
-  showScreen('courseSetup');  // ← CORRECT
-  logScreen('BACK TO COURSE SELECT');
-});
-
-
-  // 2. LOAD DATA + SHOW COURSE PICKER
-// ==============================================================
-await loadDataFromBackend();                     // ← really waits now
-
-showScreen('courseSetup');  // ← FIXED: show course picker on fresh load
-
-// ==============================================================
-// 3. NEXT → PLAYERS BUTTON
-// ==============================================================
-els.nextToPlayers?.addEventListener('click', () => {
-  if (currentCourse === null || currentCourse === undefined) {
-    return alert('Please select a course first');
-  }
-  showScreen('playerSetup');  // ← CORRECT
-  renderPlayerSelect();
-  logScreen('PLAYER SETUP');
-});
-
-// === BACK TO COURSE FROM PLAYER SETUP ===
-document.getElementById('backToCourse')?.addEventListener('click', () => {
-  showScreen('courseSetup');  // ← CORRECT
-  logScreen('BACK TO COURSE SELECT');
-});
-
-
-
-
-
-
-
-  // ==============================================================
-  // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
-  // ==============================================================
-const savedRounds = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('bbb_round_BBB-')) {
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        savedRounds.push({ ...data, key });
-      } catch (e) {}
-    }
-  }
-
-  if (savedRounds.length > 0) {
-    // Sort newest first for display
-    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
-    savedRounds.forEach((r, i) => {
-  message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-  message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-  message += `    ${new Date(r.date).toLocaleDateString()}`;
-  message += ` (${r.practiceMode ? 'Practice' : 'Live'} Round)\n\n`;  // ← ADD THIS
-});
-    message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
-
-    const choice = prompt(message);
-
-if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
-  const selected = savedRounds[choice - 1];
-
-  // Restore players
-  players = selected.players.map(p => ({
-    ...p,
-    scores: Array(18).fill(null).map(() => ({})),
-    _cachedTotal: selected._cachedTotals?.[p.name] || 0
-  }));
-  Object.keys(selected.scores || {}).forEach(name => {
-    const p = players.find(x => x.name === name);
-    if (p) p.scores = selected.scores[name];
-  });
-
-  currentHole = selected.currentHole;
-  currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
-  if (currentCourse === -1) currentCourse = 0;
-  finishedHoles = new Set(selected.finishedHoles || []);
-  inRound = true;
-  practiceMode = selected.practiceMode || false;
- 
-
-// FIXED: Use window.pm.apply()
-  showScreen('game');  // Show game screen
-  updateHole();
-  if (window.pm) window.pm.apply();  // ← RE-APPLY PRACTICE MODE
-  return;
-
-
-  // CRITICAL: Wait for courses to load before updating hole
-  const checkCourses = () => {
-    if (courses.length > 0 && courses[currentCourse]) {
-      updateHole();
-      attachFinishHoleListener();
-      renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
-      attachNavListeners();
-      setupGameButtons();
-      updateCourseInfoBar();
-      logScreen('RESUMED SAVED ROUND');
-    } else {
-      setTimeout(checkCourses, 50);
-    }
-  };
-  checkCourses();
-
-  return;
-  }
-} 
-    
-
-    
-    // If they cancel or pick nothing → fall through to normal course picker
-  }  
-
-
- 
-
-
-
-// Prevent iOS from sleeping / killing the tab during a round
-let wakeLock = null;
-
-async function requestWakeLock() {
-  if ('wakeLock' in navigator && inRound) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake Lock active — screen stays awake during round');
-    } catch (err) {
-      console.log('Wake Lock failed (iOS ignores it anyway)', err);
-    }
-  }
-}
-
-// Call it when round starts and release when finished
-// In startGame.onclick after inRound = true:
-requestWakeLock();
-
-// In completeRound, saveRound, exitRound, etc.:
-if (wakeLock) wakeLock.release().then(() => wakeLock = null);
-
   
   function save() {
     localStorage.setItem('bbb', JSON.stringify({ 
@@ -1412,8 +1190,8 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     }));
   }
 
-
-
+  
+  
 
 function renderPlayerSelect() {
   console.log('%cDEBUG: renderPlayerSelect() called', 'color: orange; font-weight: bold');
@@ -1520,9 +1298,8 @@ els.startGame.onclick = () => {
   logScreen('GAME STARTED');
 };
 }
-  
 
-  
+
 
   function generateParInputs() {
     const container = document.getElementById('pars');
@@ -1534,7 +1311,6 @@ els.startGame.onclick = () => {
     }
   }
 
-  
   // === CARRY LOGIC ===
  function getCarryInForHole(holeNumber) {
   const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
@@ -2116,38 +1892,183 @@ function attachFinishHoleListener() {
   btn.onclick = null; // clear any old listener
   btn.onclick = finishCurrentHole; // direct assignment — never fails
 }
+  // DEBUG 
 
-    // === PRACTICE MODE: FINAL, WORKING ===
+  let debugMode = false;
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      debugMode = !debugMode;
+      els.debugPanel.classList.toggle('hidden', !debugMode);
+      if (debugMode) updateDebugPanel();
+    }
+    if (e.keyCode === 113) {
+      e.preventDefault();
+      if (confirm('Run full 18-hole simulation?')) {
+        simulateRound();
+      }
+    }
+  });
+  els.closeDebug.addEventListener('click', () => {
+    debugMode = false;
+    els.debugPanel.classList.add('hidden');
+  });
+
+  function updateDebugPanel() {
+    els.debugOutput.innerHTML = '';
+    renderDebugCarryTable();
+    const hint = document.createElement('div');
+    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
+    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
+    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
+    els.debugOutput.appendChild(hint);
+  }
+
+
+// === DOM READY ===  DOMContentLoaded ===
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('DOM ready — initializing app');
+
+  els = {
+    courseSetup: document.getElementById('courseSetup'),
+    playerSetup: document.getElementById('playerSetup'),
+    game: document.getElementById('game'),
+    summary: document.getElementById('summary'),
+    darkModeToggle: document.getElementById('darkModeToggle'),
+    bbbHelpBtn: document.getElementById('bbbHelpBtn'),
+    courseSelect: document.getElementById('courseSelect'),
+    nextToPlayers: document.getElementById('nextToPlayers'),
+    playerSelect: document.getElementById('playerSelect'),
+    startGame: document.getElementById('startGame'),
+    holeDisplay: document.getElementById('holeDisplay'),
+    prevHole: document.getElementById('prevHole'),
+    nextHole: document.getElementById('nextHole'),
+    finishHole: document.getElementById('finishHole'),
+    editHole: document.getElementById('editHole'),
+    firstOnHeader: document.getElementById('firstOnHeader'),
+    scoreTable: document.getElementById('scoreTable'),
+    holeSummary: document.querySelector('.holeSummary'),
+    roundSummary: document.getElementById('roundSummary'),
+    sendSMS: document.getElementById('sendSMS'),
+    completeRound: document.getElementById('completeRound'),
+    exitRound: document.getElementById('exitRound'),
+    leaderboard: document.getElementById('leaderboard'),
+    courseInfoBar: document.getElementById('courseInfoBar'),
+    infoCourseName: document.getElementById('infoCourseName'),
+    infoCurrentHole: document.getElementById('infoCurrentHole'),
+    infoPar: document.getElementById('infoPar'),
+    debugPanel: document.getElementById('debugPanel'),
+    debugOutput: document.getElementById('debugOutput'),
+    closeDebug: document.getElementById('closeDebug'),
+    simResult: document.getElementById('simResult')
+  };
+
+  // === LOAD DATA + SHOW COURSE PICKER ===
+  await loadDataFromBackend();
+  showScreen('courseSetup');
+
+  // === NEXT → PLAYERS BUTTON ===
+  els.nextToPlayers?.addEventListener('click', () => {
+    if (!currentCourse) return alert('Please select a course first');
+    showScreen('playerSetup');
+    renderPlayerSelect();
+    logScreen('PLAYER SETUP');
+  });
+
+  // === BACK TO COURSE FROM PLAYER SETUP ===
+  document.getElementById('backToCourse')?.addEventListener('click', () => {
+    showScreen('courseSetup');
+    logScreen('BACK TO COURSE SELECT');
+  });
+
+  // === RESUME SAVED ROUND ===
+  const savedRounds = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bbb_round_BBB-')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        savedRounds.push({ ...data, key });
+      } catch (e) {}
+    }
+  }
+
+  if (savedRounds.length > 0) {
+    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+    savedRounds.forEach((r, i) => {
+      message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+      message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+      message += `    ${new Date(r.date).toLocaleDateString()}`;
+      message += ` (${r.practiceMode ? 'Practice' : 'Live'} Round)\n\n`;
+    });
+    message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
+
+    const choice = prompt(message);
+
+    if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
+      const selected = savedRounds[choice - 1];
+
+      players = selected.players.map(p => ({
+        ...p,
+        scores: Array(18).fill(null).map(() => ({})),
+        _cachedTotal: selected._cachedTotals?.[p.name] || 0
+      }));
+      Object.keys(selected.scores || {}).forEach(name => {
+        const p = players.find(x => x.name === name);
+        if (p) p.scores = selected.scores[name];
+      });
+
+      currentHole = selected.currentHole;
+      currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
+      if (currentCourse === -1) currentCourse = 0;
+      finishedHoles = new Set(selected.finishedHoles || []);
+      inRound = true;
+      practiceMode = selected.practiceMode || false;
+
+      showScreen('game');
+      updateHole();
+      if (window.pm) window.pm.apply();
+      requestWakeLock();  // ← MOVED HERE
+      return;
+    }
+  }
+
+  // === WAKE LOCK (ONLY WHEN ROUND STARTS) ===
+  let wakeLock = null;
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator && inRound) {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake Lock active');
+      } catch (err) {
+        console.log('Wake Lock failed', err);
+      }
+    }
+  }
+
+  // Call in startGame and resume
+  // (already in startGame.onclick and resume above)
+
+  // === PRACTICE MODE IIFE ===
   (function () {
     'use strict';
-
     const banner = document.getElementById('practiceBanner');
     const toggle = document.getElementById('practiceToggle');
     const body = document.body;
 
-    if (!banner || !toggle) {
-      console.error('Practice Mode: DOM missing');
-      return;
-    }
+    if (!banner || !toggle) return;
 
-    // Load saved
     practiceMode = localStorage.getItem('bbb_practiceMode') === 'true';
 
-    // Apply
     function apply() {
-      if (practiceMode) {
-        banner.classList.remove('hidden');  // ← FORCE REMOVE
-        toggle.checked = true;
-        body.classList.add('practice-mode');
-      } else {
-        banner.classList.add('hidden');     // ← FORCE ADD
-        toggle.checked = false;
-        body.classList.remove('practice-mode');
-      }
+      banner.classList.toggle('hidden', !practiceMode);
+      toggle.checked = practiceMode;
+      body.classList.toggle('practice-mode', practiceMode);
       localStorage.setItem('bbb_practiceMode', practiceMode);
     }
 
-    apply(); // run now
+    apply();
 
     toggle.addEventListener('change', () => {
       practiceMode = toggle.checked;
@@ -2156,9 +2077,10 @@ function attachFinishHoleListener() {
     });
 
     window.pm = { practiceMode, apply };
-   })();   // ← ADD () HERE — CALLS THE IIFE
+  })();
+});
 
-});       // ← CLOSES DOMContentLoaded
+
 
 
 </script>
