@@ -2088,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     apply();
 
-   onChange
+   toggle.addEventListener('change', () => {
       practiceMode = toggle.checked;
       apply();
       if (inRound) saveRound();
