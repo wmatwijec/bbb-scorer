@@ -1876,7 +1876,7 @@ function renderHoleSummary() {
   isHoleInProgress = false;
 
   // === SET GROUP START TIME — ONLY ON HOLE 1 ===
-  if (wasHole1 && !localStorage.getItem('bbb_groupStartTime')) {
+  if (finishedHoles.size === 1 && !localStorage.getItem('bbb_groupStartTime')) {
     const startTime = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
