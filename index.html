@@ -824,17 +824,18 @@ async function saveRound() {
   if (!inRound) return;
 
   const roundData = {
-    matchId: currentMatchId,
-    date: new Date().toISOString(),
-    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
-    players: players.map(p => ({ name: p.name, phone: p.phone })),
-    currentHole,
-    currentCourse,
-    currentCourseIndex: currentCourse,
-    finishedHoles: Array.from(finishedHoles),
-    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
-    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
-  };
+  matchId: currentMatchId,
+  date: new Date().toISOString(),
+  courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+  players: players.map(p => ({ name: p.name, phone: p.phone })),
+  currentHole,
+  currentCourse,
+  currentCourseIndex: currentCourse,
+  finishedHoles: Array.from(finishedHoles),
+  scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+  _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
+  groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
+};
 
   // Save locally IMMEDIATELY
   localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
@@ -1869,65 +1870,70 @@ function renderHoleSummary() {
     updateHole();
   }
 
-  function finishCurrentHole() {
+ function finishCurrentHole() {
+  const wasHole1 = currentHole === 1;
   finishedHoles.add(currentHole);
   isHoleInProgress = false;
+
+  // === SET GROUP START TIME — ONLY ON HOLE 1 ===
+  if (wasHole1 && !localStorage.getItem('bbb_groupStartTime')) {
+    const startTime = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    localStorage.setItem('bbb_groupStartTime', startTime);
+    console.log('%cGROUP START TIME SET: ' + startTime, 'color: #0f0; font-weight: bold; background: #000; padding: 2px 6px;');
+  }
 
   precomputeAllTotals();
   updateHole();
   logScreen('FINISHED HOLE ' + currentHole);
 
- // WALT SHADOW TEXT — 100% STEALTH VIA SERVER (NO POPUP EVER)
-if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
-  const holeIdx = currentHole - 1;
-  const par = courses[currentCourse].pars[holeIdx];
-  const isPar3 = par === 3;
-  let message = `BBB - H${currentHole} (P${par})\n\n`;
+  // === WALT SHADOW TEXT ===
+  if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+    const holeIdx = currentHole - 1;
+    const par = courses[currentCourse].pars[holeIdx];
+    const isPar3 = par === 3;
+    let message = `BBB - H${currentHole} (P${par})\n\n`;
 
-  players.forEach(p => {
-    const s = p.scores[holeIdx] || {};
-    const pts = p._cachedHoleTotals?.[holeIdx] || 0;
-    const notes = [];
-    if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
-    if (s.closest) notes.push('CL');
-    if (s.putt) notes.push('P');
-    message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
-  });
+    players.forEach(p => {
+      const s = p.scores[holeIdx] || {};
+      const pts = p._cachedHoleTotals?.[holeIdx] || 0;
+      const notes = [];
+      if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
+      if (s.closest) notes.push('CL');
+      if (s.putt) notes.push('P');
+      message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+    });
 
-  // DETAILED CARRY BREAKDOWN
-  const carryOut = getCarryInForHole(currentHole + 1);
-  const carryParts = [];
-  if (carryOut.firstOn) carryParts.push(`FO: ${carryOut.firstOn}`);
-  if (carryOut.closest) carryParts.push(`CL: ${carryOut.closest}`);
-  if (carryOut.putt) carryParts.push(`P: ${carryOut.putt}`);
-  if (carryOut.greenie) carryParts.push(`GR: ${carryOut.greenie}`);
-  const carryText = carryParts.length > 0 ? carryParts.join(' • ') : '0';
-  message += `\nCarry: ${carryText}\n\nStandings:\n`;
+    const carryOut = getCarryInForHole(currentHole + 1);
+    const carryParts = [];
+    if (carryOut.firstOn) carryParts.push(`FO: ${carryOut.firstOn}`);
+    if (carryOut.closest) carryParts.push(`CL: ${carryOut.closest}`);
+    if (carryOut.putt) carryParts.push(`P: ${carryOut.putt}`);
+    if (carryOut.greenie) carryParts.push(`GR: ${carryOut.greenie}`);
+    const carryText = carryParts.length > 0 ? carryParts.join(' • ') : '0';
+    message += `\nCarry: ${carryText}\n\nStandings:\n`;
 
-  const standings = players
-    .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
-    .sort((a, b) => b.total - a.total);
+    const standings = players
+      .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+      .sort((a, b) => b.total - a.total);
 
-  standings.forEach((p, i) => {
-    message += `${i + 1}. ${p.name}: ${p.total}\n`;
-  });
+    standings.forEach((p, i) => {
+      message += `${i + 1}. ${p.name}: ${p.total}\n`;
+    });
 
-  const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+    const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
 
-  /* // 1. SEND SMS (opens Messages app)
-  setTimeout(() => {
-    window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-  }, 1200); */
+    fetch('https://pwa-players-backend.onrender.com/send-walt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: shadowMessage })
+    }).catch(err => console.error('Walt shadow send failed:', err));
+  }
 
-  // 2. SEND TO SERVER (silent backup — never fails the app)
-  fetch('https://pwa-players-backend.onrender.com/send-walt', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: shadowMessage })
-  }).catch(err => console.error('Walt shadow send failed:', err));
-}
-
-// Auto-pulse BBB COMP when last hole is finished
+  // === BBB COMP PULSE ===
   if (currentHole === HOLES && finishedHoles.size === HOLES) {
     setTimeout(() => {
       const btn = document.getElementById('completeRound');
@@ -1938,10 +1944,10 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
       }
     }, 400);
   }
-releaseWakeLock();
-saveRound();
-}
 
+  releaseWakeLock();
+  saveRound();
+}
 
   function simulateRound() {
     if (inRound) {
