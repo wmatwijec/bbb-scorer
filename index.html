@@ -816,6 +816,52 @@ function parseCSV(text) {
   });
 }
 
+// === DEBOUNCED SAVE: Local + Cloud (5-second batch) ===
+let saveTimeout = null;
+let pendingRoundData = null;
+
+async function saveRound() {
+  if (!inRound) return;
+
+  // Build round data
+  const roundData = {
+    matchId: currentMatchId,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    currentCourseIndex: currentCourse,
+    finishedHoles: Array.from(finishedHoles),
+    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
+  };
+
+  // === 1. Save locally IMMEDIATELY ===
+  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
+
+  // === 2. Debounce cloud save (5 seconds) ===
+  pendingRoundData = roundData;
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (!pendingRoundData) return;
+
+    // Fire-and-forget with keepalive (survives page hide)
+    fetch('https://pwa-players-backend.onrender.com/save-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingRoundData),
+      keepalive: true  // CRITICAL: allows send after page is hidden
+    }).catch(() => {});
+
+    pendingRoundData = null;
+  }, 5000); // 5-second batch
+}
+
+// === DEBOUNCED SAVE: Local + Cloud (5-second batch) ===
+let saveTimeout = null;
+let pendingRoundData = null;
+
 async function saveRound() {
   if (!inRound) return;
 
@@ -832,16 +878,39 @@ async function saveRound() {
     _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
   };
 
-  // Save locally with unique ID
+  // Save locally IMMEDIATELY
   localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
 
-  // Cloud backup (fire-and-forget)
-  fetch('https://pwa-players-backend.onrender.com/save-round', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(roundData)
-  }).catch(() => {});
+  // Debounce cloud save
+  pendingRoundData = roundData;
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (!pendingRoundData) return;
+
+    fetch('https://pwa-players-backend.onrender.com/save-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingRoundData),
+      keepalive: true
+    }).catch(() => {});
+
+    pendingRoundData = null;
+  }, 5000);
 }
+
+// === FINAL SAVE ON EXIT (100% reliable) ===
+// PUT THIS RIGHT AFTER saveRound()
+window.addEventListener('beforeunload', () => {
+  if (!inRound || !pendingRoundData) return;
+
+  const blob = new Blob([JSON.stringify(pendingRoundData)], { type: 'application/json' });
+  navigator.sendBeacon('https://pwa-players-backend.onrender.com/save-round', blob);
+});
+
+
+
+
+
 
 function sortPlayersAlphabetically() {
   players.sort((a, b) => a.name.localeCompare(b.name));
@@ -1059,23 +1128,6 @@ function setupGameButtons() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // BBB COMP (FINISH ROUND)
   els.completeRound.onclick = () => {
     if (finishedHoles.size !== HOLES) {
@@ -1087,8 +1139,11 @@ function setupGameButtons() {
     setTimeout(() => {
       if (confirm('Round complete!\n\nStart a new round?')) {
         resetRound();
+        releaseWakeLock(); 
         hideAll();
         els.courseSetup.classList.remove('hidden');
+      } else {
+        releaseWakeLock(); 
       }
     }, 500);
   };
@@ -1097,6 +1152,7 @@ function setupGameButtons() {
   els.exitRound.onclick = () => {
     if (confirm('Exit round and lose all progress?')) {
       resetRound();
+      releaseWakeLock(); 
       location.reload();
     }
   };
@@ -1317,31 +1373,54 @@ if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
     // If they cancel or pick nothing → fall through to normal course picker
   }  
 
+ // === WAKE LOCK: SMART, SAFE, BATTERY-FRIENDLY ===
+let wakeLock = null;
+let wakeLockTimeout = null;
 
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator) || !inRound || document.hidden) return;
+
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    console.log('%cWake Lock: ACQUIRED', 'color: lime; font-weight: bold');
+
+    // Auto-release after 5 minutes of no interaction
+    clearTimeout(wakeLockTimeout);
+    wakeLockTimeout = setTimeout(releaseWakeLock, 5 * 60 * 1000);
+  } catch (err) {
+    console.log('Wake Lock failed (iOS ignores anyway)', err);
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().then(() => {
+      wakeLock = null;
+      clearTimeout(wakeLockTimeout);
+      console.log('%cWake Lock: RELEASED', 'color: orange; font-weight: bold');
+    });
+  }
+}
+
+// Re-acquire when page becomes visible
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && inRound) {
+    acquireWakeLock();
+  } else {
+    releaseWakeLock();
+  }
+});
+
+// Also release on page unload
+window.addEventListener('pagehide', releaseWakeLock);
+window.addEventListener('beforeunload', releaseWakeLock);
  
 
 
 
-// Prevent iOS from sleeping / killing the tab during a round
-let wakeLock = null;
 
-async function requestWakeLock() {
-  if ('wakeLock' in navigator && inRound) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake Lock active — screen stays awake during round');
-    } catch (err) {
-      console.log('Wake Lock failed (iOS ignores it anyway)', err);
-    }
-  }
-}
 
-// Call it when round starts and release when finished
-// In startGame.onclick after inRound = true:
-requestWakeLock();
 
-// In completeRound, saveRound, exitRound, etc.:
-if (wakeLock) wakeLock.release().then(() => wakeLock = null);
 
   
   function save() {
@@ -1455,6 +1534,7 @@ els.startGame.onclick = () => {
 
   inRound = true;
   saveRound();
+  acquireWakeLock();
 
   hideAll();
   els.game.classList.remove('hidden');
@@ -1903,7 +1983,7 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
       }
     }, 400);
   }
-
+releaseWakeLock();
 saveRound();
 }
 
@@ -2002,47 +2082,45 @@ saveRound();
   }
 
   precomputeAllTotals();
-
-  // 1. Show the nice leaderboard screen first
   showSummary();
 
-  // 2. Auto-email the CSV to you (Walt)
-  // emailRoundToWalt();
-
-  // 3. Optional: give them a second to read it, then offer New Round
   setTimeout(() => {
-  if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
-    resetRound();
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
-
-    // RE-ATTACH THE "Load Course →" BUTTON — THIS FIXES THE LOOP
-    els.nextToPlayers?.addEventListener('click', () => {
-      if (currentCourse === null || currentCourse === undefined) {
-        return alert('Please select a course first');
-      }
+    if (confirm('Round complete!\n\nStart a new round?')) {
+      resetRound();
+      releaseWakeLock();                    // ADD
       hideAll();
-      els.playerSetup.classList.remove('hidden');
-      renderPlayerSelect();
-      logScreen('PLAYER SETUP');
-    });
-  }
-}, 500);
+      els.courseSetup.classList.remove('hidden');
+
+      // Re-attach course → players flow
+      els.nextToPlayers?.addEventListener('click', () => {
+        if (currentCourse === null) return alert('Select a course');
+        hideAll();
+        els.playerSetup.classList.remove('hidden');
+        renderPlayerSelect();
+      });
+    } else {
+      // User clicked "Cancel" — round is still over
+      inRound = false;
+      releaseWakeLock();                    // ADD
+    }
+  }, 500);
 });
 
-  els.exitRound.addEventListener('click', () => {
-    if (confirm('Exit without saving?')) {
-      resetRound();
-      /* els.historyBtn.disabled = false; */
-      location.reload();
-    }
-  });
+els.exitRound.addEventListener('click', () => {
+  if (confirm('Exit without saving?')) {
+    resetRound();
+    releaseWakeLock();           // ADD THIS LINE
+    /* els.historyBtn.disabled = false; */
+    location.reload();
+  }
+});
 
  
 
   function resetRound() {
   localStorage.removeItem('bbb');
   inRound = false;
+  releaseWakeLock();      
   players = [];
   currentCourse = null;
   currentHole = 1;
