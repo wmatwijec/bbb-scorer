@@ -823,47 +823,6 @@ let pendingRoundData = null;
 async function saveRound() {
   if (!inRound) return;
 
-  // Build round data
-  const roundData = {
-    matchId: currentMatchId,
-    date: new Date().toISOString(),
-    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
-    players: players.map(p => ({ name: p.name, phone: p.phone })),
-    currentHole,
-    currentCourse,
-    currentCourseIndex: currentCourse,
-    finishedHoles: Array.from(finishedHoles),
-    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
-    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {})
-  };
-
-  // === 1. Save locally IMMEDIATELY ===
-  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
-
-  // === 2. Debounce cloud save (5 seconds) ===
-  pendingRoundData = roundData;
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    if (!pendingRoundData) return;
-
-    // Fire-and-forget with keepalive (survives page hide)
-    fetch('https://pwa-players-backend.onrender.com/save-round', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingRoundData),
-      keepalive: true  // CRITICAL: allows send after page is hidden
-    }).catch(() => {});
-
-    pendingRoundData = null;
-  }, 5000); // 5-second batch
-}
-
-// === DEBOUNCED SAVE: Local + Cloud (5-second batch) ===
-
-
-async function saveRound() {
-  if (!inRound) return;
-
   const roundData = {
     matchId: currentMatchId,
     date: new Date().toISOString(),
@@ -880,7 +839,7 @@ async function saveRound() {
   // Save locally IMMEDIATELY
   localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
 
-  // Debounce cloud save
+  // Debounce cloud save (5 seconds)
   pendingRoundData = roundData;
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
@@ -897,16 +856,13 @@ async function saveRound() {
   }, 5000);
 }
 
-// === FINAL SAVE ON EXIT (100% reliable) ===
-// PUT THIS RIGHT AFTER saveRound()
+// Final save on exit
 window.addEventListener('beforeunload', () => {
   if (!inRound || !pendingRoundData) return;
 
   const blob = new Blob([JSON.stringify(pendingRoundData)], { type: 'application/json' });
   navigator.sendBeacon('https://pwa-players-backend.onrender.com/save-round', blob);
 });
-
-
 
 
 
