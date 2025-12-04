@@ -859,8 +859,7 @@ async function saveRound() {
 }
 
 // === DEBOUNCED SAVE: Local + Cloud (5-second batch) ===
-let saveTimeout = null;
-let pendingRoundData = null;
+\
 
 async function saveRound() {
   if (!inRound) return;
