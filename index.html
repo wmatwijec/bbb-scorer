@@ -1011,7 +1011,7 @@ function setupGameButtons() {
   });
 
   // SMS BUTTON
-  els.sendSMS.onclick = () => {
+ /* els.sendSMS.onclick = () => {
     const holeIdx = currentHole - 1;
     const par = courses[currentCourse].pars[holeIdx];
     const isPar3 = par === 3;
@@ -1050,7 +1050,7 @@ function setupGameButtons() {
     const phones = players.map(p => p.phone).filter(Boolean).join(',');
     if (!phones) return alert('Add phone numbers');
     window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
-  };
+  }; */
 
   // === FINAL BBB COMP BUTTON IN SUMMARY ===
   document.getElementById('finalBBBComp')?.addEventListener('click', () => {
@@ -2213,7 +2213,7 @@ function attachFinishHoleListener() {
     <div id="roundSummary" class="hidden"></div>
 
    <div class="control-bar">
-  <button id="sendSMS" title="Send live update to group">SMS</button>
+  <!-- <button id="sendSMS" title="Send live update to group">SMS</button> -->
   <button id="completeRound" title="Finish round & email Walt">BBB COMP</button>
   <button id="exitRound" title="Quit without saving">EXIT</button>
   <button id="darkModeToggle" title="Toggle dark mode">DARK</button>
@@ -2277,7 +2277,7 @@ function attachFinishHoleListener() {
 
       <!-- CONTROL BAR -->
       <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
-      <div>SMS – Send live update to the group</div>
+      <!-- <div>SMS – Send live update to the group</div> -->
       <div>BBB COMP – Complete the round</div>
       <div>EXIT – Quit current round</div>
       <div>DARK – Toggle dark mode</div>
