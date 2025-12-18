@@ -573,6 +573,42 @@ body {
 #courseSetup.hidden { height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
 
 
+/* VIEW-ONLY MODE — spectators see everything but can't touch */
+body.view-only input[type="checkbox"],
+body.view-only button:not(#bbbHelpBtn):not(#darkModeToggle) {
+  pointer-events: none !important;
+  opacity: 0.6 !important;
+}
+
+body.view-only #finishHole,
+body.view-only #editHole,
+body.view-only #prevHole,
+body.view-only #nextHole,
+body.view-only #completeRound,
+body.view-only #exitRound {
+  display: none !important;
+}
+
+/* Optional banner so they know they're read-only */
+body.view-only::before {
+  content: "VIEW-ONLY MODE (read-only)";
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: #ff0; color: #000;
+  font-weight: bold; text-align: center;
+  padding: 6px; z-index: 9999;
+  font-size: 0.9rem;
+}
+
+
+
+
+
+
+
+
+
+
 </style>
 </head>
 
@@ -648,6 +684,18 @@ body {
     let isHoleInProgress = false;
     let els = {};
     let waltShadowPhone = null;
+
+    
+        // === VIEW-ONLY MODE DETECTION ===
+    const urlParams = new URLSearchParams(location.search);
+    const isViewOnly = urlParams.has('viewonly') || localStorage.getItem('bbb_viewonly') === 'true';
+
+    if (isViewOnly) {
+       document.body.classList.add('view-only');
+       // Optional: persist the flag so refresh keeps view-only
+       localStorage.setItem('bbb_viewonly', 'true');
+      }
+
 
 
 
@@ -1591,18 +1639,16 @@ els.startGame.onclick = () => {
       if (s.closest) holePoints += 1;
       if (s.putt) holePoints += 1;
 
-      // Carry-in
-      if (holeNumber < HOLES) {
-        if (s.firstOn) {
-          holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
-        }
-        if (s.closest) holePoints += carryIn.closest;
-        if (s.putt) holePoints += carryIn.putt;
+      // Carry-in points – award on EVERY hole (including 18!)
+      if (s.firstOn) {
+        holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
       }
+      if (s.closest) holePoints += carryIn.closest;
+      if (s.putt) holePoints += carryIn.putt;
 
-      p._cachedHoleTotals[idx] = holePoints;
-      total += holePoints;
-    }
+            p._cachedHoleTotals[idx] = holePoints;
+            total += holePoints;
+          }
 
     p._cachedTotal = total;
   });
