@@ -1152,10 +1152,11 @@ function setupGameButtons() {
     }, 500);
   };
 
-  els.exitRound.onclick = () => {
-  // Double-tap protection
+ els.exitRound.onclick = async () => {
+  // Prevent double-click freeze
+  if (els.exitRound.disabled) return;
   els.exitRound.disabled = true;
-  els.exitRound.textContent = 'Exiting...';
+  els.exitRound.textContent = 'Exiting…';
 
   if (!confirm('Exit round and lose all progress?')) {
     els.exitRound.disabled = false;
@@ -1163,21 +1164,38 @@ function setupGameButtons() {
     return;
   }
 
-  // 1. Stop everything that could keep the round alive
+  // 1. Stop everything that can fire later
   stopLiveSync();
-  releaseWakeLock();
+  if (wakeLock) {
+    try { await wakeLock.release(); } catch(e) {}
+    wakeLock = null;
+  }
 
-  // 2. Nuke everything
-  resetRound();                        // clears inRound, players, etc.
-  localStorage.removeItem(`bbb_round_${currentMatchId}`);
+  // 2. Nuke all round data
+  const matchId = currentMatchId;
+  inRound = false;
+  players = [];
+  currentCourse = null;
+  currentHole = 1;
+  finishedHoles.clear();
+  otherScorers = {};
+  isHoleInProgress = false;
+
+  localStorage.removeItem(`bbb_round_${matchId}`);
   localStorage.removeItem('bbb_currentMatchId');
   localStorage.removeItem('bbb_currentCourse');
   localStorage.removeItem('bbb_groupStartTime');
 
-  // 3. Force a clean start — this works 100% on iOS/Android/Chrome
-  setTimeout(() => {
-    window.location.href = window.location.origin + window.location.pathname;
-  }, 100);
+  // 3. Reset button appearance
+  const compBtn = document.getElementById('completeRound');
+  if (compBtn) {
+    compBtn.classList.remove('pulsing');
+    compBtn.textContent = 'BBB COMP';
+  }
+  document.getElementById('forceFinish')?.classList.add('hidden');
+
+  // 4. Hard navigation — this is the only thing that works 100% on iOS standalone
+  location.href = location.origin + location.pathname;
 };
 
   // DARK MODE TOGGLE
@@ -2144,8 +2162,7 @@ els.exitRound.addEventListener('click', () => {
  
 
   function resetRound() {
-  stopLiveSync();
-  releaseWakeLock();
+  
   
   inRound = false;
   players = [];
