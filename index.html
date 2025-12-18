@@ -1152,14 +1152,33 @@ function setupGameButtons() {
     }, 500);
   };
 
-  // EXIT ROUND — ONE PROMPT ONLY
   els.exitRound.onclick = () => {
-    if (confirm('Exit round and lose all progress?')) {
-      resetRound();
-      releaseWakeLock(); 
-      location.reload();
-    }
-  };
+  // Double-tap protection
+  els.exitRound.disabled = true;
+  els.exitRound.textContent = 'Exiting...';
+
+  if (!confirm('Exit round and lose all progress?')) {
+    els.exitRound.disabled = false;
+    els.exitRound.textContent = 'EXIT';
+    return;
+  }
+
+  // 1. Stop everything that could keep the round alive
+  stopLiveSync();
+  releaseWakeLock();
+
+  // 2. Nuke everything
+  resetRound();                        // clears inRound, players, etc.
+  localStorage.removeItem(`bbb_round_${currentMatchId}`);
+  localStorage.removeItem('bbb_currentMatchId');
+  localStorage.removeItem('bbb_currentCourse');
+  localStorage.removeItem('bbb_groupStartTime');
+
+  // 3. Force a clean start — this works 100% on iOS/Android/Chrome
+  setTimeout(() => {
+    window.location.href = window.location.origin + window.location.pathname;
+  }, 100);
+};
 
   // DARK MODE TOGGLE
   if (els.darkModeToggle) {
@@ -2125,21 +2144,26 @@ els.exitRound.addEventListener('click', () => {
  
 
   function resetRound() {
-  localStorage.removeItem('bbb');
+  stopLiveSync();
+  releaseWakeLock();
+  
   inRound = false;
-  releaseWakeLock();      
   players = [];
   currentCourse = null;
   currentHole = 1;
   finishedHoles.clear();
+  otherScorers = {};                   // ← clear dual-scorer memory
+  isHoleInProgress = false;
 
-  // === RESET BBB COMP BUTTON ===
+  // Reset button pulse
   const compBtn = document.getElementById('completeRound');
   if (compBtn) {
     compBtn.classList.remove('pulsing');
     compBtn.textContent = 'BBB COMP';
-    compBtn.title = 'Finish round';
   }
+
+  // Hide force finish
+  document.getElementById('forceFinish')?.classList.add('hidden');
 }
 
   
