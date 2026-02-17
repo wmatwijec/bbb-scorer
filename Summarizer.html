@@ -5,549 +5,389 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BBB Daily Summaries</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        
-        :root {
-            --bg: #f8f9fa;
-            --text: #1a1a1a;
-            --accent: #0d6efd;
-            --success: #198754;
-            --card: white;
-        }
-        
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #121212;
-                --text: #e0e0e0;
-                --accent: #0d6efd;
-                --success: #20c997;
-                --card: #1e1e1e;
-            }
-        }
-        
         body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
             margin: 0;
             padding: 20px;
             line-height: 1.6;
         }
-        
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        
-        h1, h2 {
-            color: var(--accent);
-        }
-        
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1, h2 { color: #0d6efd; }
         .input-area {
-            background: var(--card);
+            background: white;
             padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 30px;
         }
-        
-        textarea {
+        input[type="date"], textarea {
             width: 100%;
-            height: 200px;
-            font-family: monospace;
-            font-size: 14px;
-            padding: 15px;
+            padding: 12px;
+            margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 8px;
-            background: var(--card);
-            color: var(--text);
+            font-size: 16px;
         }
-        
         button {
-            background: var(--accent);
+            background: #0d6efd;
             color: white;
             border: none;
-            padding: 14px 28px;
+            padding: 12px 24px;
             font-size: 16px;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            margin: 10px 5px;
-            transition: all 0.2s;
+            margin: 8px 4px;
         }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(13, 110, 253, 0.3);
-        }
-        
-        .results {
-            display: none;
-        }
-        
+        button:hover { opacity: 0.9; }
+        .results { display: none; }
         .round-card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
-        
         table {
             width: 100%;
             border-collapse: collapse;
             margin: 15px 0;
-            font-size: 15px;
         }
-        
         th, td {
-            padding: 12px 10px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
-        
-        th {
-            background: #f1f3f5;
-            font-weight: 600;
-            color: #555;
-        }
-        
-        .player-total {
-            font-weight: 700;
-            color: var(--success);
-            font-size: 1.1em;
-        }
-        
-        .carry-in {
-            background: #e7f3ff;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.9em;
-            margin-bottom: 15px;
-        }
-        
-        .highlight {
-            background: #fff3cd;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .email-btn {
-            background: #dc3545;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            color: #666;
-            font-size: 0.9em;
-        }
+        th { background: #f1f3f5; font-weight: 600; }
+        .player-total { font-weight: bold; color: #198754; }
+        .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
+        .highlight { background: #fff3cd; padding: 12px; border-radius: 8px; margin: 15px 0; }
+        .status { color: #666; font-style: italic; margin: 15px 0; }
+        .email-btn { background: #dc3545; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⛳ BBB Daily Round Summaries</h1>
-        <p>Paste one or more round JSONs from the backend DB (today's rounds only). Then hit <strong>Process</strong>.</p>
-        
+        <p>Automatically loads rounds from the backend for the selected date (or today).</p>
+
         <div class="input-area">
-            <textarea id="jsonInput" placeholder='Paste JSON here... e.g. [{"matchId": "...", ...}, {...}] or single object'></textarea>
-            <div style="text-align: center; margin-top: 15px;">
-                <button onclick="processRounds()">Process Rounds</button>
-                <button onclick="clearInput()" style="background: #6c757d;">Clear</button>
+            <label for="dateInput"><strong>Date (YYYY-MM-DD) — blank = today:</strong></label><br>
+            <input type="date" id="dateInput">
+
+            <div style="margin: 20px 0; text-align: center;">
+                <button onclick="fetchAndProcessRounds()">Load & Summarize Rounds</button>
+                <button onclick="clearAll()" style="background:#6c757d;">Clear</button>
+            </div>
+
+            <p style="margin-top:20px; font-size:0.95em; color:#555;">
+                <strong>Fallback (manual):</strong> Paste round JSON here if needed
+            </p>
+            <textarea id="jsonInput" placeholder="Paste JSON array or single round object here..." rows="5"></textarea>
+
+            <div style="text-align:center; margin-top:15px;">
+                <button onclick="processRounds()">Process Pasted JSON</button>
             </div>
         </div>
-        
+
         <div id="results" class="results">
             <h2 id="summaryTitle">Today's Summaries</h2>
             <div id="roundsContainer"></div>
-            
-            <div style="margin-top: 30px; text-align: center;">
-                <button onclick="emailSummary()" class="email-btn">📧 Email Full Summary to Me</button>
+
+            <div style="margin: 30px 0; text-align:center;">
+                <button onclick="emailSummary()" class="email-btn">📧 Email Full Summary</button>
             </div>
         </div>
-        
-        <div class="footer">
-            Built by Grok • Auto-carries calculated • Bridge Course Pars Loaded
+
+        <div class="footer" style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
+            BBB Summarizer • Bridge Course • Auto-fetch from backend
         </div>
     </div>
 
     <script>
-        // === BRIDGE PARS (from backend) ===
+        // === BRIDGE COURSE PARS (update if needed) ===
         const BRIDGE_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
-        
-        // === CARRY LOGIC (exact port from your app) ===
-        function getCarryInForHole(scoresByHole, pars, holeNumber) {
+
+        // === CARRY LOGIC (same as your app) ===
+        function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-            
             for (let h = 1; h < holeNumber; h++) {
                 const idx = h - 1;
-                if (!scoresByHole[idx]) continue; // skip unfinished
-                
+                if (!holeScores[idx]) continue;
                 const par = pars[idx];
                 const isPar3 = par === 3;
-                const holeScores = scoresByHole[idx];
-                
-                // FIRST ON / GREENIE
+                const scores = holeScores[idx];
+
+                // First On / Greenie
                 if (isPar3) {
-                    if (Object.values(holeScores).some(s => s.firstOn)) {
-                        carry.greenie = 0;
-                    } else {
-                        carry.greenie++;
-                    }
+                    if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                    else carry.greenie++;
                 } else {
-                    if (Object.values(holeScores).some(s => s.firstOn)) {
-                        carry.firstOn = 0;
-                    } else {
-                        carry.firstOn++;
-                    }
+                    if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                    else carry.firstOn++;
                 }
-                
-                // CLOSEST
-                if (Object.values(holeScores).some(s => s.closest)) {
-                    carry.closest = 0;
-                } else {
-                    carry.closest++;
-                }
-                
-                // PUTT
-                if (Object.values(holeScores).some(s => s.putt)) {
-                    carry.putt = 0;
-                } else {
-                    carry.putt++;
-                }
+
+                // Closest
+                if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+                else carry.closest++;
+
+                // Putt
+                if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+                else carry.putt++;
             }
             return carry;
         }
-        
+
         function computeHolePoints(playerScores, carryIn, pars, holeIdx) {
             const par = pars[holeIdx];
             const isPar3 = par === 3;
             const s = playerScores[holeIdx] || {};
-            
-            let holePoints = 0;
-            
-            // Base points
-            if (s.firstOn) holePoints += 1;
-            if (s.closest) holePoints += 1;
-            if (s.putt) holePoints += 1;
-            
-            // Carries (only if winner on this hole)
-            if (s.firstOn) {
-                holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
-            }
-            if (s.closest) {
-                holePoints += carryIn.closest;
-            }
-            if (s.putt) {
-                holePoints += carryIn.putt;
-            }
-            
-            return holePoints;
+            let pts = 0;
+
+            if (s.firstOn) pts += 1 + (isPar3 ? carryIn.greenie : carryIn.firstOn);
+            if (s.closest) pts += 1 + carryIn.closest;
+            if (s.putt)   pts += 1 + carryIn.putt;
+
+            return pts;
         }
-        
+
         function computeAllForRound(round) {
-            const pars = BRIDGE_PARS; // All rounds today are Bridge
-            const holeScores = {}; // holeIdx -> {playerName: {firstOn, closest, putt}}
-            
-            // Build per-hole scores map
+            const pars = BRIDGE_PARS;
+            const holeScores = {}; // idx → {playerName: {firstOn,closest,putt}}
+
             round.players.forEach(p => {
                 p.scores.forEach((scoreObj, idx) => {
                     if (!holeScores[idx]) holeScores[idx] = {};
                     holeScores[idx][p.name] = scoreObj || {};
                 });
             });
-            
-            // Precompute totals and per-hole
+
             const playerTotals = {};
-            const playerHoleDetails = {};
-            
             round.players.forEach(p => {
                 playerTotals[p.name] = 0;
-                playerHoleDetails[p.name] = [];
-                
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
-                    const holePts = computeHolePoints(holeScores, carryIn, pars, idx);
-                    
-                    playerHoleDetails[p.name].push({
-                        hole: idx + 1,
-                        points: holePts,
-                        details: getHoleDetailString(holeScores[idx] || {}, p.name, carryIn, pars[idx])
-                    });
-                    
-                    playerTotals[p.name] += holePts;
+                    playerTotals[p.name] += computeHolePoints(holeScores, carryIn, pars, idx);
                 }
             });
-            
-            // Hole-by-hole full breakdown
+
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
                 const carryIn = getCarryInForHole(holeScores, pars, h);
                 const winners = [];
-                
-                Object.keys(holeScores[idx] || {}).forEach(name => {
-                    const s = holeScores[idx][name];
-                    if (!s) return;
+
+                Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
+                    if (!s.firstOn && !s.closest && !s.putt) return;
                     let pts = 0;
                     let notes = [];
-                    
+
                     if (s.firstOn) {
-                        const base = 1;
                         const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
-                        pts += base + carry;
-                        notes.push(pars[idx] === 3 ? `GR:${base}+${carry}` : `FO:${base}+${carry}`);
+                        pts += 1 + carry;
+                        notes.push(pars[idx] === 3 ? `GR:${1}+${carry}` : `FO:${1}+${carry}`);
                     }
                     if (s.closest) {
                         pts += 1 + carryIn.closest;
-                        notes.push(`CL:1+${carryIn.closest}`);
+                        notes.push(`CL:${1}+${carryIn.closest}`);
                     }
                     if (s.putt) {
                         pts += 1 + carryIn.putt;
-                        notes.push(`P:1+${carryIn.putt}`);
+                        notes.push(`P:${1}+${carryIn.putt}`);
                     }
-                    
+
                     if (pts > 0) winners.push({name, pts, notes: notes.join(' • ')});
                 });
-                
+
                 holeBreakdowns.push({
                     hole: h,
-                    carryIn: carryIn,
-                    winners: winners,
+                    carryIn,
+                    winners,
                     totalPts: winners.reduce((sum, w) => sum + w.pts, 0)
                 });
             }
-            
+
             return {
                 finalTotals: playerTotals,
-                holeBreakdowns: holeBreakdowns,
-                playerHoleDetails: playerHoleDetails
+                holeBreakdowns,
+                roundInfo: round
             };
         }
-        
-        function getHoleDetailString(holeScores, playerName, carryIn, par) {
-            const s = holeScores[playerName] || {};
-            if (!s.firstOn && !s.closest && !s.putt) return '—';
-            
-            const isPar3 = par === 3;
-            let parts = [];
-            
-            if (s.firstOn) {
-                const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
-                parts.push(`${isPar3 ? 'GR' : 'FO'}:${1 + carry}`);
-            }
-            if (s.closest) parts.push(`CL:${1 + carryIn.closest}`);
-            if (s.putt) parts.push(`P:${1 + carryIn.putt}`);
-            
-            return parts.join(' • ');
-        }
-        
-        // === PROCESSING ===
-        function processRounds() {
-            const input = document.getElementById('jsonInput').value.trim();
-            if (!input) return alert('Paste some JSON!');
-            
-            let rounds;
-            try {
-                // Handle single object or array
-                const parsed = JSON.parse(input);
-                rounds = Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-                alert('Invalid JSON! Check your paste.');
-                return;
-            }
-            
-            // Filter today's rounds (Feb 16, 2026 in your examples)
-            const todayStr = '2026-02-16';
-            rounds = rounds.filter(r => r.date && r.date.startsWith(todayStr));
-            
-            if (rounds.length === 0) {
-                alert('No rounds from today found in the paste.');
-                return;
-            }
-            
-            const container = document.getElementById('roundsContainer');
-            container.innerHTML = '';
-            
-            let allPlayerTotals = {};
-            
-            rounds.forEach((round, roundIndex) => {
-                const computed = computeAllForRound(round);
-                
-                // Aggregate totals
-                Object.keys(computed.finalTotals).forEach(name => {
-                    if (!allPlayerTotals[name]) allPlayerTotals[name] = 0;
-                    allPlayerTotals[name] += computed.finalTotals[name];
-                });
-                
-                // Render round card
-                const card = document.createElement('div');
-                card.className = 'round-card';
-                card.innerHTML = `
-                    <h3 style="margin-top:0;">${round.courseName} • ${round.matchId}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players.length} players</p>
-                    
-                    <div class="carry-in">
-                        <strong>Final Standings:</strong><br>
-                        ${Object.entries(computed.finalTotals)
-                            .sort((a,b) => b[1] - a[1])
-                            .map(([name, pts]) => `${name}: <span class="player-total">${pts}</span> pts`).join('<br>')}
-                    </div>
-                    
-                    <h4>Hole-by-Hole Breakdown</h4>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Hole</th>
-                                <th>Carry In</th>
-                                <th>Winners & Points</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${computed.holeBreakdowns.map(hb => `
-                                <tr>
-                                    <td><strong>${hb.hole}</strong></td>
-                                    <td>${formatCarryIn(hb.carryIn)}</td>
-                                    <td>${hb.winners.map(w => `${w.name} (${w.pts} pts: ${w.notes})`).join('<br>') || '—'}</td>
-                                    <td><strong>${hb.totalPts}</strong></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                    
-                    <div class="highlight">
-                        <strong>Key Carries:</strong> ${getKeyCarries(computed.holeBreakdowns)}
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-            
-            // Overall today
-            const overall = document.createElement('div');
-            overall.className = 'round-card';
-            overall.innerHTML = `
-                <h3>🏆 Today's Combined Leaderboard</h3>
-                <table>
-                    <thead>
-                        <tr><th>Player</th><th>Total Points</th></tr>
-                    </thead>
-                    <tbody>
-                        ${Object.entries(allPlayerTotals)
-                            .sort((a,b) => b[1] - a[1])
-                            .map(([name, pts]) => `
-                                <tr>
-                                    <td>${name}</td>
-                                    <td class="player-total">${pts}</td>
-                                </tr>
-                            `).join('')}
-                    </tbody>
-                </table>
-            `;
-            container.appendChild(overall);
-            
-            document.getElementById('results').style.display = 'block';
-            document.getElementById('summaryTitle').textContent = `Today's Summaries (${rounds.length} rounds)`;
-            
-            // Store for email
-            window.currentRoundsData = rounds;
-            window.currentComputed = rounds.map(r => computeAllForRound(r));
-        }
-        
+
         function formatCarryIn(carry) {
             const parts = [];
             if (carry.firstOn) parts.push(`FO:${carry.firstOn}`);
             if (carry.greenie) parts.push(`GR:${carry.greenie}`);
             if (carry.closest) parts.push(`CL:${carry.closest}`);
-            if (carry.putt) parts.push(`P:${carry.putt}`);
+            if (carry.putt)    parts.push(`P:${carry.putt}`);
             return parts.length ? parts.join(' ') : '0';
         }
-        
-        function getKeyCarries(holeBreakdowns) {
-            let maxCarry = 0;
-            let maxHole = '';
-            holeBreakdowns.forEach(hb => {
-                const totalCarry = Object.values(hb.carryIn).reduce((a,b) => a + b, 0);
-                if (totalCarry > maxCarry) {
-                    maxCarry = totalCarry;
-                    maxHole = hb.hole;
+
+        // === FETCH FROM BACKEND ===
+        async function fetchAndProcessRounds() {
+            let date = document.getElementById('dateInput').value.trim();
+            if (!date) {
+                date = new Date().toISOString().split('T')[0];
+            }
+
+            try {
+                const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
+
+                const data = await res.json();
+                let rounds = data.rounds || [];
+
+                if (rounds.length === 0) {
+                    alert(`No rounds found for ${date}.\n\nTry a different date or paste JSON manually.`);
+                    document.getElementById('results').style.display = 'none';
+                    return;
                 }
-            });
-            return maxCarry > 0 ? `Biggest carry payout on hole ${maxHole} (${maxCarry} pts rolled over)` : 'No major carries today';
+
+                // Show in textarea for reference
+                document.getElementById('jsonInput').value = JSON.stringify(rounds, null, 2);
+
+                // Store for processing & email
+                window.currentRoundsData = rounds;
+                window.currentComputed = rounds.map(r => computeAllForRound(r));
+
+                renderResults(rounds);
+            } catch (err) {
+                alert(`Could not load rounds:\n${err.message}\n\nUse manual paste instead.`);
+            }
         }
-        
-        function clearInput() {
+
+        function renderResults(rounds) {
+            const container = document.getElementById('roundsContainer');
+            container.innerHTML = '';
+
+            let allTotals = {};
+
+            rounds.forEach((round, i) => {
+                const comp = window.currentComputed[i];
+
+                // Aggregate totals
+                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
+                    allTotals[name] = (allTotals[name] || 0) + pts;
+                });
+
+                const card = document.createElement('div');
+                card.className = 'round-card';
+                card.innerHTML = `
+                    <h3>${round.courseName} • ${round.matchId}</h3>
+                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players.length} players</p>
+
+                    <div class="carry-in">
+                        <strong>Standings:</strong><br>
+                        ${Object.entries(comp.finalTotals)
+                            .sort((a,b) => b[1] - a[1])
+                            .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>')}
+                    </div>
+
+                    <h4>Hole Breakdown</h4>
+                    <table>
+                        <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Total</th></tr>
+                        ${comp.holeBreakdowns.map(hb => `
+                            <tr>
+                                <td><strong>${hb.hole}</strong></td>
+                                <td>${formatCarryIn(hb.carryIn)}</td>
+                                <td>${hb.winners.map(w => `${w.name} (${w.pts})`).join('<br>') || '—'}</td>
+                                <td><strong>${hb.totalPts}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </table>
+
+                    <div class="highlight">
+                        <strong>Key:</strong> Biggest carry payout: hole ${comp.holeBreakdowns.reduce((max,h) => {
+                            const t = Object.values(h.carryIn).reduce((a,b)=>a+b,0) > Object.values(max.carryIn).reduce((a,b)=>a+b,0) ? h : max;
+                            return max;
+                        }, {hole:0, carryIn:{}}).hole}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Overall leaderboard
+            const overall = document.createElement('div');
+            overall.className = 'round-card';
+            overall.innerHTML = `
+                <h3>🏆 Combined Leaderboard (${rounds.length} rounds)</h3>
+                <table>
+                    <tr><th>Player</th><th>Total Points</th></tr>
+                    ${Object.entries(allTotals)
+                        .sort((a,b) => b[1] - a[1])
+                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('')}
+                </table>
+            `;
+            container.appendChild(overall);
+
+            document.getElementById('summaryTitle').textContent = `Rounds for ${date} (${rounds.length})`;
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function processRounds() {
+            const input = document.getElementById('jsonInput').value.trim();
+            if (!input) return alert('Paste some JSON first!');
+
+            let rounds;
+            try {
+                const parsed = JSON.parse(input);
+                rounds = Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                alert('Invalid JSON format.');
+                return;
+            }
+
+            window.currentRoundsData = rounds;
+            window.currentComputed = rounds.map(r => computeAllForRound(r));
+            renderResults(rounds);
+        }
+
+        function emailSummary() {
+            if (!window.currentRoundsData) return alert('No rounds loaded yet.');
+
+            let body = `BBB Golf Summaries – ${new Date().toLocaleDateString()}\n\n`;
+
+            window.currentRoundsData.forEach((r, i) => {
+                const c = window.currentComputed[i];
+                body += `=== ${r.courseName} • ${r.matchId} ===\n`;
+                body += `Start: ${r.groupStartTime || '—'}\n\nStandings:\n`;
+                Object.entries(c.finalTotals).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
+                    body += `${n}: ${p} pts\n`;
+                });
+                body += '\nHoles:\n';
+                c.holeBreakdowns.forEach(hb => {
+                    body += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
+                    body += hb.winners.map(w => `${w.name} (${w.pts})`).join(', ') || '—';
+                    body += ` | ${hb.totalPts} pts\n`;
+                });
+                body += '\n';
+            });
+
+            let grand = {};
+            window.currentComputed.forEach(c => {
+                Object.entries(c.finalTotals).forEach(([n,p]) => grand[n] = (grand[n]||0) + p);
+            });
+            body += '=== GRAND TOTALS ===\n';
+            Object.entries(grand).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
+                body += `${n}: ${p} pts\n`;
+            });
+
+            const subject = `BBB Rounds Summary - ${new Date().toLocaleDateString()}`;
+            window.location.href = `mailto:wmatwijec@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+
+        function clearAll() {
+            document.getElementById('dateInput').value = '';
             document.getElementById('jsonInput').value = '';
             document.getElementById('results').style.display = 'none';
+            window.currentRoundsData = null;
+            window.currentComputed = null;
         }
-        
-        // === EMAIL ===
-        function emailSummary() {
-            if (!window.currentRoundsData) return alert('Process rounds first!');
-            
-            let emailBody = `BBB Daily Golf Summaries - ${new Date().toLocaleDateString('en-US', {month:'long', day:'numeric'})}\n\n`;
-            
-            window.currentRoundsData.forEach((round, i) => {
-                const comp = window.currentComputed[i];
-                emailBody += `=== ${round.courseName} • ${round.matchId} ===\n`;
-                emailBody += `Start: ${round.groupStartTime}\n\n`;
-                
-                // Standings
-                emailBody += 'FINAL STANDINGS:\n';
-                Object.entries(comp.finalTotals).sort((a,b) => b[1]-a[1]).forEach(([n,p]) => {
-                    emailBody += `${n}: ${p} pts\n`;
-                });
-                emailBody += '\n';
-                
-                // Holes
-                emailBody += 'HOLE BREAKDOWN:\n';
-                comp.holeBreakdowns.forEach(hb => {
-                    emailBody += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
-                    if (hb.winners.length) {
-                        emailBody += hb.winners.map(w => `${w.name} (${w.pts})`).join(', ');
-                    } else {
-                        emailBody += '—';
-                    }
-                    emailBody += ` | ${hb.totalPts} pts\n`;
-                });
-                emailBody += '\n';
-            });
-            
-            // Overall
-            let allTotals = {};
-            window.currentComputed.forEach(comp => {
-                Object.entries(comp.finalTotals).forEach(([n, p]) => {
-                    allTotals[n] = (allTotals[n] || 0) + p;
-                });
-            });
-            
-            emailBody += '=== TODAY\'S GRAND TOTALS ===\n';
-            Object.entries(allTotals).sort((a,b) => b[1]-a[1]).forEach(([n,p]) => {
-                emailBody += `${n}: ${p} pts\n`;
-            });
-            
-            emailBody += `\n\nGenerated by BBB Daily Summarizer • ${new Date().toISOString()}`;
-            
-            const subject = `BBB Rounds - ${new Date().toLocaleDateString()}`;
-            const mailto = `mailto:walt@yourdomain.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-            window.location.href = mailto;
-        }
-        
-        // Auto dark mode
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.setAttribute('data-theme', 'dark');
-        }
-        
-        // Demo data load (remove after first use)
-        // Uncomment below for testing with your previous rounds
-        /*
-        setTimeout(() => {
-            document.getElementById('jsonInput').value = JSON.stringify([
-                // paste your first round JSON object here,
-                // paste your second round JSON object here
-            ]);
-            }, 500);
-         */
+
+        // Optional: auto-load today's rounds when opening the page
+        // window.addEventListener('load', fetchAndProcessRounds);
     </script>
 </body>
 </html>
