@@ -64,6 +64,7 @@
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
         .highlight { background: #fff3cd; padding: 12px; border-radius: 8px; margin: 15px 0; }
         .status { color: #666; font-style: italic; margin: 15px 0; }
+        .error { color: #dc3545; font-weight: bold; margin: 15px 0; }
         .email-btn { background: #dc3545; }
     </style>
 </head>
@@ -109,7 +110,7 @@
         // === BRIDGE COURSE PARS (update if needed) ===
         const BRIDGE_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
-        // === CARRY LOGIC (same as your app) ===
+        // === CARRY LOGIC ===
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -119,7 +120,6 @@
                 const isPar3 = par === 3;
                 const scores = holeScores[idx];
 
-                // First On / Greenie
                 if (isPar3) {
                     if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
                     else carry.greenie++;
@@ -128,11 +128,9 @@
                     else carry.firstOn++;
                 }
 
-                // Closest
                 if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
                 else carry.closest++;
 
-                // Putt
                 if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
                 else carry.putt++;
             }
@@ -154,9 +152,24 @@
 
         function computeAllForRound(round) {
             const pars = BRIDGE_PARS;
-            const holeScores = {}; // idx → {playerName: {firstOn,closest,putt}}
+            const holeScores = {};
+
+            if (!round.players || !Array.isArray(round.players)) {
+                console.warn(`Round ${round.matchId || '?'} missing valid players array`);
+                return { finalTotals: {}, holeBreakdowns: [], roundInfo: round };
+            }
 
             round.players.forEach(p => {
+                if (!p.name) {
+                    console.warn(`Player missing name in round ${round.matchId || '?'}`);
+                    return;
+                }
+
+                if (!p.scores || !Array.isArray(p.scores)) {
+                    console.warn(`Player ${p.name} missing or invalid scores array in round ${round.matchId || '?'}`);
+                    return; // Skip this player
+                }
+
                 p.scores.forEach((scoreObj, idx) => {
                     if (!holeScores[idx]) holeScores[idx] = {};
                     holeScores[idx][p.name] = scoreObj || {};
@@ -165,6 +178,7 @@
 
             const playerTotals = {};
             round.players.forEach(p => {
+                if (!p.scores || !Array.isArray(p.scores)) return; // Already warned above
                 playerTotals[p.name] = 0;
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
@@ -245,15 +259,14 @@
                     return;
                 }
 
-                // Show in textarea for reference
                 document.getElementById('jsonInput').value = JSON.stringify(rounds, null, 2);
 
-                // Store for processing & email
                 window.currentRoundsData = rounds;
                 window.currentComputed = rounds.map(r => computeAllForRound(r));
 
                 renderResults(rounds);
             } catch (err) {
+                console.error("Fetch error:", err);
                 alert(`Could not load rounds:\n${err.message}\n\nUse manual paste instead.`);
             }
         }
@@ -265,9 +278,8 @@
             let allTotals = {};
 
             rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i];
+                const comp = window.currentComputed[i] || { finalTotals: {} };
 
-                // Aggregate totals
                 Object.entries(comp.finalTotals).forEach(([name, pts]) => {
                     allTotals[name] = (allTotals[name] || 0) + pts;
                 });
@@ -275,40 +287,32 @@
                 const card = document.createElement('div');
                 card.className = 'round-card';
                 card.innerHTML = `
-                    <h3>${round.courseName} • ${round.matchId}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players.length} players</p>
+                    <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
+                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
 
                     <div class="carry-in">
                         <strong>Standings:</strong><br>
                         ${Object.entries(comp.finalTotals)
                             .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>')}
+                            .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>') || 'No valid scores'}
                     </div>
 
                     <h4>Hole Breakdown</h4>
                     <table>
                         <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Total</th></tr>
-                        ${comp.holeBreakdowns.map(hb => `
+                        ${comp.holeBreakdowns?.map(hb => `
                             <tr>
                                 <td><strong>${hb.hole}</strong></td>
                                 <td>${formatCarryIn(hb.carryIn)}</td>
                                 <td>${hb.winners.map(w => `${w.name} (${w.pts})`).join('<br>') || '—'}</td>
                                 <td><strong>${hb.totalPts}</strong></td>
                             </tr>
-                        `).join('')}
+                        `).join('') || '<tr><td colspan="4">No valid hole data</td></tr>'}
                     </table>
-
-                    <div class="highlight">
-                        <strong>Key:</strong> Biggest carry payout: hole ${comp.holeBreakdowns.reduce((max,h) => {
-                            const t = Object.values(h.carryIn).reduce((a,b)=>a+b,0) > Object.values(max.carryIn).reduce((a,b)=>a+b,0) ? h : max;
-                            return max;
-                        }, {hole:0, carryIn:{}}).hole}
-                    </div>
                 `;
                 container.appendChild(card);
             });
 
-            // Overall leaderboard
             const overall = document.createElement('div');
             overall.className = 'round-card';
             overall.innerHTML = `
@@ -317,7 +321,7 @@
                     <tr><th>Player</th><th>Total Points</th></tr>
                     ${Object.entries(allTotals)
                         .sort((a,b) => b[1] - a[1])
-                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('')}
+                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No valid totals</td></tr>'}
                 </table>
             `;
             container.appendChild(overall);
@@ -350,14 +354,14 @@
             let body = `BBB Golf Summaries – ${new Date().toLocaleDateString()}\n\n`;
 
             window.currentRoundsData.forEach((r, i) => {
-                const c = window.currentComputed[i];
-                body += `=== ${r.courseName} • ${r.matchId} ===\n`;
+                const c = window.currentComputed[i] || { finalTotals: {} };
+                body += `=== ${r.courseName || 'Unknown'} • ${r.matchId || 'No ID'} ===\n`;
                 body += `Start: ${r.groupStartTime || '—'}\n\nStandings:\n`;
                 Object.entries(c.finalTotals).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
                     body += `${n}: ${p} pts\n`;
                 });
                 body += '\nHoles:\n';
-                c.holeBreakdowns.forEach(hb => {
+                (c.holeBreakdowns || []).forEach(hb => {
                     body += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
                     body += hb.winners.map(w => `${w.name} (${w.pts})`).join(', ') || '—';
                     body += ` | ${hb.totalPts} pts\n`;
@@ -367,7 +371,7 @@
 
             let grand = {};
             window.currentComputed.forEach(c => {
-                Object.entries(c.finalTotals).forEach(([n,p]) => grand[n] = (grand[n]||0) + p);
+                Object.entries(c.finalTotals || {}).forEach(([n,p]) => grand[n] = (grand[n]||0) + p);
             });
             body += '=== GRAND TOTALS ===\n';
             Object.entries(grand).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
@@ -385,9 +389,6 @@
             window.currentRoundsData = null;
             window.currentComputed = null;
         }
-
-        // Optional: auto-load today's rounds when opening the page
-        // window.addEventListener('load', fetchAndProcessRounds);
     </script>
 </body>
 </html>
