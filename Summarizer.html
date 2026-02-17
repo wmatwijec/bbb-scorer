@@ -109,6 +109,7 @@
     <script>
         // === BRIDGE COURSE PARS (update if needed) ===
         const BRIDGE_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
+        let currentDate = '';
 
         // === CARRY LOGIC ===
         function getCarryInForHole(holeScores, pars, holeNumber) {
@@ -242,8 +243,12 @@
         async function fetchAndProcessRounds() {
             let date = document.getElementById('dateInput').value.trim();
             if (!date) {
-                date = new Date().toISOString().split('T')[0];
-            }
+                const today = new Date();
+                date = today.getFullYear() + '-' +
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(today.getDate()).padStart(2, '0');
+                        }
+            currentDate = date;
 
             try {
                 const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
@@ -326,7 +331,7 @@
             `;
             container.appendChild(overall);
 
-            document.getElementById('summaryTitle').textContent = `Rounds for ${date} (${rounds.length})`;
+            document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
             document.getElementById('results').style.display = 'block';
         }
 
