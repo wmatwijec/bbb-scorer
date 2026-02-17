@@ -53,6 +53,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 15px 0;
+            font-size: 0.95em;
         }
         th, td {
             padding: 10px;
@@ -62,7 +63,10 @@
         th { background: #f1f3f5; font-weight: 600; }
         .player-total { font-weight: bold; color: #198754; }
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
-        .highlight { background: #fff3cd; padding: 12px; border-radius: 8px; margin: 15px 0; }
+        .running-cell {
+            white-space: pre-line;
+            font-size: 0.9em;
+        }
         .email-btn { background: #dc3545; }
     </style>
 </head>
@@ -100,12 +104,12 @@
         </div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Multi-course support • Filters false starts
+            BBB Summarizer • Multi-course support • Running totals added
         </div>
     </div>
 
     <script>
-        // === DEFAULT PARS (Franklin Bridge) — fallback for old rounds ===
+        // === DEFAULT PARS (Franklin Bridge) — fallback ===
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
@@ -138,20 +142,17 @@
         }
 
         function computeAllForRound(round) {
-            // Use course pars if present in round (future-proof), else fallback
             const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
                 ? round.pars 
                 : DEFAULT_PARS;
 
             const holeScores = {};
 
-            // Defensive checks
             if (!round.players || !Array.isArray(round.players)) {
                 console.warn(`Round ${round.matchId || '?'} missing players array`);
-                return { finalTotals: {}, holeBreakdowns: [], roundInfo: round };
+                return { finalTotals: {}, holeBreakdowns: [], roundInfo: round, runningTotals: {} };
             }
 
-            // Handle backend format: scores as object { "PlayerName": [hole1, hole2, ...] }
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
                 Object.entries(round.scores).forEach(([playerName, playerHoleArray]) => {
                     if (!Array.isArray(playerHoleArray) || playerHoleArray.length !== 18) {
@@ -168,13 +169,17 @@
                 console.warn(`Round ${round.matchId || '?'} has unexpected scores format`);
             }
 
-            // Compute totals
+            // Compute per-hole points + running totals
             const playerTotals = {};
+            const runningTotals = {}; // player → array of cumulative after each hole
             round.players.forEach(p => {
                 const name = p.name;
                 if (!name) return;
 
                 playerTotals[name] = 0;
+                runningTotals[name] = new Array(18).fill(0);
+                let cumulative = 0;
+
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
@@ -184,6 +189,8 @@
                     if (s.closest) pts += 1 + carryIn.closest;
                     if (s.putt)   pts += 1 + carryIn.putt;
 
+                    cumulative += pts;
+                    runningTotals[name][idx] = cumulative;
                     playerTotals[name] += pts;
                 }
             });
@@ -201,20 +208,17 @@
 
                     if (s.firstOn) {
                         const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
-                        const total = 1 + carry;
-                        detailParts.push(`${total}${pars[idx] === 3 ? 'GR' : 'FO'}`);
+                        detailParts.push(`${1 + carry}${pars[idx] === 3 ? 'GR' : 'FO'}`);
                     }
                     if (s.closest) {
-                        const total = 1 + carryIn.closest;
-                        detailParts.push(`${total}CL`);
+                        detailParts.push(`${1 + carryIn.closest}CL`);
                     }
                     if (s.putt) {
-                        const total = 1 + carryIn.putt;
-                        detailParts.push(`${total}P`);
+                        detailParts.push(`${1 + carryIn.putt}P`);
                     }
 
                     const detail = detailParts.join(', ');
-                    const pts = detailParts.length ? detailParts.reduce((sum, d) => sum + parseInt(d), 0) : 0;
+                    const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0]), 0);
 
                     winners.push({name, pts, detail});
                 });
@@ -223,14 +227,15 @@
                     hole: h,
                     carryIn,
                     winners,
-                    totalPts: winners.reduce((sum, w) => sum + w.pts, 0)
+                    runningTotals: runningTotals
                 });
             }
 
             return {
                 finalTotals: playerTotals,
                 holeBreakdowns,
-                roundInfo: round
+                roundInfo: round,
+                runningTotals
             };
         }
 
@@ -263,15 +268,14 @@
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
-                // FILTER FALSE STARTS: Drop rounds where NO points were awarded at all
+                // Filter false starts
                 rounds = rounds.filter(r => {
                     const comp = computeAllForRound(r);
-                    const hasPoints = Object.values(comp.finalTotals).some(t => t > 0);
-                    return hasPoints;
+                    return Object.values(comp.finalTotals).some(t => t > 0);
                 });
 
                 if (rounds.length === 0) {
-                    alert(`No valid rounds found for ${date} (false starts filtered out).\n\nTry another date or paste manually.`);
+                    alert(`No valid rounds found for ${date}.\n\nTry another date or paste manually.`);
                     document.getElementById('results').style.display = 'none';
                     return;
                 }
@@ -295,7 +299,7 @@
             let allTotals = {};
 
             rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i] || { finalTotals: {} };
+                const comp = window.currentComputed[i] || { finalTotals: {}, runningTotals: {} };
 
                 Object.entries(comp.finalTotals).forEach(([name, pts]) => {
                     allTotals[name] = (allTotals[name] || 0) + (pts || 0);
@@ -308,23 +312,33 @@
                     <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
 
                     <div class="carry-in">
-                        <strong>Standings:</strong><br>
+                        <strong>Final Standings:</strong><br>
                         ${Object.entries(comp.finalTotals)
                             .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
+                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores'}
                     </div>
 
                     <h4>Hole Breakdown</h4>
                     <table>
-                        <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Total</th></tr>
-                        ${comp.holeBreakdowns?.map(hb => `
-                            <tr>
-                                <td><strong>${hb.hole}</strong></td>
-                                <td>${formatCarryIn(hb.carryIn)}</td>
-                                <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
-                                <td><strong>${hb.totalPts}</strong></td>
-                            </tr>
-                        `).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
+                        <tr>
+                            <th>Hole</th>
+                            <th>Carry In</th>
+                            <th>Winners & Points</th>
+                            <th>Running Totals</th>
+                        </tr>
+                        ${comp.holeBreakdowns?.map(hb => {
+                            const runningStr = Object.entries(comp.runningTotals || {})
+                                .map(([name, cumuls]) => `${name}: ${cumuls[hb.hole - 1] || 0}`)
+                                .join(' | ');
+                            return `
+                                <tr>
+                                    <td><strong>${hb.hole}</strong></td>
+                                    <td>${formatCarryIn(hb.carryIn)}</td>
+                                    <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
+                                    <td class="running-cell">${runningStr || '—'}</td>
+                                </tr>
+                            `;
+                        }).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
                     </table>
                 `;
                 container.appendChild(card);
@@ -360,7 +374,6 @@
                 return;
             }
 
-            // Filter false starts for manual paste too
             rounds = rounds.filter(r => {
                 const comp = computeAllForRound(r);
                 return Object.values(comp.finalTotals).some(t => t > 0);
@@ -379,7 +392,7 @@
             window.currentRoundsData.forEach((r, i) => {
                 const c = window.currentComputed[i] || { finalTotals: {} };
                 body += `=== ${r.courseName || 'Unknown'} • ${r.matchId || 'No ID'} ===\n`;
-                body += `Start: ${r.groupStartTime || '—'}\n\nStandings:\n`;
+                body += `Start: ${r.groupStartTime || '—'}\n\nFinal Standings:\n`;
                 Object.entries(c.finalTotals).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
                     body += `${n}: ${p || 0} pts\n`;
                 });
@@ -387,7 +400,7 @@
                 (c.holeBreakdowns || []).forEach(hb => {
                     body += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
                     body += hb.winners.map(w => `${w.name} (${w.detail})`).join(', ') || '—';
-                    body += ` | ${hb.totalPts} pts\n`;
+                    body += '\n';
                 });
                 body += '\n\n';
             });
