@@ -63,7 +63,6 @@
         .player-total { font-weight: bold; color: #198754; }
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
         .highlight { background: #fff3cd; padding: 12px; border-radius: 8px; margin: 15px 0; }
-        .error { color: #dc3545; font-weight: bold; margin: 15px 0; }
         .email-btn { background: #dc3545; }
     </style>
 </head>
@@ -101,12 +100,12 @@
         </div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Multi-course support coming soon
+            BBB Summarizer • Multi-course support • Filters false starts
         </div>
     </div>
 
     <script>
-        // === DEFAULT PARS (Franklin Bridge) — fallback ===
+        // === DEFAULT PARS (Franklin Bridge) — fallback for old rounds ===
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
@@ -139,7 +138,7 @@
         }
 
         function computeAllForRound(round) {
-            // Use course pars if available, otherwise fallback
+            // Use course pars if present in round (future-proof), else fallback
             const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
                 ? round.pars 
                 : DEFAULT_PARS;
@@ -189,7 +188,7 @@
                 }
             });
 
-            // Hole breakdowns
+            // Hole breakdowns with detailed labels
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
@@ -198,24 +197,26 @@
 
                 Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
                     if (!s.firstOn && !s.closest && !s.putt) return;
-                    let pts = 0;
-                    let notes = [];
+                    let detailParts = [];
 
                     if (s.firstOn) {
                         const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
-                        pts += 1 + carry;
-                        notes.push(pars[idx] === 3 ? `GR:${1}+${carry}` : `FO:${1}+${carry}`);
+                        const total = 1 + carry;
+                        detailParts.push(`${total}${pars[idx] === 3 ? 'GR' : 'FO'}`);
                     }
                     if (s.closest) {
-                        pts += 1 + carryIn.closest;
-                        notes.push(`CL:${1}+${carryIn.closest}`);
+                        const total = 1 + carryIn.closest;
+                        detailParts.push(`${total}CL`);
                     }
                     if (s.putt) {
-                        pts += 1 + carryIn.putt;
-                        notes.push(`P:${1}+${carryIn.putt}`);
+                        const total = 1 + carryIn.putt;
+                        detailParts.push(`${total}P`);
                     }
 
-                    if (pts > 0) winners.push({name, pts, notes: notes.join(' • ')});
+                    const detail = detailParts.join(', ');
+                    const pts = detailParts.length ? detailParts.reduce((sum, d) => sum + parseInt(d), 0) : 0;
+
+                    winners.push({name, pts, detail});
                 });
 
                 holeBreakdowns.push({
@@ -262,8 +263,15 @@
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
+                // FILTER FALSE STARTS: Drop rounds where NO points were awarded at all
+                rounds = rounds.filter(r => {
+                    const comp = computeAllForRound(r);
+                    const hasPoints = Object.values(comp.finalTotals).some(t => t > 0);
+                    return hasPoints;
+                });
+
                 if (rounds.length === 0) {
-                    alert(`No rounds found for ${date}. Try another date or paste manually.`);
+                    alert(`No valid rounds found for ${date} (false starts filtered out).\n\nTry another date or paste manually.`);
                     document.getElementById('results').style.display = 'none';
                     return;
                 }
@@ -313,7 +321,7 @@
                             <tr>
                                 <td><strong>${hb.hole}</strong></td>
                                 <td>${formatCarryIn(hb.carryIn)}</td>
-                                <td>${hb.winners.map(w => `${w.name} (${w.pts})`).join('<br>') || '—'}</td>
+                                <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
                                 <td><strong>${hb.totalPts}</strong></td>
                             </tr>
                         `).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
@@ -352,6 +360,12 @@
                 return;
             }
 
+            // Filter false starts for manual paste too
+            rounds = rounds.filter(r => {
+                const comp = computeAllForRound(r);
+                return Object.values(comp.finalTotals).some(t => t > 0);
+            });
+
             window.currentRoundsData = rounds;
             window.currentComputed = rounds.map(r => computeAllForRound(r));
             renderResults(rounds);
@@ -372,7 +386,7 @@
                 body += '\nHoles:\n';
                 (c.holeBreakdowns || []).forEach(hb => {
                     body += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
-                    body += hb.winners.map(w => `${w.name} (${w.pts})`).join(', ') || '—';
+                    body += hb.winners.map(w => `${w.name} (${w.detail})`).join(', ') || '—';
                     body += ` | ${hb.totalPts} pts\n`;
                 });
                 body += '\n\n';
