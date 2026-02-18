@@ -66,8 +66,7 @@
         .player-total { font-weight: bold; color: #198754; }
         .running-cell { white-space: pre-line; font-size: 0.9em; }
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
-        .email-btn { background: #dc3545; }
-        .status { color: #666; margin: 20px 0; font-style: italic; }
+        .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
     </style>
 </head>
 <body>
@@ -88,10 +87,6 @@
         <div id="results" class="results">
             <h2 id="summaryTitle">Rounds</h2>
             <div id="roundsContainer"></div>
-
-            <div style="margin: 30px 0; text-align:center;">
-                <button onclick="emailSummary()" class="email-btn">📧 Email Full Summary</button>
-            </div>
         </div>
 
         <div id="status" class="status"></div>
@@ -235,6 +230,7 @@
 
         async function fetchAndProcessRounds() {
             document.getElementById('status').textContent = 'Loading rounds...';
+            document.getElementById('results').style.display = 'none';
 
             let date = document.getElementById('dateInput').value.trim();
             if (!date) {
@@ -262,7 +258,6 @@
 
                 if (rounds.length === 0) {
                     document.getElementById('status').textContent = `No valid rounds found for ${date}.`;
-                    document.getElementById('results').style.display = 'none';
                     return;
                 }
 
@@ -346,40 +341,6 @@
 
             document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
             document.getElementById('results').style.display = 'block';
-        }
-
-        function emailSummary() {
-            if (!window.currentRoundsData?.length) return alert('No rounds loaded yet.');
-
-            let body = `BBB Golf Summaries – ${currentDate || new Date().toLocaleDateString()}\n\n`;
-
-            window.currentRoundsData.forEach((r, i) => {
-                const c = window.currentComputed[i] || { finalTotals: {} };
-                body += `=== ${r.courseName || 'Unknown'} • ${r.matchId || 'No ID'} ===\n`;
-                body += `Start: ${r.groupStartTime || '—'}\n\nFinal Standings:\n`;
-                Object.entries(c.finalTotals).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
-                    body += `${n}: ${p || 0} pts\n`;
-                });
-                body += '\nHoles:\n';
-                (c.holeBreakdowns || []).forEach(hb => {
-                    body += `H${hb.hole}: ${formatCarryIn(hb.carryIn)} → `;
-                    body += hb.winners.map(w => `${w.name} (${w.detail})`).join(', ') || '—';
-                    body += '\n';
-                });
-                body += '\n\n';
-            });
-
-            let grand = {};
-            window.currentComputed.forEach(c => {
-                Object.entries(c.finalTotals || {}).forEach(([n,p]) => grand[n] = (grand[n]||0) + (p||0));
-            });
-            body += '=== GRAND TOTALS ===\n';
-            Object.entries(grand).sort((a,b)=>b[1]-a[1]).forEach(([n,p]) => {
-                body += `${n}: ${p} pts\n`;
-            });
-
-            const subject = `BBB Rounds Summary - ${currentDate || 'Recent'}`;
-            window.location.href = `mailto:wmatwijec@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
 
         function clearAll() {
