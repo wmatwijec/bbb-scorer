@@ -99,6 +99,33 @@
         let uniquePlayers = [];
         let statsCache = {};
 
+        // === CARRY-IN FUNCTION (must be defined before use) ===
+        function getCarryInForHole(holeScores, pars, holeNumber) {
+            const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+            for (let h = 1; h < holeNumber; h++) {
+                const idx = h - 1;
+                if (!holeScores[idx]) continue;
+                const par = pars[idx] || 4;
+                const isPar3 = par === 3;
+                const scores = holeScores[idx];
+
+                if (isPar3) {
+                    if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                    else carry.greenie++;
+                } else {
+                    if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                    else carry.firstOn++;
+                }
+
+                if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+                else carry.closest++;
+
+                if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+                else carry.putt++;
+            }
+            return carry;
+        }
+
         // Simple median function
         function median(arr) {
             if (!arr.length) return 0;
@@ -112,7 +139,8 @@
 
             try {
                 const res = await fetch(`${BACKEND}/rounds`);
-                if (!res.ok) throw new Error('Backend error');
+                if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+
                 const data = await res.json();
                 allRounds = data.rounds || [];
 
@@ -123,21 +151,31 @@
                 );
 
                 if (allRounds.length === 0) {
-                    document.getElementById('status').textContent = 'No completed rounds found.';
+                    document.getElementById('status').textContent = 'No completed rounds found in database.';
                     return;
                 }
 
                 // Unique non-guest players
                 const playerSet = new Set();
-                allRounds.forEach(r => r.players.forEach(p => {
-                    if (p.name && !p.name.toLowerCase().includes('guest')) playerSet.add(p.name);
-                }));
+                allRounds.forEach(r => {
+                    (r.players || []).forEach(p => {
+                        if (p?.name && !p.name.toLowerCase().includes('guest')) {
+                            playerSet.add(p.name);
+                        }
+                    });
+                });
+
                 uniquePlayers = Array.from(playerSet).sort();
+
+                if (uniquePlayers.length === 0) {
+                    document.getElementById('status').textContent = 'No players found in completed rounds.';
+                    return;
+                }
 
                 // Precompute stats
                 statsCache = computeAllStats();
 
-                // Populate player dropdown
+                // Populate dropdown
                 const select = document.getElementById('playerSelect');
                 select.innerHTML = '<option value="">-- Select Player --</option>';
                 uniquePlayers.forEach(name => {
@@ -149,9 +187,10 @@
 
                 select.addEventListener('change', e => showStats(e.target.value));
 
-                document.getElementById('status').textContent = `Loaded ${allRounds.length} completed rounds for ${uniquePlayers.length} players.`;
+                document.getElementById('status').textContent = `Loaded ${allRounds.length} completed rounds • ${uniquePlayers.length} players`;
             } catch (err) {
-                document.getElementById('status').textContent = `Error: ${err.message}`;
+                console.error(err);
+                document.getElementById('status').textContent = `Error loading data: ${err.message}`;
             }
         }
 
@@ -160,7 +199,7 @@
                 group: {
                     rounds: allRounds.length,
                     totalPoints: 0,
-                    pointsPerRound: [],     // for median
+                    pointsPerRound: [],
                     foPerRound: [],
                     clPerRound: [],
                     pPerRound: [],
@@ -192,7 +231,7 @@
                 });
 
                 uniquePlayers.forEach(name => {
-                    if (!r.players.some(p => p.name === name)) return;
+                    if (!r.players?.some(p => p.name === name)) return;
 
                     let playerPoints = 0;
                     let fo = 0, cl = 0, p = 0, carry = 0;
@@ -241,7 +280,6 @@
                 });
             });
 
-            // Group averages and medians
             const g = cache.group;
             g.avgPoints = g.pointsPerRound.length ? g.pointsPerRound.reduce((a,b)=>a+b,0)/g.pointsPerRound.length : 0;
             g.medianPoints = median(g.pointsPerRound);
@@ -317,6 +355,7 @@
             document.getElementById('statsArea').style.display = 'block';
         }
 
+        // Start loading data immediately
         loadData();
     </script>
 </body>
