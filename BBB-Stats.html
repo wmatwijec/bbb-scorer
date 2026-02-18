@@ -95,11 +95,13 @@
     <script>
         const BACKEND = 'https://pwa-players-backend.onrender.com';
 
+        const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
+
         let allRounds = [];
         let uniquePlayers = [];
         let statsCache = {};
 
-        // === CARRY-IN FUNCTION (must be defined before use) ===
+        // === CARRY-IN FUNCTION ===
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -133,6 +135,8 @@
             const mid = Math.floor(sorted.length / 2);
             return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
         }
+
+    
 
         async function loadData() {
             document.getElementById('status').textContent = 'Fetching rounds...';
