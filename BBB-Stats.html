@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBB Golf Stats</title>
+    <style>
+        body { 
+            font-family: system-ui, sans-serif; 
+            background: #f8f9fa; 
+            color: #1a1a1a; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.6; 
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1, h2 { color: #0d6efd; }
+        select { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 15px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            font-size: 16px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            font-size: 0.95em;
+        }
+        th, td { 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            text-align: center; 
+        }
+        th { background: #f1f3f5; font-weight: 600; }
+        .highlight { font-weight: bold; color: #198754; }
+        .status { color: #666; font-style: italic; text-align: center; margin: 20px 0; }
+        .player-row td:first-child { text-align: left; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⛳ BBB Golf Stats</h1>
+        <p>Stats from completed rounds only. Select a player to see details and comparisons.</p>
+
+        <div id="playerSelectArea">
+            <label for="playerSelect"><strong>Select Player:</strong></label><br>
+            <select id="playerSelect">
+                <option value="">-- Loading players --</option>
+            </select>
+        </div>
+
+        <div id="statsArea" style="display: none;">
+            <h2 id="playerName">Player Stats</h2>
+
+            <table id="playerStatsTable">
+                <thead>
+                    <tr>
+                        <th>Stat</th>
+                        <th>Your Total</th>
+                        <th>Your Mean</th>
+                        <th>Your Median</th>
+                        <th>Group Mean</th>
+                        <th>Group Median</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Rounds Played</td><td id="roundsPlayed" colspan="5"></td></tr>
+                    <tr><td>Total Points</td><td id="totalPoints" colspan="5"></td></tr>
+                    <tr><td>Points per Round</td><td id="pointsPerRoundTotal">-</td><td id="pointsMean"></td><td id="pointsMedian"></td><td id="groupPointsMean"></td><td id="groupPointsMedian"></td></tr>
+                    <tr><td>Best Round Points</td><td id="bestRound"></td><td colspan="5">-</td></tr>
+                    <tr><td>FO/GR Wins</td><td id="foWinsTotal">-</td><td id="foMean"></td><td id="foMedian"></td><td id="groupFoMean"></td><td id="groupFoMedian"></td></tr>
+                    <tr><td>CL Wins</td><td id="clWinsTotal">-</td><td id="clMean"></td><td id="clMedian"></td><td id="groupClMean"></td><td id="groupClMedian"></td></tr>
+                    <tr><td>P Wins</td><td id="pWinsTotal">-</td><td id="pMean"></td><td id="pMedian"></td><td id="groupPMean"></td><td id="groupPMedian"></td></tr>
+                    <tr><td>Carry Points Cashed</td><td id="carryTotal">-</td><td id="carryMean"></td><td id="carryMedian"></td><td id="groupCarryMean"></td><td id="groupCarryMedian"></td></tr>
+                    <tr><td>Rank in Total Points</td><td id="rank" colspan="5" class="highlight"></td></tr>
+                </tbody>
+            </table>
+
+            <h2>Group Leaderboard (Total Points)</h2>
+            <table id="leaderboard">
+                <tr><th>Player</th><th>Total Points</th><th>Rounds</th><th>Mean / Round</th></tr>
+            </table>
+        </div>
+
+        <div id="status" class="status">Loading data...</div>
+
+        <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
+            BBB Stats PWA • Completed rounds only • Mean & Median shown
+        </div>
+    </div>
+
+    <script>
+        const BACKEND = 'https://pwa-players-backend.onrender.com';
+
+        let allRounds = [];
+        let uniquePlayers = [];
+        let statsCache = {};
+
+        // Simple median function
+        function median(arr) {
+            if (!arr.length) return 0;
+            const sorted = [...arr].sort((a,b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
+        }
+
+        async function loadData() {
+            document.getElementById('status').textContent = 'Fetching rounds...';
+
+            try {
+                const res = await fetch(`${BACKEND}/rounds`);
+                if (!res.ok) throw new Error('Backend error');
+                const data = await res.json();
+                allRounds = data.rounds || [];
+
+                // Filter completed rounds only
+                allRounds = allRounds.filter(r => 
+                    r.finishedHoles && r.finishedHoles.length === 18 &&
+                    Object.values(r.scores || {}).some(arr => arr.some(s => s?.firstOn || s?.closest || s?.putt))
+                );
+
+                if (allRounds.length === 0) {
+                    document.getElementById('status').textContent = 'No completed rounds found.';
+                    return;
+                }
+
+                // Unique non-guest players
+                const playerSet = new Set();
+                allRounds.forEach(r => r.players.forEach(p => {
+                    if (p.name && !p.name.toLowerCase().includes('guest')) playerSet.add(p.name);
+                }));
+                uniquePlayers = Array.from(playerSet).sort();
+
+                // Precompute stats
+                statsCache = computeAllStats();
+
+                // Populate player dropdown
+                const select = document.getElementById('playerSelect');
+                select.innerHTML = '<option value="">-- Select Player --</option>';
+                uniquePlayers.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                });
+
+                select.addEventListener('change', e => showStats(e.target.value));
+
+                document.getElementById('status').textContent = `Loaded ${allRounds.length} completed rounds for ${uniquePlayers.length} players.`;
+            } catch (err) {
+                document.getElementById('status').textContent = `Error: ${err.message}`;
+            }
+        }
+
+        function computeAllStats() {
+            const cache = {
+                group: {
+                    rounds: allRounds.length,
+                    totalPoints: 0,
+                    pointsPerRound: [],     // for median
+                    foPerRound: [],
+                    clPerRound: [],
+                    pPerRound: [],
+                    carryPerRound: [],
+                    bestRounds: []
+                }
+            };
+
+            uniquePlayers.forEach(name => {
+                cache[name] = {
+                    rounds: 0,
+                    totalPoints: 0,
+                    pointsPerRound: [],
+                    foPerRound: [],
+                    clPerRound: [],
+                    pPerRound: [],
+                    carryPerRound: [],
+                    bestRound: 0
+                };
+            });
+
+            allRounds.forEach(r => {
+                const holeScores = {};
+                for (let idx = 0; idx < 18; idx++) holeScores[idx] = {};
+
+                Object.entries(r.scores || {}).forEach(([name, playerHoles]) => {
+                    if (!uniquePlayers.includes(name)) return;
+                    playerHoles.forEach((s, idx) => holeScores[idx][name] = s || {});
+                });
+
+                uniquePlayers.forEach(name => {
+                    if (!r.players.some(p => p.name === name)) return;
+
+                    let playerPoints = 0;
+                    let fo = 0, cl = 0, p = 0, carry = 0;
+
+                    for (let idx = 0; idx < 18; idx++) {
+                        const carryIn = getCarryInForHole(holeScores, DEFAULT_PARS, idx + 1);
+                        const s = holeScores[idx][name] || {};
+                        const par = DEFAULT_PARS[idx];
+                        const isPar3 = par === 3;
+
+                        if (s.firstOn) {
+                            const c = isPar3 ? carryIn.greenie : carryIn.firstOn;
+                            playerPoints += 1 + c;
+                            fo += 1;
+                            carry += c;
+                        }
+                        if (s.closest) {
+                            playerPoints += 1 + carryIn.closest;
+                            cl += 1;
+                            carry += carryIn.closest;
+                        }
+                        if (s.putt) {
+                            playerPoints += 1 + carryIn.putt;
+                            p += 1;
+                            carry += carryIn.putt;
+                        }
+                    }
+
+                    const stats = cache[name];
+                    stats.rounds += 1;
+                    stats.totalPoints += playerPoints;
+                    stats.pointsPerRound.push(playerPoints);
+                    stats.foPerRound.push(fo);
+                    stats.clPerRound.push(cl);
+                    stats.pPerRound.push(p);
+                    stats.carryPerRound.push(carry);
+                    stats.bestRound = Math.max(stats.bestRound, playerPoints);
+
+                    cache.group.totalPoints += playerPoints;
+                    cache.group.pointsPerRound.push(playerPoints);
+                    cache.group.foPerRound.push(fo);
+                    cache.group.clPerRound.push(cl);
+                    cache.group.pPerRound.push(p);
+                    cache.group.carryPerRound.push(carry);
+                    cache.group.bestRounds.push(playerPoints);
+                });
+            });
+
+            // Group averages and medians
+            const g = cache.group;
+            g.avgPoints = g.pointsPerRound.length ? g.pointsPerRound.reduce((a,b)=>a+b,0)/g.pointsPerRound.length : 0;
+            g.medianPoints = median(g.pointsPerRound);
+            g.avgFo = g.foPerRound.length ? g.foPerRound.reduce((a,b)=>a+b,0)/g.foPerRound.length : 0;
+            g.medianFo = median(g.foPerRound);
+            g.avgCl = g.clPerRound.length ? g.clPerRound.reduce((a,b)=>a+b,0)/g.clPerRound.length : 0;
+            g.medianCl = median(g.clPerRound);
+            g.avgP = g.pPerRound.length ? g.pPerRound.reduce((a,b)=>a+b,0)/g.pPerRound.length : 0;
+            g.medianP = median(g.pPerRound);
+            g.avgCarry = g.carryPerRound.length ? g.carryPerRound.reduce((a,b)=>a+b,0)/g.carryPerRound.length : 0;
+            g.medianCarry = median(g.carryPerRound);
+            g.avgBest = g.bestRounds.length ? g.bestRounds.reduce((a,b)=>a+b,0)/g.bestRounds.length : 0;
+
+            return cache;
+        }
+
+        function showStats(player) {
+            if (!player) {
+                document.getElementById('statsArea').style.display = 'none';
+                return;
+            }
+
+            const p = statsCache[player];
+            const g = statsCache.group;
+
+            document.getElementById('playerName').textContent = `${player}'s Stats`;
+
+            document.getElementById('roundsPlayed').textContent = p.rounds;
+            document.getElementById('totalPoints').textContent = p.totalPoints;
+            document.getElementById('bestRound').textContent = p.bestRound;
+
+            document.getElementById('pointsMean').textContent = p.pointsPerRound.length ? (p.pointsPerRound.reduce((a,b)=>a+b,0)/p.pointsPerRound.length).toFixed(1) : '—';
+            document.getElementById('pointsMedian').textContent = median(p.pointsPerRound).toFixed(1);
+            document.getElementById('groupPointsMean').textContent = g.avgPoints.toFixed(1);
+            document.getElementById('groupPointsMedian').textContent = g.medianPoints.toFixed(1);
+
+            document.getElementById('foMean').textContent = p.foPerRound.length ? (p.foPerRound.reduce((a,b)=>a+b,0)/p.foPerRound.length).toFixed(1) : '—';
+            document.getElementById('foMedian').textContent = median(p.foPerRound).toFixed(1);
+            document.getElementById('groupFoMean').textContent = g.avgFo.toFixed(1);
+            document.getElementById('groupFoMedian').textContent = g.medianFo.toFixed(1);
+
+            document.getElementById('clMean').textContent = p.clPerRound.length ? (p.clPerRound.reduce((a,b)=>a+b,0)/p.clPerRound.length).toFixed(1) : '—';
+            document.getElementById('clMedian').textContent = median(p.clPerRound).toFixed(1);
+            document.getElementById('groupClMean').textContent = g.avgCl.toFixed(1);
+            document.getElementById('groupClMedian').textContent = g.medianCl.toFixed(1);
+
+            document.getElementById('pMean').textContent = p.pPerRound.length ? (p.pPerRound.reduce((a,b)=>a+b,0)/p.pPerRound.length).toFixed(1) : '—';
+            document.getElementById('pMedian').textContent = median(p.pPerRound).toFixed(1);
+            document.getElementById('groupPMean').textContent = g.avgP.toFixed(1);
+            document.getElementById('groupPMedian').textContent = g.medianP.toFixed(1);
+
+            document.getElementById('carryMean').textContent = p.carryPerRound.length ? (p.carryPerRound.reduce((a,b)=>a+b,0)/p.carryPerRound.length).toFixed(1) : '—';
+            document.getElementById('carryMedian').textContent = median(p.carryPerRound).toFixed(1);
+            document.getElementById('groupCarryMean').textContent = g.avgCarry.toFixed(1);
+            document.getElementById('groupCarryMedian').textContent = g.medianCarry.toFixed(1);
+
+            // Rank
+            const ranks = uniquePlayers.map(n => ({name: n, points: statsCache[n].totalPoints})).sort((a,b) => b.points - a.points);
+            const rank = ranks.findIndex(r => r.name === player) + 1;
+            document.getElementById('rank').textContent = `#${rank} of ${uniquePlayers.length} players`;
+
+            // Leaderboard
+            const lb = document.getElementById('leaderboard');
+            lb.innerHTML = '<tr><th>Player</th><th>Total Points</th><th>Rounds</th><th>Mean / Round</th></tr>';
+            ranks.forEach(r => {
+                const tr = lb.insertRow();
+                tr.insertCell().textContent = r.name;
+                tr.insertCell().textContent = r.points;
+                tr.insertCell().textContent = statsCache[r.name].rounds;
+                tr.insertCell().textContent = statsCache[r.name].pointsPerRound.length ? (statsCache[r.name].pointsPerRound.reduce((a,b)=>a+b,0)/statsCache[r.name].pointsPerRound.length).toFixed(1) : '—';
+            });
+
+            document.getElementById('statsArea').style.display = 'block';
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
