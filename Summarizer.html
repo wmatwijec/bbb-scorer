@@ -21,11 +21,13 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 30px;
+            text-align: center;
         }
-        input[type="date"], textarea {
+        input[type="date"] {
             width: 100%;
+            max-width: 300px;
             padding: 12px;
-            margin: 10px 0;
+            margin: 15px 0;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
@@ -34,11 +36,11 @@
             background: #0d6efd;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 8px;
+            padding: 14px 32px;
+            font-size: 17px;
+            border-radius: 10px;
             cursor: pointer;
-            margin: 8px 4px;
+            margin: 10px;
         }
         button:hover { opacity: 0.9; }
         .results { display: none; }
@@ -62,35 +64,24 @@
         }
         th { background: #f1f3f5; font-weight: 600; }
         .player-total { font-weight: bold; color: #198754; }
+        .running-cell { white-space: pre-line; font-size: 0.9em; }
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
-        .running-cell {
-            white-space: pre-line;
-            font-size: 0.9em;
-        }
         .email-btn { background: #dc3545; }
+        .status { color: #666; margin: 20px 0; font-style: italic; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⛳ BBB Daily Round Summaries</h1>
-        <p>Loads rounds from backend for the selected date (blank = today).</p>
+        <p>Pick a date (or leave blank for today) and tap Load.</p>
 
         <div class="input-area">
-            <label for="dateInput"><strong>Date (YYYY-MM-DD) — blank = today:</strong></label><br>
+            <label for="dateInput"><strong>Select Date (YYYY-MM-DD) — blank = today:</strong></label><br>
             <input type="date" id="dateInput">
 
-            <div style="margin: 20px 0; text-align: center;">
+            <div style="margin-top: 25px;">
                 <button onclick="fetchAndProcessRounds()">Load & Summarize Rounds</button>
                 <button onclick="clearAll()" style="background:#6c757d;">Clear</button>
-            </div>
-
-            <p style="margin-top:20px; font-size:0.95em; color:#555;">
-                <strong>Fallback (manual paste):</strong>
-            </p>
-            <textarea id="jsonInput" placeholder="Paste JSON array or single round object..." rows="5"></textarea>
-
-            <div style="text-align:center; margin-top:15px;">
-                <button onclick="processRounds()">Process Pasted JSON</button>
             </div>
         </div>
 
@@ -103,8 +94,10 @@
             </div>
         </div>
 
+        <div id="status" class="status"></div>
+
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Multi-course support • Running totals added
+            BBB Summarizer • Auto-fetch • Running totals per hole
         </div>
     </div>
 
@@ -150,7 +143,7 @@
 
             if (!round.players || !Array.isArray(round.players)) {
                 console.warn(`Round ${round.matchId || '?'} missing players array`);
-                return { finalTotals: {}, holeBreakdowns: [], roundInfo: round, runningTotals: {} };
+                return { finalTotals: {}, holeBreakdowns: [], runningTotals: {}, roundInfo: round };
             }
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
@@ -165,13 +158,10 @@
                         holeScores[idx][playerName] = scoreObj || {};
                     });
                 });
-            } else {
-                console.warn(`Round ${round.matchId || '?'} has unexpected scores format`);
             }
 
-            // Compute per-hole points + running totals
             const playerTotals = {};
-            const runningTotals = {}; // player → array of cumulative after each hole
+            const runningTotals = {};
             round.players.forEach(p => {
                 const name = p.name;
                 if (!name) return;
@@ -195,7 +185,6 @@
                 }
             });
 
-            // Hole breakdowns with detailed labels
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
@@ -210,15 +199,11 @@
                         const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
                         detailParts.push(`${1 + carry}${pars[idx] === 3 ? 'GR' : 'FO'}`);
                     }
-                    if (s.closest) {
-                        detailParts.push(`${1 + carryIn.closest}CL`);
-                    }
-                    if (s.putt) {
-                        detailParts.push(`${1 + carryIn.putt}P`);
-                    }
+                    if (s.closest) detailParts.push(`${1 + carryIn.closest}CL`);
+                    if (s.putt) detailParts.push(`${1 + carryIn.putt}P`);
 
                     const detail = detailParts.join(', ');
-                    const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0]), 0);
+                    const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0] || 0), 0);
 
                     winners.push({name, pts, detail});
                 });
@@ -227,15 +212,15 @@
                     hole: h,
                     carryIn,
                     winners,
-                    runningTotals: runningTotals
+                    runningTotals
                 });
             }
 
             return {
                 finalTotals: playerTotals,
                 holeBreakdowns,
-                roundInfo: round,
-                runningTotals
+                runningTotals,
+                roundInfo: round
             };
         }
 
@@ -244,12 +229,13 @@
             if (carry.firstOn) parts.push(`FO:${carry.firstOn}`);
             if (carry.greenie) parts.push(`GR:${carry.greenie}`);
             if (carry.closest) parts.push(`CL:${carry.closest}`);
-            if (carry.putt)    parts.push(`P:${carry.putt}`);
+            if (carry.putt) parts.push(`P:${carry.putt}`);
             return parts.length ? parts.join(' ') : '0';
         }
 
-        // === FETCH ===
         async function fetchAndProcessRounds() {
+            document.getElementById('status').textContent = 'Loading rounds...';
+
             let date = document.getElementById('dateInput').value.trim();
             if (!date) {
                 const today = new Date();
@@ -263,24 +249,24 @@
             try {
                 const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
                 const res = await fetch(url);
-                if (!res.ok) throw new Error(`Backend responded ${res.status}`);
+                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
 
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
-                // Filter false starts
+                // Filter false starts (no points awarded)
                 rounds = rounds.filter(r => {
                     const comp = computeAllForRound(r);
                     return Object.values(comp.finalTotals).some(t => t > 0);
                 });
 
                 if (rounds.length === 0) {
-                    alert(`No valid rounds found for ${date}.\n\nTry another date or paste manually.`);
+                    document.getElementById('status').textContent = `No valid rounds found for ${date}.`;
                     document.getElementById('results').style.display = 'none';
                     return;
                 }
 
-                document.getElementById('jsonInput').value = JSON.stringify(rounds, null, 2);
+                document.getElementById('status').textContent = `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'}.`;
 
                 window.currentRoundsData = rounds;
                 window.currentComputed = rounds.map(r => computeAllForRound(r));
@@ -288,7 +274,7 @@
                 renderResults(rounds);
             } catch (err) {
                 console.error(err);
-                alert(`Load failed: ${err.message}\n\nUse manual paste instead.`);
+                document.getElementById('status').textContent = `Error: ${err.message}`;
             }
         }
 
@@ -315,10 +301,10 @@
                         <strong>Final Standings:</strong><br>
                         ${Object.entries(comp.finalTotals)
                             .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores'}
+                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
                     </div>
 
-                    <h4>Hole Breakdown</h4>
+                    <h4>Hole-by-Hole Breakdown</h4>
                     <table>
                         <tr>
                             <th>Hole</th>
@@ -329,6 +315,7 @@
                         ${comp.holeBreakdowns?.map(hb => {
                             const runningStr = Object.entries(comp.runningTotals || {})
                                 .map(([name, cumuls]) => `${name}: ${cumuls[hb.hole - 1] || 0}`)
+                                .sort()
                                 .join(' | ');
                             return `
                                 <tr>
@@ -347,7 +334,7 @@
             const overall = document.createElement('div');
             overall.className = 'round-card';
             overall.innerHTML = `
-                <h3>🏆 Combined Leaderboard (${rounds.length} rounds)</h3>
+                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
                 <table>
                     <tr><th>Player</th><th>Total Points</th></tr>
                     ${Object.entries(allTotals)
@@ -361,31 +348,8 @@
             document.getElementById('results').style.display = 'block';
         }
 
-        function processRounds() {
-            const input = document.getElementById('jsonInput').value.trim();
-            if (!input) return alert('Paste JSON first!');
-
-            let rounds;
-            try {
-                const parsed = JSON.parse(input);
-                rounds = Array.isArray(parsed) ? parsed : [parsed];
-            } catch (e) {
-                alert('Invalid JSON.');
-                return;
-            }
-
-            rounds = rounds.filter(r => {
-                const comp = computeAllForRound(r);
-                return Object.values(comp.finalTotals).some(t => t > 0);
-            });
-
-            window.currentRoundsData = rounds;
-            window.currentComputed = rounds.map(r => computeAllForRound(r));
-            renderResults(rounds);
-        }
-
         function emailSummary() {
-            if (!window.currentRoundsData?.length) return alert('No rounds loaded.');
+            if (!window.currentRoundsData?.length) return alert('No rounds loaded yet.');
 
             let body = `BBB Golf Summaries – ${currentDate || new Date().toLocaleDateString()}\n\n`;
 
@@ -414,14 +378,14 @@
                 body += `${n}: ${p} pts\n`;
             });
 
-            const subject = `BBB Rounds - ${currentDate || 'Recent'}`;
+            const subject = `BBB Rounds Summary - ${currentDate || 'Recent'}`;
             window.location.href = `mailto:wmatwijec@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
 
         function clearAll() {
             document.getElementById('dateInput').value = '';
-            document.getElementById('jsonInput').value = '';
             document.getElementById('results').style.display = 'none';
+            document.getElementById('status').textContent = '';
             currentDate = '';
             window.currentRoundsData = null;
             window.currentComputed = null;
