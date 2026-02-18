@@ -71,17 +71,18 @@
                     <tr><td>Total Points</td><td id="totalPoints" colspan="5"></td></tr>
                     <tr><td>Points per Round</td><td id="pointsPerRoundTotal">-</td><td id="pointsMean"></td><td id="pointsMedian"></td><td id="groupPointsMean"></td><td id="groupPointsMedian"></td></tr>
                     <tr><td>Best Round Points</td><td id="bestRound"></td><td colspan="5">-</td></tr>
-                    <tr><td>FO/GR Wins</td><td id="foWinsTotal">-</td><td id="foMean"></td><td id="foMedian"></td><td id="groupFoMean"></td><td id="groupFoMedian"></td></tr>
-                    <tr><td>CL Wins</td><td id="clWinsTotal">-</td><td id="clMean"></td><td id="clMedian"></td><td id="groupClMean"></td><td id="groupClMedian"></td></tr>
-                    <tr><td>P Wins</td><td id="pWinsTotal">-</td><td id="pMean"></td><td id="pMedian"></td><td id="groupPMean"></td><td id="groupPMedian"></td></tr>
-                    <tr><td>Carry Points Cashed</td><td id="carryTotal">-</td><td id="carryMean"></td><td id="carryMedian"></td><td id="groupCarryMean"></td><td id="groupCarryMedian"></td></tr>
-                    <tr><td>Rank in Total Points</td><td id="rank" colspan="5" class="highlight"></td></tr>
+                    <tr><td>FO/GR Wins per Round</td><td id="foWinsTotal">-</td><td id="foMean"></td><td id="foMedian"></td><td id="groupFoMean"></td><td id="groupFoMedian"></td></tr>
+                    <tr><td>CL Wins per Round</td><td id="clWinsTotal">-</td><td id="clMean"></td><td id="clMedian"></td><td id="groupClMean"></td><td id="groupClMedian"></td></tr>
+                    <tr><td>P Wins per Round</td><td id="pWinsTotal">-</td><td id="pMean"></td><td id="pMedian"></td><td id="groupPMean"></td><td id="groupPMedian"></td></tr>
+                    <tr><td>Carry Points per Round</td><td id="carryTotal">-</td><td id="carryMean"></td><td id="carryMedian"></td><td id="groupCarryMean"></td><td id="groupCarryMedian"></td></tr>
+                    <tr><td>Rank by Mean Points/Round</td><td id="meanRank" colspan="5" class="highlight"></td></tr>
+                    <tr><td>Rank by Median Points/Round</td><td id="medianRank" colspan="5" class="highlight"></td></tr>
                 </tbody>
             </table>
 
-            <h2>Group Leaderboard (Total Points)</h2>
+            <h2>Group Leaderboard (sorted by Mean Points per Round)</h2>
             <table id="leaderboard">
-                <tr><th>Player</th><th>Total Points</th><th>Rounds</th><th>Mean / Round</th></tr>
+                <tr><th>Player</th><th>Rounds</th><th>Mean / Round</th><th>Median / Round</th><th>Total Points</th></tr>
             </table>
         </div>
 
@@ -135,8 +136,6 @@
             const mid = Math.floor(sorted.length / 2);
             return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
         }
-
-    
 
         async function loadData() {
             document.getElementById('status').textContent = 'Fetching rounds...';
@@ -340,26 +339,39 @@
             document.getElementById('groupCarryMean').textContent = g.avgCarry.toFixed(1);
             document.getElementById('groupCarryMedian').textContent = g.medianCarry.toFixed(1);
 
-            // Rank
-            const ranks = uniquePlayers.map(n => ({name: n, points: statsCache[n].totalPoints})).sort((a,b) => b.points - a.points);
-            const rank = ranks.findIndex(r => r.name === player) + 1;
-            document.getElementById('rank').textContent = `#${rank} of ${uniquePlayers.length} players`;
+            // Ranks by mean and median
+            const meanRanks = uniquePlayers.map(n => ({
+                name: n,
+                mean: statsCache[n].pointsPerRound.length ? statsCache[n].pointsPerRound.reduce((a,b)=>a+b,0)/statsCache[n].pointsPerRound.length : 0
+            })).sort((a,b) => b.mean - a.mean);
+            const meanRank = meanRanks.findIndex(r => r.name === player) + 1;
 
-            // Leaderboard
+            const medianRanks = uniquePlayers.map(n => ({
+                name: n,
+                median: median(statsCache[n].pointsPerRound)
+            })).sort((a,b) => b.median - a.median);
+            const medianRank = medianRanks.findIndex(r => r.name === player) + 1;
+
+            document.getElementById('meanRank').textContent = `#${meanRank} of ${uniquePlayers.length} (by mean points/round)`;
+            document.getElementById('medianRank').textContent = `#${medianRank} of ${uniquePlayers.length} (by median points/round)`;
+
+            // Leaderboard sorted by mean
             const lb = document.getElementById('leaderboard');
-            lb.innerHTML = '<tr><th>Player</th><th>Total Points</th><th>Rounds</th><th>Mean / Round</th></tr>';
-            ranks.forEach(r => {
+            lb.innerHTML = '<tr><th>Player</th><th>Rounds</th><th>Mean / Round</th><th>Median / Round</th><th>Total Points</th></tr>';
+            meanRanks.forEach(r => {
+                const stats = statsCache[r.name];
                 const tr = lb.insertRow();
                 tr.insertCell().textContent = r.name;
-                tr.insertCell().textContent = r.points;
-                tr.insertCell().textContent = statsCache[r.name].rounds;
-                tr.insertCell().textContent = statsCache[r.name].pointsPerRound.length ? (statsCache[r.name].pointsPerRound.reduce((a,b)=>a+b,0)/statsCache[r.name].pointsPerRound.length).toFixed(1) : '—';
+                tr.insertCell().textContent = stats.rounds;
+                tr.insertCell().textContent = stats.pointsPerRound.length ? (stats.pointsPerRound.reduce((a,b)=>a+b,0)/stats.pointsPerRound.length).toFixed(1) : '—';
+                tr.insertCell().textContent = median(stats.pointsPerRound).toFixed(1);
+                tr.insertCell().textContent = stats.totalPoints;
             });
 
             document.getElementById('statsArea').style.display = 'block';
         }
 
-        // Start loading data immediately
+        // Start loading data
         loadData();
     </script>
 </body>
