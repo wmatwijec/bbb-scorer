@@ -779,7 +779,37 @@ async function saveRound() {
   }, 5000);
 }
 
+function renderCourseSelect() {
+      if (!els.courseSelect) return;
+      els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+      if (courses.length === 0) {
+        els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+        if (els.nextToPlayers) els.nextToPlayers.disabled = true;
+        return;
+      }
+      courses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.name;
+        els.courseSelect.appendChild(opt);
+      });
 
+      const updateButton = () => {
+        const selected = els.courseSelect.value;
+        if (selected !== '' && selected !== null) {
+          currentCourse = Number(selected);
+          localStorage.setItem('bbb_currentCourse', currentCourse);
+          if (els.nextToPlayers) els.nextToPlayers.disabled = false;
+        } else {
+          currentCourse = null;
+          if (els.nextToPlayers) els.nextToPlayers.disabled = true;
+        }
+      };
+
+      updateButton();
+      els.courseSelect.addEventListener('change', updateButton);
+      setTimeout(updateButton, 100);
+    }
 
 
     // === EARLY FUNCTIONS – Moved up to prevent "not defined" during resume ===
