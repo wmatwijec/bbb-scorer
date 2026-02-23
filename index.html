@@ -620,7 +620,7 @@ function attachNavListeners() {
       }
     }
   });
-  els.closeDebug.addEventListener('click', () => {
+  els.closeDebug?.addEventListener('click', () => {
     debugMode = false;
     els.debugPanel.classList.add('hidden');
   });
