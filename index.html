@@ -1332,82 +1332,115 @@ function attachNavListeners() {
   });
 
 
-
-
-
-
-
-
-
-  // ==============================================================
-  // 4. RESUME SAVED ROUND (copy-paste your existing block unchanged)
-  // ==============================================================
+// ==============================================================
+// 4. RESUME SAVED ROUND — IMPROVED VERSION WITH BETTER HANDLING
+// ==============================================================
 const savedRounds = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('bbb_round_BBB-')) {
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        savedRounds.push({ ...data, key });
-      } catch (e) {}
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  if (key?.startsWith('bbb_round_BBB-')) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      savedRounds.push({ ...data, key });
+    } catch (e) {
+      console.warn(`Corrupted saved round skipped: ${key}`, e);
     }
   }
-
-  if (savedRounds.length > 0) {
-    // Sort newest first for display
-    savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
-    savedRounds.forEach((r, i) => {
-      message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-      message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-      message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
-    });
-    message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
-
-    const choice = prompt(message);
-
-if (choice && !isNaN(choice) && choice >= 1 && choice <= savedRounds.length) {
-  const selected = savedRounds[choice - 1];
-
-  // Restore players
-  players = selected.players.map(p => ({
-    ...p,
-    scores: Array(18).fill(null).map(() => ({})),
-    _cachedTotal: selected._cachedTotals?.[p.name] || 0
-  }));
-  Object.keys(selected.scores || {}).forEach(name => {
-    const p = players.find(x => x.name === name);
-    if (p) p.scores = selected.scores[name];
-  });
-
-  currentHole = selected.currentHole;
-  currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
-  if (currentCourse === -1) currentCourse = 0;
-  finishedHoles = new Set(selected.finishedHoles || []);
-  inRound = true;
-
-  hideAll();
-  els.game.classList.remove('hidden');
-
-  // CRITICAL: Wait for courses to load before updating hole
-  const checkCourses = () => {
-    if (courses.length > 0 && courses[currentCourse]) {
-      updateHole();
-      attachFinishHoleListener();
-      renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
-      attachNavListeners();
-      setupGameButtons();
-      updateCourseInfoBar();
-      logScreen('RESUMED SAVED ROUND');
-    } else {
-      setTimeout(checkCourses, 50);
-    }
-  };
-  checkCourses();
-
-  return;
 }
+
+if (savedRounds.length > 0) {
+  // Sort newest first
+  savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+  savedRounds.forEach((r, i) => {
+    message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+    message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+    message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
+  });
+  message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
+
+  const choice = prompt(message);
+
+  if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
+    const selected = savedRounds[choice - 1];
+
+    // Restore players with proper structure
+    players = selected.players.map(p => ({
+      ...p,
+      scores: Array(18).fill(null).map(() => ({})),
+      gir: Array(18).fill(false),
+      _cachedTotal: selected._cachedTotals?.[p.name] || 0,
+      _cachedHoleTotals: {}
+    }));
+
+    // Restore actual scores
+    Object.keys(selected.scores || {}).forEach(name => {
+      const player = players.find(x => x.name === name);
+      if (player) {
+        player.scores = selected.scores[name];
+      }
+    });
+
+    currentHole     = Number(selected.currentHole) || 1;
+    currentCourse   = Number(selected.currentCourseIndex) || 
+                      courses.findIndex(c => c.name === selected.courseName);
+    
+    // Fallback if course name no longer matches
+    if (currentCourse === -1 || isNaN(currentCourse)) {
+      console.warn('Course index not found — defaulting to first course');
+      currentCourse = 0;
+    }
+
+    finishedHoles   = new Set(selected.finishedHoles || []);
+    inRound         = true;
+    isHoleInProgress = false;  // safe after app restart
+
+    // Sort players alphabetically (consistency)
+    players.sort((a, b) => a.name.localeCompare(b.name));
+
+    hideAll();
+    els.game.classList.remove('hidden');
+
+    // Wait for courses to be ready before rendering
+    const checkCoursesAndRender = () => {
+      if (courses.length > 0 && courses[currentCourse]) {
+        updateHole();
+        attachFinishHoleListener();
+        attachNavListeners();
+        setupGameButtons();
+        updateCourseInfoBar();
+        acquireWakeLock();
+        logScreen(`RESUMED ROUND #${choice} — HOLE ${currentHole}`);
+      } else {
+        setTimeout(checkCoursesAndRender, 100); // retry every 100ms
+      }
+    };
+    checkCoursesAndRender();
+
+    return;  // ← important: exit early so we don't fall through to course picker
+  } 
+  else {
+    // User cancelled prompt or entered invalid number
+    console.log('Resume cancelled or invalid input');
+    
+    if (confirm("No valid round selected.\n\nClear ALL saved rounds and start fresh?")) {
+      savedRounds.forEach(r => {
+        localStorage.removeItem(r.key);
+      });
+      localStorage.removeItem('bbb_currentMatchId');
+      alert("All saved rounds cleared. Starting a new round.");
+    }
+    // Fall through to normal course picker flow
+  }
+
+
+
+
+
+
+
+
     
 
     
