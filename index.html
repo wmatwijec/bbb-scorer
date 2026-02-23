@@ -414,8 +414,15 @@
       roster.sort((a, b) => a.name.localeCompare(b.name));
     }
 
-
-    // === MOVE THESE HIGHER – BEFORE DOMContentLoaded ===
+     
+  function save() {
+    localStorage.setItem('bbb', JSON.stringify({ 
+      players: players.map(p => ({ ...p, _cachedTotal: undefined, _cachedHoleTotals: undefined })), 
+      currentHole, currentCourse,
+      finishedHoles: Array.from(finishedHoles), inRound
+    }));
+  }
+    
 
 function precomputeAllTotals() {
   players.forEach(p => {
@@ -1136,14 +1143,7 @@ function updateNavButtons() {
 
 
 
-  
-  function save() {
-    localStorage.setItem('bbb', JSON.stringify({ 
-      players: players.map(p => ({ ...p, _cachedTotal: undefined, _cachedHoleTotals: undefined })), 
-      currentHole, currentCourse,
-      finishedHoles: Array.from(finishedHoles), inRound
-    }));
-  }
+ 
 
   // ==== FLOW ====
  function hideAll() {
