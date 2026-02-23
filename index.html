@@ -83,11 +83,11 @@
   <div id="launchWrapper">
     <h1>BBB Golf Scorer</h1>
     <p>Tap below to open the app<br><small>(works on iPhone & Android)</small></p>
-    <a href="/bbb-scorer/" 
-       onclick="localStorage.setItem('appLaunched','true'); window.open('/bbb-scorer/', '_blank'); return false;"
-       style="display:inline-block; padding:18px 40px; background:#0f0; color:black; font-size:20px; font-weight:bold; text-decoration:none; border-radius:12px;">
-       Launch Golf Scorer
-    </a>
+    <<a href="/" 
+   onclick="localStorage.setItem('appLaunched','true'); window.open('/', '_blank'); return false;"
+   style="...">
+   Launch Golf Scorer
+</a>
     <p style="margin-top:30px; font-size:14px;">
       Pro tip: Bookmark this page and add to home screen!
     </p>
@@ -189,6 +189,14 @@
   <!-- FULL SCRIPT BLOCK -->
   <script>
     console.log('app-v23.js INLINED — LOADED 100% — 20251122-FINAL-WIN');
+
+
+    // Auto-hide launch wrapper on app load
+setTimeout(() => {
+  const wrapper = document.getElementById('launchWrapper');
+  if (wrapper) wrapper.remove();
+  console.log('Launch wrapper removed');
+}, 1000);  // 1-second delay so button click can register
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
     const VERSION = '20251122-FINAL-WIN';
