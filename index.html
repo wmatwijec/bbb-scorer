@@ -813,6 +813,50 @@ async function saveRound() {
 
 
     // === EARLY FUNCTIONS – Moved up to prevent "not defined" during resume ===
+
+
+    function logScreen(msg) {
+  console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
+}
+
+
+    function toggleScore(player, holeIdx, point) {
+    const currentHoleIdx = currentHole - 1;
+    if (holeIdx === currentHoleIdx && !isHoleInProgress) {
+      const hasAnyScore = players.some(p => {
+        const s = p.scores[holeIdx] || {};
+        return s.firstOn || s.closest || s.putt;
+      });
+      if (!hasAnyScore) {
+      isHoleInProgress = true;   // ← this + updateNavButtons() is enough
+      updateNavButtons();        // ← call it directly
+    }
+    }
+
+    const score = player.scores[holeIdx];
+    const wasChecked = !!score[point];
+    const willBeChecked = !wasChecked;
+
+    if (willBeChecked) {
+      const otherHasIt = players.some((p, j) => {
+        return j !== players.indexOf(player) && p.scores[holeIdx] && p.scores[holeIdx][point];
+      });
+      if (otherHasIt) {
+        alert('Only one winner per point!');
+        return;
+      }
+    }
+
+    score[point] = willBeChecked;
+    save();
+    precomputeAllTotals();
+    updateHole();
+  }
+
+
+
+
+
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       const headers = lines[0].split(',').map(h => h.trim());
@@ -1908,39 +1952,7 @@ els.startGame.onclick = () => {
   
 
 
-    function toggleScore(player, holeIdx, point) {
-    const currentHoleIdx = currentHole - 1;
-    if (holeIdx === currentHoleIdx && !isHoleInProgress) {
-      const hasAnyScore = players.some(p => {
-        const s = p.scores[holeIdx] || {};
-        return s.firstOn || s.closest || s.putt;
-      });
-      if (!hasAnyScore) {
-      isHoleInProgress = true;   // ← this + updateNavButtons() is enough
-      updateNavButtons();        // ← call it directly
-    }
-    }
-
-    const score = player.scores[holeIdx];
-    const wasChecked = !!score[point];
-    const willBeChecked = !wasChecked;
-
-    if (willBeChecked) {
-      const otherHasIt = players.some((p, j) => {
-        return j !== players.indexOf(player) && p.scores[holeIdx] && p.scores[holeIdx][point];
-      });
-      if (otherHasIt) {
-        alert('Only one winner per point!');
-        return;
-      }
-    }
-
-    score[point] = willBeChecked;
-    save();
-    precomputeAllTotals();
-    updateHole();
-  }
-
+    
  
   function simulateRound() {
     if (inRound) {
