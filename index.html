@@ -871,7 +871,18 @@ function getRunningTotal(player) {
   return sum;
 }
 
-
+function updateNavButtons() {
+        const canPrev = currentHole > 1 && !isHoleInProgress;
+        const canNext = currentHole < HOLES && !isHoleInProgress;
+        if (els.prevHole) els.prevHole.disabled = !canPrev;
+        if (els.nextHole) els.nextHole.disabled = !canNext;
+        [els.prevHole, els.nextHole].forEach(btn => {
+          if (btn) {
+            btn.style.opacity = btn.disabled ? '0.5' : '1';
+            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+          }
+        });
+      }
 
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('DOM ready — initializing app');
@@ -909,18 +920,7 @@ function getRunningTotal(player) {
         simResult: document.getElementById('simResult')
       };
 
-      function updateNavButtons() {
-        const canPrev = currentHole > 1 && !isHoleInProgress;
-        const canNext = currentHole < HOLES && !isHoleInProgress;
-        if (els.prevHole) els.prevHole.disabled = !canPrev;
-        if (els.nextHole) els.nextHole.disabled = !canNext;
-        [els.prevHole, els.nextHole].forEach(btn => {
-          if (btn) {
-            btn.style.opacity = btn.disabled ? '0.5' : '1';
-            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
-          }
-        });
-      }
+      
 
       function setupGameButtons() {
         if (!inRound || currentCourse === null || !courses[currentCourse]) return;
