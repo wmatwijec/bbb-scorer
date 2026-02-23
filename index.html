@@ -178,12 +178,12 @@
   </div>
   <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;"></div>
 
-  <!-- COURSE + HOLE INFO BAR – MISSING ELEMENT CAUSING CRASH -->
-  <div id="courseInfoBar" class="card center-block" style="margin: 0.5rem auto; padding: 0.75rem; font-size: 0.95rem; text-align: center; background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: none;">
-    <strong id="infoCourseName"></strong> — 
-     Hole <span id="infoCurrentHole"></span> of 18
-    <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
-  </div>
+  <!-- COURSE + HOLE INFO BAR – Restored to fix null textContent crash -->
+<div id="courseInfoBar" class="card center-block" style="margin: 0.5rem auto; padding: 0.75rem; font-size: 0.95rem; text-align: center; background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: none;">
+  <strong id="infoCourseName"></strong> — 
+  Hole <span id="infoCurrentHole"></span> of 18
+  <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
+</div>
 
   
   <!-- FULL SCRIPT BLOCK -->
