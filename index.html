@@ -1,5 +1,184 @@
-<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
- <!-- Redeploy test check Feb 23rd Bracket issue?   Second Time!-->
+<!DOCTYPE html>
+<!-- Rebuild Trigger: persistence_v1 FULL RESTORE Feb 23 2026 -->
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+  <title>BBB Golf</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.png" /> 
+  <meta id="cacheBuster" name="version" content="20250223-FULL-RESTORE" />
+
+  <!-- Basic CSS to prevent whiteout - add your full styles here -->
+  <style>
+    :root {
+      --bg: #f4f4f4;
+      --card: #fff;
+      --text: #222;
+      --green: #0f0;
+      --btn-bg: #0f0;
+      --btn-text: #000;
+    }
+    [data-theme="dark"] {
+      --bg: #111;
+      --card: #222;
+      --text: #eee;
+      --green: #0f0;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .hidden { display: none !important; }
+    .card {
+      background: var(--card);
+      padding: 1rem;
+      margin: 1rem auto;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    button {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #launchWrapper {
+      text-align: center;
+      padding: 40px 20px;
+      background: #f9f9f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    h1, h2 { color: var(--green); text-align: center; }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #courseLoader div:last-child {
+      width: 48px; height: 48px;
+      border: 5px solid #ddd;
+      border-top: 5px solid var(--green);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 1. LAUNCH SCREEN -->
+  <div id="launchWrapper">
+    <h1>BBB Golf Scorer</h1>
+    <p>Tap below to open the app<br><small>(works on iPhone & Android)</small></p>
+    <a href="/bbb-scorer/" 
+       onclick="localStorage.setItem('appLaunched','true'); window.open('/bbb-scorer/', '_blank'); return false;"
+       style="display:inline-block; padding:18px 40px; background:#0f0; color:black; font-size:20px; font-weight:bold; text-decoration:none; border-radius:12px;">
+       Launch Golf Scorer
+    </a>
+    <p style="margin-top:30px; font-size:14px;">
+      Pro tip: Bookmark this page and add to home screen!
+    </p>
+  </div>
+
+  <!-- COURSE SETUP – RESTORED -->
+  <section id="courseSetup" class="card hidden">
+    <h2>BBB Golf</h2>
+
+    <div id="courseLoader">
+      <div>Loading your courses...</div>
+      <div></div> <!-- spinner -->
+    </div>
+
+    <div id="courseError" class="hidden">
+      <p>Failed to load data from server.</p>
+      <button id="retryBtn">Retry</button>
+      <p style="font-size:0.9rem;">Check internet or wake backend.</p>
+    </div>
+
+    <div id="coursePicker" class="hidden">
+      <select id="courseSelect">
+        <option value="">– Select Course –</option>
+      </select>
+      <button id="nextToPlayers" disabled>Load Course →</button>
+    </div>
+  </section>
+
+  <!-- PLAYER SETUP -->
+  <section id="playerSetup" class="card hidden">
+    <h2>Player Setup</h2>
+    <button id="backToCourse">Back</button>
+    <div id="playerSelect"></div>
+    <button id="startGame" disabled>Start Round</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game" class="card hidden">
+    <h3 id="holeDisplay">Loading...</h3>
+    <div>
+      <button id="prevHole">Prev</button>
+      <button id="nextHole">Next</button>
+      <button id="editHole" class="hidden">Edit</button>
+      <button id="finishHole">Finish Hole</button>
+    </div>
+    <table id="scoreTable">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th id="firstOnHeader">FO</th>
+          <th>CL</th>
+          <th>P</th>
+          <th>H</th>
+          <th>RUN</th>
+          <th>TOT</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="holeSummary"></div>
+    <div id="roundSummary" class="hidden"></div>
+    <div class="control-bar">
+      <button id="completeRound">BBB COMP</button>
+      <button id="exitRound">EXIT</button>
+      <button id="darkModeToggle">DARK</button>
+      <button id="bbbHelpBtn">HELP</button>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary" class="card hidden">
+    <h2>Summary</h2>
+    <ol id="leaderboard"></ol>
+  </section>
+
+  <!-- DEBUG PANEL -->
+  <div id="debugPanel" class="card hidden" style="position:fixed;bottom:10px;right:10px;width:300px;max-height:80vh;overflow:auto;z-index:1000;background:#222;color:#0f0;">
+    <button id="closeDebug">Close</button>
+    <h4>Carry Debug</h4>
+    <div id="debugOutput"></div>
+  </div>
+
+  <!-- BBB HELP MODAL -->
+  <div id="bbbHelpModal" class="hidden" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding:1rem;">
+    <button id="closeHelp" style="float:right;">×</button>
+    <h3>BBB Help</h3>
+    <p>Help content placeholder.</p>
+  </div>
+  <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;"></div>
+
+  <!-- FULL SCRIPT BLOCK -->
   <script>
     console.log('app-v23.js INLINED — LOADED 100% — 20251122-FINAL-WIN');
 
@@ -20,812 +199,504 @@
     let els = {};
     let waltShadowPhone = null;
 
-    
-        // === VIEW-ONLY MODE DETECTION ===
+    // VIEW-ONLY MODE DETECTION
     const urlParams = new URLSearchParams(location.search);
     const isViewOnly = urlParams.has('viewonly') || localStorage.getItem('bbb_viewonly') === 'true';
-
     if (isViewOnly) {
-       document.body.classList.add('view-only');
-       // Optional: persist the flag so refresh keeps view-only
-       localStorage.setItem('bbb_viewonly', 'true');
-      }
+      document.body.classList.add('view-only');
+      localStorage.setItem('bbb_viewonly', 'true');
+    }
 
-
-
-
-    // === PERSISTENCE V2 — MULTIPLE ROUNDS + UNIQUE MATCH ID ===
+    // PERSISTENCE V2
     let currentMatchId = localStorage.getItem('bbb_currentMatchId');
     if (!currentMatchId) {
       currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
       localStorage.setItem('bbb_currentMatchId', currentMatchId);
-    }    
+    }
 
     const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
-
-
-function getWaltPhone() {
-  if (!roster || !Array.isArray(roster)) return;
-  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
-  if (walt && walt.phone) {
-    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
-    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
-  }
-}
-
-// ENHANCED EMERGENCY SPINNER KILLER — polls until picker shows (iOS 18-proof)
-(function() {
-  let attempts = 0;
-  const maxAttempts = 30;  // 3 seconds max
-  const interval = setInterval(() => {
-    attempts++;
-    const loader = document.getElementById('courseLoader');
-    const picker = document.getElementById('coursePicker');
-    const error = document.getElementById('courseError');
-    
-    if (loader && picker) {
-      // Force-kill loader and error, force-show picker
-      loader.style.display = 'none !important';
-      if (error) error.style.display = 'none !important';
-      picker.style.display = 'block !important';  // or 'flex !important' if your CSS uses flex
-      
-      // Extra iOS reflow trigger
-      picker.offsetHeight;
-      
-      console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
-      clearInterval(interval);
-    }
-    
-    if (attempts >= maxAttempts) {
-      console.error('Emergency fallback timed out — manual intervention needed');
-      clearInterval(interval);
-    }
-  }, 100);  // Check every 100ms
-})();
-
-
-// === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone) ===
-async function loadDataFromBackend() {
-  const loader = document.getElementById('courseLoader');
-  const error = document.getElementById('courseError');
-  const picker = document.getElementById('coursePicker');
-
-  const BACKEND_URL = 'https://pwa-players-backend.onrender.com';
-
-  try {
-    console.log('Starting backend load...');
-
-    const [playersRes, coursesRes] = await Promise.all([
-      fetch(`${BACKEND_URL}/players`, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit'
-      }),
-      fetch(`${BACKEND_URL}/courses`, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit'
-      })
-    ]);
-
-    if (!playersRes.ok) throw new Error(`Players ${playersRes.status}`);
-    if (!coursesRes.ok) throw new Error(`Courses ${coursesRes.status}`);
-
-    const playersCSV = await playersRes.text();
-    const coursesCSV = await coursesRes.text();
-
-    console.log('Raw players CSV length:', playersCSV.length);
-    console.log('Raw courses CSV length:', coursesCSV.length);
-
-    // Parse players
-    roster = parseCSV(playersCSV).map(p => ({
-      name: p.Name?.trim(),
-      phone: p.Phone?.trim(),
-      email: p.Email?.trim()
-    })).filter(p => p.name);
-
-    getWaltPhone();
-
-    // Parse courses
-    courses = parseCSV(coursesCSV).map(c => {
-      const name = c.Name?.trim();
-      const pars = [];
-      for (let i = 1; i <= 18; i++) {
-        const par = parseInt(c[`Par${i}`]);
-        if (!isNaN(par)) pars.push(par);
+    function getWaltPhone() {
+      if (!roster || !Array.isArray(roster)) return;
+      const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+      if (walt && walt.phone) {
+        waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+        console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
       }
-      return { name, pars };
-    }).filter(c => c.name && c.pars.length === 18);
-
-    sortPlayersAlphabetically();
-
-    if (courses.length === 0) throw new Error('No courses returned');
-
-    console.log('%cBackend data loaded successfully!', 'color: gold; font-weight: bold');
-
-    // CRITICAL iOS repaint fix — this is what finally hides the spinner
-    setTimeout(() => {
-      loader.classList.add('hidden');
-      picker.classList.remove('hidden');
-      renderCourseSelect();
-      console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
-    }, 0);
-
-  } catch (err) {
-    console.error('Backend load failed:', err);
-    loader.classList.add('hidden');
-    error.classList.remove('hidden');
-    error.textContent = `Load failed: ${err.message}`;
-  }
-}
-
-function logScreen(msg) {
-  console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
-}
-
-
-// Retry button
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'retryBtn') {
-    document.getElementById('courseError').classList.add('hidden');
-    document.getElementById('courseLoader').classList.remove('hidden');
-    loadDataFromBackend();
-  }
-});
-
-// === CSV PARSER ===
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
-  const rows = lines.slice(1).map(line => {
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
-      else if (char === '"') inQuotes = !inQuotes;
-      else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-      else current += char;
     }
-    values.push(current.trim());
-    return values;
-  });
-  return rows.map(row => {
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i] || '');
-    return obj;
-  });
-}
 
-// === DEBOUNCED SAVE: Local + Cloud (5-second batch) ===
-let saveTimeout = null;
-let pendingRoundData = null;
+    // EMERGENCY SPINNER KILLER
+    (function() {
+      let attempts = 0;
+      const maxAttempts = 60; // 6 seconds
+      const interval = setInterval(() => {
+        attempts++;
+        const loader = document.getElementById('courseLoader');
+        const picker = document.getElementById('coursePicker');
+        const error = document.getElementById('courseError');
 
-async function saveRound() {
-  if (!inRound) return;
+        if (loader && picker) {
+          loader.style.display = 'none !important';
+          if (error) error.style.display = 'none !important';
+          picker.style.display = 'block !important';
+          picker.offsetHeight;
+          console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
+          clearInterval(interval);
+        }
 
-  const roundData = {
-  matchId: currentMatchId,
-  date: new Date().toISOString(),
-  courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
-  players: players.map(p => ({ name: p.name, phone: p.phone })),
-  currentHole,
-  currentCourse,
-  currentCourseIndex: currentCourse,
-  finishedHoles: Array.from(finishedHoles),
-  scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
-  _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
-  groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
-};
+        if (attempts >= maxAttempts) {
+          console.error('Emergency fallback timed out — manual intervention needed');
+          if (picker) picker.style.display = 'block !important';
+          clearInterval(interval);
+        }
+      }, 100);
+    })();
 
-  // Save locally IMMEDIATELY
-  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
+    // MAIN DATA LOADER
+    async function loadDataFromBackend() {
+      const loader = document.getElementById('courseLoader');
+      const error = document.getElementById('courseError');
+      const picker = document.getElementById('coursePicker');
 
-  // Debounce cloud save (5 seconds)
-  pendingRoundData = roundData;
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    if (!pendingRoundData) return;
+      const BACKEND_URL = 'https://pwa-players-backend.onrender.com';
 
-    fetch('https://pwa-players-backend.onrender.com/save-round', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingRoundData),
-      keepalive: true
-    }).catch(() => {});
+      try {
+        console.log('Starting backend load...');
 
-    pendingRoundData = null;
-  }, 5000);
-}
+        const [playersRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND_URL}/players`, { method: 'GET', mode: 'cors', credentials: 'omit' }),
+          fetch(`${BACKEND_URL}/courses`, { method: 'GET', mode: 'cors', credentials: 'omit' })
+        ]);
 
-// Final save on exit
-window.addEventListener('beforeunload', () => {
-  if (!inRound || !pendingRoundData) return;
+        if (!playersRes.ok) throw new Error(`Players ${playersRes.status}`);
+        if (!coursesRes.ok) throw new Error(`Courses ${coursesRes.status}`);
 
-  const blob = new Blob([JSON.stringify(pendingRoundData)], { type: 'application/json' });
-  navigator.sendBeacon('https://pwa-players-backend.onrender.com/save-round', blob);
-});
+        const playersCSV = await playersRes.text();
+        const coursesCSV = await coursesRes.text();
 
+        console.log('Raw players CSV length:', playersCSV.length);
+        console.log('Raw courses CSV length:', coursesCSV.length);
 
+        roster = parseCSV(playersCSV).map(p => ({
+          name: p.Name?.trim(),
+          phone: p.Phone?.trim(),
+          email: p.Email?.trim()
+        })).filter(p => p.name);
 
+        getWaltPhone();
 
-function sortPlayersAlphabetically() {
-  players.sort((a, b) => a.name.localeCompare(b.name));
-  // Also keep roster sorted for consistency in player select screen
-  roster.sort((a, b) => a.name.localeCompare(b.name));
-}
+        courses = parseCSV(coursesCSV).map(c => {
+          const name = c.Name?.trim();
+          const pars = [];
+          for (let i = 1; i <= 18; i++) {
+            const par = parseInt(c[`Par${i}`]);
+            if (!isNaN(par)) pars.push(par);
+          }
+          return { name, pars };
+        }).filter(c => c.name && c.pars.length === 18);
 
+        sortPlayersAlphabetically();
 
+        if (courses.length === 0) throw new Error('No courses returned');
 
+        console.log('%cBackend data loaded successfully!', 'color: gold; font-weight: bold');
 
+        setTimeout(() => {
+          if (loader) loader.classList.add('hidden');
+          if (picker) {
+            picker.classList.remove('hidden');
+            picker.style.display = 'block !important';
+          }
+          renderCourseSelect();
+          console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
+        }, 0);
 
-
-
-
-// === RENDER COURSE SELECT ===
-function renderCourseSelect() {
-  if (!els.courseSelect) return;
-  
-  els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
-  if (courses.length === 0) {
-    els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
-    els.nextToPlayers.disabled = true;
-    return;
-  }
-
-  courses.forEach((c, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = c.name;
-    els.courseSelect.appendChild(opt);
-  });
-
-  // FORCE UPDATE THE BUTTON — THIS FIXES MOBILE GREY-OUT BUG
-  const updateButton = () => {
-    const selected = els.courseSelect.value;
-    if (selected !== '' && selected !== null) {
-      currentCourse = Number(selected);
-      localStorage.setItem('bbb_currentCourse', currentCourse); // ← ADD THIS
-      els.nextToPlayers.disabled = false;
-    false;
-    } else {
-      currentCourse = null;
-      els.nextToPlayers.disabled = true;
+      } catch (err) {
+        console.error('Backend load failed:', err);
+        if (loader) loader.classList.add('hidden');
+        if (error) {
+          error.classList.remove('hidden');
+          error.textContent = `Load failed: ${err.message}`;
+        }
+      }
     }
-  };
 
-  // Run once immediately
-  updateButton();
+    function logScreen(msg) {
+      console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
+    }
 
-  // And also run every time the select changes (mobile-safe)
-  els.courseSelect.addEventListener('change', updateButton);
-
-  // iOS sometimes needs a tiny delay — this covers all edge cases
-  setTimeout(updateButton, 100);
-}
-
-// === DOM READY ===
-document.addEventListener('DOMContentLoaded',async () => {
-  console.log('DOM ready — initializing app');
-
- els = {
-    courseSetup: document.getElementById('courseSetup'),
-    playerSetup: document.getElementById('playerSetup'),
-    game: document.getElementById('game'),
-    summary: document.getElementById('summary'),
-    darkModeToggle: document.getElementById('darkModeToggle'),
-    bbbHelpBtn: document.getElementById('bbbHelpBtn'),  
-    courseSelect: document.getElementById('courseSelect'),
-    nextToPlayers: document.getElementById('nextToPlayers'),
-    playerSelect: document.getElementById('playerSelect'),
-    startGame: document.getElementById('startGame'),
-    holeDisplay: document.getElementById('holeDisplay'),
-    prevHole: document.getElementById('prevHole'),
-    nextHole: document.getElementById('nextHole'),
-    finishHole: document.getElementById('finishHole'),
-    editHole: document.getElementById('editHole'),
-    firstOnHeader: document.getElementById('firstOnHeader'),
-    scoreTable: document.getElementById('scoreTable'),
-    holeSummary: document.querySelector('.holeSummary'),
-    roundSummary: document.getElementById('roundSummary'),
-    sendSMS: document.getElementById('sendSMS'),
-    completeRound: document.getElementById('completeRound'),
-    exitRound: document.getElementById('exitRound'),
-    leaderboard: document.getElementById('leaderboard'),
-    courseInfoBar: document.getElementById('courseInfoBar'),
-    infoCourseName: document.getElementById('infoCourseName'),
-    infoCurrentHole: document.getElementById('infoCurrentHole'),
-    infoPar: document.getElementById('infoPar'),
-    debugPanel: document.getElementById('debugPanel'),
-    debugOutput: document.getElementById('debugOutput'),
-    closeDebug: document.getElementById('closeDebug'),
-    simResult: document.getElementById('simResult')
-  };
-
-
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-  // CRITICAL: updateNavButtons() MUST BE HERE
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-  function updateNavButtons() {
-    console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
-    console.log('currentHole:', currentHole, 'isHoleInProgress:', isHoleInProgress);
-    
-    const canPrev = currentHole > 1 && !isHoleInProgress;
-    const canNext = currentHole < HOLES && !isHoleInProgress;
-    
-    if (els.prevHole) els.prevHole.disabled = !canPrev;
-    if (els.nextHole) els.nextHole.disabled = !canNext;
-    
-    [els.prevHole, els.nextHole].forEach(btn => {
-      if (!btn) return;
-      btn.style.opacity = btn.disabled ? '0.5' : '1';
-      btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
-    });
-    
-    console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
-  }
-
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-  // NOW lockNavigation() can safely call it
-  // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
-
-
-
-function setupGameButtons() {
-
-   console.log('setupGameButtons() CALLED — inRound:', inRound);
-  console.log('els.sendSMS:', !!els.sendSMS);
-  console.log('els.completeRound:', !!els.completeRound);
-  console.log('els.exitRound:', !!els.exitRound);
-  console.log('els.darkModeToggle:', !!els.darkModeToggle);
-  console.log('els.bbbHelpBtn:', !!els.bbbHelpBtn);
-
-
-
-
-  if (!inRound || currentCourse === null || !courses[currentCourse]) return;
-
-  // CLEAR ANY OLD LISTENERS — prevents double prompts
-  const clearButtons = [els.sendSMS, els.completeRound, els.exitRound, els.darkModeToggle, els.bbbHelpBtn];
-  clearButtons.forEach(btn => {
-    if (btn) btn.onclick = null;
-  });
-
-  // SMS BUTTON
- /* els.sendSMS.onclick = () => {
-    const holeIdx = currentHole - 1;
-    const par = courses[currentCourse].pars[holeIdx];
-    const isPar3 = par === 3;
-    let message = `BBB - H${currentHole} (P${par})\n\n`;
-
-    players.forEach(p => {
-      const s = p.scores[holeIdx] || {};
-      const pts = p._cachedHoleTotals?.[holeIdx] || 0;
-      const notes = [];
-      if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
-      if (s.closest) notes.push('CL');
-      if (s.putt) notes.push('P');
-      message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+    // Retry button
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'retryBtn') {
+        document.getElementById('courseError')?.classList.add('hidden');
+        document.getElementById('courseLoader')?.classList.remove('hidden');
+        loadDataFromBackend();
+      }
     });
 
-    const carryOut = getCarryInForHole(currentHole + 1);
-    const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
-    message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
-
-    const standings = players
-      .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
-      .sort((a, b) => b.total - a.total);
-
-    standings.forEach((p, i) => {
-      message += `${i + 1}. ${p.name}: ${p.total}\n`;
-    });
-
-    // Walt shadow text
-    if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
-      const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
-      setTimeout(() => {
-        window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
-      }, 1200);
-    }
-
-    const phones = players.map(p => p.phone).filter(Boolean).join(',');
-    if (!phones) return alert('Add phone numbers');
-    window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
-  }; */
-
-  // === FINAL BBB COMP BUTTON IN SUMMARY ===
-  document.getElementById('finalBBBComp')?.addEventListener('click', () => {
-    if (finishedHoles.size !== HOLES) {
-      alert(`Finish all ${HOLES} holes first.`);
-      return;
-    }
-    precomputeAllTotals();
-    if (confirm('Round complete!\n\nStart a new round?')) {
-      resetRound();
-      hideAll();
-      els.courseSetup.classList.remove('hidden');
-      // Re-attach course → players flow
-      els.nextToPlayers?.addEventListener('click', () => {
-        if (currentCourse === null) return alert('Select a course');
-        hideAll();
-        els.playerSetup.classList.remove('hidden');
-        renderPlayerSelect();
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else current += char;
+        }
+        values.push(current.trim());
+        return values;
+      });
+      return rows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
       });
     }
-  });
 
-  // === BACK TO SETUP (from summary) ===
-  document.getElementById('backToSetup')?.addEventListener('click', () => {
-    if (confirm('Leave summary and start over?')) {
-      resetRound();
-      hideAll();
-      els.courseSetup.classList.remove('hidden');
+    // DEBOUNCED SAVE
+    let saveTimeout = null;
+    let pendingRoundData = null;
+
+    async function saveRound() {
+      if (!inRound) return;
+
+      const roundData = {
+        matchId: currentMatchId,
+        date: new Date().toISOString(),
+        courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+        players: players.map(p => ({ name: p.name, phone: p.phone })),
+        currentHole,
+        currentCourse,
+        currentCourseIndex: currentCourse,
+        finishedHoles: Array.from(finishedHoles),
+        scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+        _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
+        groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
+      };
+
+      localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
+
+      pendingRoundData = roundData;
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        if (!pendingRoundData) return;
+        fetch('https://pwa-players-backend.onrender.com/save-round', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendingRoundData),
+          keepalive: true
+        }).catch(() => {});
+        pendingRoundData = null;
+      }, 5000);
     }
-  });
 
-
-
-  // BBB COMP (FINISH ROUND)
-  els.completeRound.onclick = () => {
-    if (finishedHoles.size !== HOLES) {
-      alert(`Finish all ${HOLES} holes first.`);
-      return;
-    }
-    precomputeAllTotals();
-    showSummary();
-    setTimeout(() => {
-      if (confirm('Round complete!\n\nStart a new round?')) {
-        resetRound();
-        releaseWakeLock(); 
-        hideAll();
-        els.courseSetup.classList.remove('hidden');
-      } else {
-        releaseWakeLock(); 
-      }
-    }, 500);
-  };
-
- els.exitRound.onclick = async () => {
-  // Prevent double-click freeze
-  if (els.exitRound.disabled) return;
-  els.exitRound.disabled = true;
-  els.exitRound.textContent = 'Exiting…';
-
-  if (!confirm('Exit round and lose all progress?')) {
-    els.exitRound.disabled = false;
-    els.exitRound.textContent = 'EXIT';
-    return;
-  }
-
-  // 1. Stop everything that can fire later
-  stopLiveSync();
-  if (wakeLock) {
-    try { await wakeLock.release(); } catch(e) {}
-    wakeLock = null;
-  }
-
-  // 2. Nuke all round data
-  const matchId = currentMatchId;
-  inRound = false;
-  players = [];
-  currentCourse = null;
-  currentHole = 1;
-  finishedHoles.clear();
-  otherScorers = {};
-  isHoleInProgress = false;
-
-  localStorage.removeItem(`bbb_round_${matchId}`);
-  localStorage.removeItem('bbb_currentMatchId');
-  localStorage.removeItem('bbb_currentCourse');
-  localStorage.removeItem('bbb_groupStartTime');
-
-  // 3. Reset button appearance
-  const compBtn = document.getElementById('completeRound');
-  if (compBtn) {
-    compBtn.classList.remove('pulsing');
-    compBtn.textContent = 'BBB COMP';
-  }
-  document.getElementById('forceFinish')?.classList.add('hidden');
-
-  // 4. Hard navigation — this is the only thing that works 100% on iOS standalone
-  location.href = location.origin + location.pathname;
-};
-
-  // DARK MODE TOGGLE
-  if (els.darkModeToggle) {
-    els.darkModeToggle.onclick = () => {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      localStorage.setItem('bbb_dark', !isDark);
-    };
-  }
-
-  // HELP BUTTON — OPEN MODAL
-  if (els.bbbHelpBtn) {
-    els.bbbHelpBtn.onclick = () => {
-      document.getElementById('bbbHelpModal')?.classList.remove('hidden');
-      document.getElementById('bbbHelpBackdrop')?.classList.remove('hidden');
-    };
-  }
-
-  // CLOSE HELP MODAL — X button + backdrop click
-  const closeHelp = () => {
-    document.getElementById('bbbHelpModal')?.classList.add('hidden');
-    document.getElementById('bbbHelpBackdrop')?.classList.add('hidden');
-  };
-
-  document.getElementById('closeHelp')?.addEventListener('click', closeHelp);
-  document.getElementById('bbbHelpBackdrop')?.addEventListener('click', closeHelp);
-}
-  
-
-
-function attachNavListeners() {
-  const add = (id, handler) => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.onclick = null;           // clear old
-      btn.onclick = handler;        // attach fresh
-    }
-  };
-
-  add('prevHole', () => {
-    if (currentHole > 1 && !isHoleInProgress) {
-      currentHole--;
-      updateHole();
-      updateCourseInfoBar();
-      logScreen(`PREV → HOLE ${currentHole}`);
-    }
-  });
-
-  add('nextHole', () => {
-    if (currentHole < HOLES && !isHoleInProgress) {
-      currentHole++;
-      updateHole();
-      updateCourseInfoBar();
-      logScreen(`NEXT → HOLE ${currentHole}`);
-    }
-  });
-
-  add('editHole', () => {
-    if (finishedHoles.has(currentHole)) {
-      finishedHoles.delete(currentHole);
-      isHoleInProgress = false;
-      precomputeAllTotals();
-      updateHole();
-      logScreen('EDIT MODE');
-    }
-  });
-
-  add('finishHole', finishCurrentHole);
-}
-
-
-
-  // DEBUG B
-
-  let debugMode = false;
-  document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      debugMode = !debugMode;
-      els.debugPanel.classList.toggle('hidden', !debugMode);
-      if (debugMode) updateDebugPanel();
-    }
-    if (e.keyCode === 113) {
-      e.preventDefault();
-      if (confirm('Run full 18-hole simulation?')) {
-        simulateRound();
-      }
-    }
-  });
-  els.closeDebug?.addEventListener('click', () => {
-    debugMode = false;
-    els.debugPanel.classList.add('hidden');
-  });
-
-  function updateDebugPanel() {
-    els.debugOutput.innerHTML = '';
-    renderDebugCarryTable();
-    const hint = document.createElement('div');
-    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
-    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
-    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
-    els.debugOutput.appendChild(hint);
-  }
-
-
-
-
-// ==============================================================
-  // 2. LOAD DATA + SHOW COURSE PICKER
-  // ==============================================================
-  await loadDataFromBackend();                     // ← really waits now
-
-  hideAll();
-  els.courseSetup.classList.remove('hidden');      // ← fresh load = course picker
-
-  // ==============================================================
-  // 3. NEXT → PLAYERS BUTTON (now works perfectly)
-  // ==============================================================
-   els.nextToPlayers?.addEventListener('click', () => {
-    if (currentCourse === null || currentCourse === undefined) {
-      return alert('Please select a course first');
-    }
-    hideAll();
-    els.playerSetup.classList.remove('hidden');
-    renderPlayerSelect();
-    logScreen('PLAYER SETUP');
-  });
-  
-  // === BACK TO COURSE FROM PLAYER SETUP ===
-  document.getElementById('backToCourse')?.addEventListener('click', () => {
-    hideAll();
-    els.courseSetup.classList.remove('hidden');
-    logScreen('BACK TO COURSE SELECT');
-  });
-
-
-// ==============================================================
-// 4. RESUME SAVED ROUND — IMPROVED VERSION WITH BETTER HANDLING
-// ==============================================================
-console.log('%cDEBUG: Starting resume check', 'color: purple; font-weight: bold');
-
-// Log all localStorage keys to see what's there
-for (let i = 0; i < localStorage.length; i++) {
-  console.log('%cLS key:', 'color: blue', localStorage.key(i));
-}
-
-const savedRounds = [];
-for (let i = 0; i < localStorage.length; i++) {
-  const key = localStorage.key(i);
-  if (key?.startsWith('bbb_round_BBB-')) {
-    try {
-      const data = JSON.parse(localStorage.getItem(key));
-      savedRounds.push({ ...data, key });
-      console.log('%cFound saved round key:', 'color: green', key);
-    } catch (e) {
-      console.warn(`Corrupted saved round skipped: ${key}`, e);
-    }
-  }
-}
-
-console.log('%cFound saved rounds:', 'color: orange; font-weight: bold', savedRounds.length);
-
-if (savedRounds.length > 0) {
-  // Sort newest first
-  savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
-  savedRounds.forEach((r, i) => {
-    message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-    message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-    message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
-  });
-  message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
-
-  const choice = prompt(message);
-  console.log('%cUser choice:', 'color: blue', choice);
-
-  if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
-    const selected = savedRounds[choice - 1];
-
-    // Restore players with proper structure
-    players = selected.players.map(p => ({
-      ...p,
-      scores: Array(18).fill(null).map(() => ({})),
-      gir: Array(18).fill(false),
-      _cachedTotal: selected._cachedTotals?.[p.name] || 0,
-      _cachedHoleTotals: {}
-    }));
-
-    // Restore actual scores
-    Object.keys(selected.scores || {}).forEach(name => {
-      const player = players.find(x => x.name === name);
-      if (player) {
-        player.scores = selected.scores[name];
-      }
+    window.addEventListener('beforeunload', () => {
+      if (!inRound || !pendingRoundData) return;
+      const blob = new Blob([JSON.stringify(pendingRoundData)], { type: 'application/json' });
+      navigator.sendBeacon('https://pwa-players-backend.onrender.com/save-round', blob);
     });
 
-    currentHole     = Number(selected.currentHole) || 1;
-    currentCourse   = Number(selected.currentCourseIndex) || 
-                      courses.findIndex(c => c.name === selected.courseName);
-    
-    // Fallback if course name no longer matches
-    if (currentCourse === -1 || isNaN(currentCourse)) {
-      console.warn('Course index not found — defaulting to first course');
-      currentCourse = 0;
+    function sortPlayersAlphabetically() {
+      players.sort((a, b) => a.name.localeCompare(b.name));
+      roster.sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    finishedHoles   = new Set(selected.finishedHoles || []);
-    inRound         = true;
-    isHoleInProgress = false;  // safe after app restart
-
-    // Sort players alphabetically (consistency)
-    players.sort((a, b) => a.name.localeCompare(b.name));
-
-    hideAll();
-    els.game.classList.remove('hidden');
-
-    // Wait for courses to be ready before rendering
-    const checkCoursesAndRender = () => {
-      if (courses.length > 0 && courses[currentCourse]) {
-        updateHole();
-        attachFinishHoleListener();
-        attachNavListeners();
-        setupGameButtons();
-        updateCourseInfoBar();
-        acquireWakeLock();
-        logScreen(`RESUMED ROUND #${choice} — HOLE ${currentHole}`);
-      } else {
-        setTimeout(checkCoursesAndRender, 100); // retry every 100ms
+    function renderCourseSelect() {
+      if (!els.courseSelect) return;
+      els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+      if (courses.length === 0) {
+        els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+        if (els.nextToPlayers) els.nextToPlayers.disabled = true;
+        return;
       }
-    };
-    checkCoursesAndRender();
-
-    return;  // ← important: exit early so we don't fall through to course picker
-  } 
-  else {
-    // User cancelled prompt or entered invalid number
-    console.log('Resume cancelled or invalid input');
-    
-    if (confirm("No valid round selected.\n\nClear ALL saved rounds and start fresh?")) {
-      savedRounds.forEach(r => {
-        localStorage.removeItem(r.key);
+      courses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.name;
+        els.courseSelect.appendChild(opt);
       });
-      localStorage.removeItem('bbb_currentMatchId');
-      alert("All saved rounds cleared. Starting a new round.");
+
+      const updateButton = () => {
+        const selected = els.courseSelect.value;
+        if (selected !== '' && selected !== null) {
+          currentCourse = Number(selected);
+          localStorage.setItem('bbb_currentCourse', currentCourse);
+          if (els.nextToPlayers) els.nextToPlayers.disabled = false;
+        } else {
+          currentCourse = null;
+          if (els.nextToPlayers) els.nextToPlayers.disabled = true;
+        }
+      };
+
+      updateButton();
+      els.courseSelect.addEventListener('change', updateButton);
+      setTimeout(updateButton, 100);
     }
-    // Fall through to normal course picker flow
-  }
-}
 
-// === WAKE LOCK: SMART, SAFE, BATTERY-FRIENDLY ===
-let wakeLock = null;
-let wakeLockTimeout = null;
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('DOM ready — initializing app');
 
-async function acquireWakeLock() {
-  if (!('wakeLock' in navigator) || !inRound || document.hidden) return;
+      els = {
+        courseSetup: document.getElementById('courseSetup'),
+        playerSetup: document.getElementById('playerSetup'),
+        game: document.getElementById('game'),
+        summary: document.getElementById('summary'),
+        darkModeToggle: document.getElementById('darkModeToggle'),
+        bbbHelpBtn: document.getElementById('bbbHelpBtn'),
+        courseSelect: document.getElementById('courseSelect'),
+        nextToPlayers: document.getElementById('nextToPlayers'),
+        playerSelect: document.getElementById('playerSelect'),
+        startGame: document.getElementById('startGame'),
+        holeDisplay: document.getElementById('holeDisplay'),
+        prevHole: document.getElementById('prevHole'),
+        nextHole: document.getElementById('nextHole'),
+        finishHole: document.getElementById('finishHole'),
+        editHole: document.getElementById('editHole'),
+        firstOnHeader: document.getElementById('firstOnHeader'),
+        scoreTable: document.getElementById('scoreTable'),
+        holeSummary: document.querySelector('.holeSummary'),
+        roundSummary: document.getElementById('roundSummary'),
+        completeRound: document.getElementById('completeRound'),
+        exitRound: document.getElementById('exitRound'),
+        leaderboard: document.getElementById('leaderboard'),
+        courseInfoBar: document.getElementById('courseInfoBar'),
+        infoCourseName: document.getElementById('infoCourseName'),
+        infoCurrentHole: document.getElementById('infoCurrentHole'),
+        infoPar: document.getElementById('infoPar'),
+        debugPanel: document.getElementById('debugPanel'),
+        debugOutput: document.getElementById('debugOutput'),
+        closeDebug: document.getElementById('closeDebug'),
+        simResult: document.getElementById('simResult')
+      };
 
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    console.log('%cWake Lock: ACQUIRED', 'color: lime; font-weight: bold');
+      function updateNavButtons() {
+        const canPrev = currentHole > 1 && !isHoleInProgress;
+        const canNext = currentHole < HOLES && !isHoleInProgress;
+        if (els.prevHole) els.prevHole.disabled = !canPrev;
+        if (els.nextHole) els.nextHole.disabled = !canNext;
+        [els.prevHole, els.nextHole].forEach(btn => {
+          if (btn) {
+            btn.style.opacity = btn.disabled ? '0.5' : '1';
+            btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+          }
+        });
+      }
 
-    // Auto-release after 5 minutes of no interaction
-    clearTimeout(wakeLockTimeout);
-    wakeLockTimeout = setTimeout(releaseWakeLock, 5 * 60 * 1000);
-  } catch (err) {
-    console.log('Wake Lock failed (iOS ignores anyway)', err);
-  }
-}
+      function setupGameButtons() {
+        if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-function releaseWakeLock() {
-  if (wakeLock) {
-    wakeLock.release().then(() => {
-      wakeLock = null;
-      clearTimeout(wakeLockTimeout);
-      console.log('%cWake Lock: RELEASED', 'color: orange; font-weight: bold');
-    });
-  }
-}
+        if (els.completeRound) {
+          els.completeRound.onclick = () => {
+            if (finishedHoles.size !== HOLES) {
+              alert(`Finish all ${HOLES} holes first.`);
+              return;
+            }
+            precomputeAllTotals();
+            showSummary();
+            setTimeout(() => {
+              if (confirm('Round complete!\n\nStart a new round?')) {
+                resetRound();
+                hideAll();
+                if (els.courseSetup) els.courseSetup.classList.remove('hidden');
+              }
+            }, 500);
+          };
+        }
 
-// Re-acquire when page becomes visible
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && inRound) {
-    acquireWakeLock();
-  } else {
-    releaseWakeLock();
-  }
-});
+        if (els.exitRound) {
+          els.exitRound.onclick = () => {
+            if (confirm('Exit without saving?')) {
+              resetRound();
+              location.reload();
+            }
+          };
+        }
+      }
 
-// Also release on page unload
-window.addEventListener('pagehide', releaseWakeLock);
-window.addEventListener('beforeunload', releaseWakeLock);
+      // DEBUG BLOCK
+      let debugMode = false;
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+          debugMode = !debugMode;
+          if (els.debugPanel) els.debugPanel.classList.toggle('hidden', !debugMode);
+          if (debugMode && typeof updateDebugPanel === 'function') updateDebugPanel();
+        }
+        if (e.keyCode === 113) {
+          e.preventDefault();
+          if (confirm('Run full 18-hole simulation?')) {
+            simulateRound();
+          }
+        }
+      });
+      if (els.closeDebug) {
+        els.closeDebug.addEventListener('click', () => {
+          debugMode = false;
+          if (els.debugPanel) els.debugPanel.classList.add('hidden');
+        });
+      }
+
+      function updateDebugPanel() {
+        if (!els.debugOutput) return;
+        els.debugOutput.innerHTML = '';
+        const hint = document.createElement('div');
+        hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
+        els.debugOutput.appendChild(hint);
+      }
+
+      // LOAD DATA
+      await loadDataFromBackend();
+
+      hideAll();
+      if (els.courseSetup) els.courseSetup.classList.remove('hidden');
+
+      if (els.nextToPlayers) {
+        els.nextToPlayers.addEventListener('click', () => {
+          if (currentCourse === null) return alert('Please select a course');
+          hideAll();
+          if (els.playerSetup) els.playerSetup.classList.remove('hidden');
+          renderPlayerSelect();
+        });
+      }
+
+      // RESUME LOGIC (your latest version with debug logs)
+      console.log('%cDEBUG: Starting resume check', 'color: purple; font-weight: bold');
+
+      for (let i = 0; i < localStorage.length; i++) {
+        console.log('%cLS key:', 'color: blue', localStorage.key(i));
+      }
+
+      const savedRounds = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('bbb_round_BBB-')) {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            savedRounds.push({ ...data, key });
+            console.log('%cFound saved round key:', 'color: green', key);
+          } catch (e) {
+            console.warn(`Corrupted saved round skipped: ${key}`, e);
+          }
+        }
+      }
+
+      console.log('%cFound saved rounds:', 'color: orange; font-weight: bold', savedRounds.length);
+
+      if (savedRounds.length > 0) {
+        savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+        savedRounds.forEach((r, i) => {
+          message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+          message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+          message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
+        });
+        message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
+
+        const choice = prompt(message);
+        console.log('%cUser choice:', 'color: blue', choice);
+
+        if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
+          const selected = savedRounds[choice - 1];
+
+          players = selected.players.map(p => ({
+            ...p,
+            scores: Array(18).fill(null).map(() => ({})),
+            gir: Array(18).fill(false),
+            _cachedTotal: selected._cachedTotals?.[p.name] || 0,
+            _cachedHoleTotals: {}
+          }));
+
+          Object.keys(selected.scores || {}).forEach(name => {
+            const player = players.find(x => x.name === name);
+            if (player) player.scores = selected.scores[name];
+          });
+
+          currentHole = Number(selected.currentHole) || 1;
+          currentCourse = Number(selected.currentCourseIndex) || courses.findIndex(c => c.name === selected.courseName);
+
+          if (currentCourse === -1 || isNaN(currentCourse)) {
+            console.warn('Course index not found — defaulting to first course');
+            currentCourse = 0;
+          }
+
+          finishedHoles = new Set(selected.finishedHoles || []);
+          inRound = true;
+          isHoleInProgress = false;
+
+          players.sort((a, b) => a.name.localeCompare(b.name));
+
+          hideAll();
+          if (els.game) els.game.classList.remove('hidden');
+
+          const checkCoursesAndRender = () => {
+            if (courses.length > 0 && courses[currentCourse]) {
+              updateHole();
+              attachFinishHoleListener();
+              attachNavListeners();
+              setupGameButtons();
+              updateCourseInfoBar();
+              logScreen(`RESUMED ROUND #${choice} — HOLE ${currentHole}`);
+            } else {
+              setTimeout(checkCoursesAndRender, 100);
+            }
+          };
+          checkCoursesAndRender();
+
+          return;
+        } else {
+          console.log('Resume cancelled or invalid input');
+          if (confirm("No valid round selected.\n\nClear ALL saved rounds and start fresh?")) {
+            savedRounds.forEach(r => localStorage.removeItem(r.key));
+            localStorage.removeItem('bbb_currentMatchId');
+            alert("All saved rounds cleared. Starting a new round.");
+          }
+        }
+      }
+
+      // WAKE LOCK
+      let wakeLock = null;
+      let wakeLockTimeout = null;
+
+      async function acquireWakeLock() {
+        if (!('wakeLock' in navigator) || !inRound || document.hidden) return;
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('%cWake Lock: ACQUIRED', 'color: lime; font-weight: bold');
+          clearTimeout(wakeLockTimeout);
+          wakeLockTimeout = setTimeout(releaseWakeLock, 5 * 60 * 1000);
+        } catch (err) {
+          console.log('Wake Lock failed', err);
+        }
+      }
+
+      function releaseWakeLock() {
+        if (wakeLock) {
+          wakeLock.release().then(() => {
+            wakeLock = null;
+            clearTimeout(wakeLockTimeout);
+            console.log('%cWake Lock: RELEASED', 'color: orange; font-weight: bold');
+          });
+        }
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && inRound) acquireWakeLock();
+        else releaseWakeLock();
+      });
+
+      window.addEventListener('pagehide', releaseWakeLock);
+      window.addEventListener('beforeunload', releaseWakeLock);
+
+  
  
 
 
-
+// Everything from here up was replaced with grok's changes.  Note: pasted script only causing error (I did not Grok)
 
 
 
@@ -1569,4 +1440,11 @@ function attachFinishHoleListener() {
 
 
 
-</script>
+    // ... rest of your functions (save, hideAll, renderPlayerSelect, etc.) ...
+      // Paste the remaining functions from your latest script here (getCarryInForHole, precomputeAllTotals, etc.)
+
+
+  </script>
+
+</body>
+</html>
