@@ -446,6 +446,47 @@
       setTimeout(updateButton, 100);
     }
 
+
+    function attachNavListeners() {
+  const add = (id, handler) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.onclick = null;           // clear old
+      btn.onclick = handler;        // attach fresh
+    }
+  };
+
+  add('prevHole', () => {
+    if (currentHole > 1 && !isHoleInProgress) {
+      currentHole--;
+      updateHole();
+      updateCourseInfoBar();
+      logScreen(`PREV → HOLE ${currentHole}`);
+    }
+  });
+
+  add('nextHole', () => {
+    if (currentHole < HOLES && !isHoleInProgress) {
+      currentHole++;
+      updateHole();
+      updateCourseInfoBar();
+      logScreen(`NEXT → HOLE ${currentHole}`);
+    }
+  });
+
+  add('editHole', () => {
+    if (finishedHoles.has(currentHole)) {
+      finishedHoles.delete(currentHole);
+      isHoleInProgress = false;
+      precomputeAllTotals();
+      updateHole();
+      logScreen('EDIT MODE');
+    }
+  });
+
+  add('finishHole', finishCurrentHole);
+}
+
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('DOM ready — initializing app');
 
