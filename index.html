@@ -205,6 +205,7 @@
     let inRound = false;
     let isHoleInProgress = false;
     let els = {};
+    let debugMode = false;
     let waltShadowPhone = null;
 
     // VIEW-ONLY MODE DETECTION
@@ -961,7 +962,7 @@ function updateNavButtons() {
       }
 
       // DEBUG BLOCK
-      let debugMode = false;
+      
       document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key === 'D') {
           debugMode = !debugMode;
