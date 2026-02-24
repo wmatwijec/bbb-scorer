@@ -1672,6 +1672,7 @@ window.addEventListener('pagehide', () => {
           if (currentCourse === -1) currentCourse = 0;
           finishedHoles = new Set(selected.finishedHoles || []);
           inRound = true;
+          console.log('After restore — inRound:', inRound, 'currentHole:', currentHole, 'finishedHoles:', Array.from(finishedHoles), 'players length:', players.length);
 
           hideAll();
           if (els.game) els.game.classList.remove('hidden');
