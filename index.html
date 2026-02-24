@@ -1119,7 +1119,7 @@ window.addEventListener('visibilitychange', () => {
       });
     }
 
-    function updateHole() {
+   function updateHole() {
   console.log('=== UPDATEHOLE DEBUG START ===');
   console.log('currentHole:', currentHole);
   console.log('currentCourse (raw):', currentCourse);
@@ -1131,6 +1131,7 @@ window.addEventListener('visibilitychange', () => {
   console.log('courses[2]:', courses[2]);
   console.log('=== UPDATEHOLE DEBUG END ===');
 
+  // Safety net for currentCourse
   if (currentCourse === null || currentCourse === undefined || isNaN(Number(currentCourse))) {
     console.log('currentCourse is invalid — FORCING to 0');
     currentCourse = 0;
@@ -1138,13 +1139,21 @@ window.addEventListener('visibilitychange', () => {
     currentCourse = Number(currentCourse);
   }
 
-  if (!inRound || players.length === 0 || !courses[currentCourse]) return;
+  // Skip if no round, no players, or no course data yet
+  if (!inRound || players.length === 0 || !courses.length || !courses[currentCourse]) {
+    console.log('Skipping updateHole — data not ready');
+    return;
+  }
 
+  // Now safe to precompute
   precomputeAllTotals();
 
   const holeIdx = currentHole - 1;
   const courseObj = courses[currentCourse];
-  if (!courseObj || !courseObj.pars) return;
+  if (!courseObj || !courseObj.pars) {
+    console.log('Course or pars missing — skipping render');
+    return;
+  }
 
   const par = courseObj.pars[holeIdx];
   const isPar3 = par === 3;
@@ -1173,7 +1182,6 @@ window.addEventListener('visibilitychange', () => {
   attachNavListeners();
   save();
 
-  // Safe guard - no crash if debugMode or function missing
   if (typeof debugMode !== 'undefined' && debugMode && typeof renderDebugCarryTable === 'function') {
     renderDebugCarryTable();
   }
@@ -1181,7 +1189,6 @@ window.addEventListener('visibilitychange', () => {
   console.log('updateHole() END — about to repaint');
   const table = document.querySelector('#scoreTable');
   if (table) {
-    console.log('Table found — forcing repaint');
     table.style.display = 'none';
     void table.offsetHeight;
     table.style.display = '';
