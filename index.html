@@ -777,13 +777,17 @@
     let els = {};
     let waltShadowPhone = null;
     let debugMode = false;
+    let wakeLock = null;
+    let wakeLockTimeout = null;
+    let saveTimeout = null;
+    let pendingRoundData = null;     
 
 
 // === NEW SAFETY NET: Save round when tab is hidden/minimized/closed ===
 window.addEventListener('visibilitychange', () => {
   if (document.hidden && inRound) {
     console.log('Tab hidden — forcing saveRound()');
-    saveRound();
+    if (typeof saveRound === 'function') saveRound();
   }
 });
 
@@ -806,6 +810,16 @@ window.addEventListener('visibilitychange', () => {
     const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
     // === ALL CRITICAL FUNCTIONS MOVED EARLY ===
+  function releaseWakeLock() {
+        if (wakeLock) {
+          wakeLock.release().then(() => {
+            wakeLock = null;
+            clearTimeout(wakeLockTimeout);
+            console.log('%cWake Lock: RELEASED', 'color: orange; font-weight: bold');
+          });
+        }
+      }
+
 
     function sortPlayersAlphabetically() {
   players.sort((a, b) => a.name.localeCompare(b.name));
@@ -853,7 +867,7 @@ window.addEventListener('visibilitychange', () => {
 
       score[point] = willBeChecked;
       console.log('Toggled score:', player.name, 'hole', holeIdx, point, '=', willBeChecked);
-      saveRound();  // direct call to save immediately
+      if (typeof saveRound === 'function') saveRound();
       precomputeAllTotals();
       updateHole();
     }
@@ -1308,7 +1322,7 @@ window.addEventListener('visibilitychange', () => {
 
       precomputeAllTotals();
       updateHole();
-      saveRound()
+      if (typeof saveRound === 'function') saveRound();
       logScreen('FINISHED HOLE ' + currentHole);
 
       if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
@@ -1365,7 +1379,7 @@ window.addEventListener('visibilitychange', () => {
       }
 
       releaseWakeLock();
-      saveRound();
+      if (typeof saveRound === 'function') saveRound();
     }
 
     // === REST OF YOUR ORIGINAL SCRIPT (unchanged except order) ===
@@ -1684,15 +1698,7 @@ window.addEventListener('visibilitychange', () => {
         }
       }
 
-      function releaseWakeLock() {
-        if (wakeLock) {
-          wakeLock.release().then(() => {
-            wakeLock = null;
-            clearTimeout(wakeLockTimeout);
-            console.log('%cWake Lock: RELEASED', 'color: orange; font-weight: bold');
-          });
-        }
-      }
+      
 
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden && inRound) acquireWakeLock();
@@ -1759,7 +1765,7 @@ window.addEventListener('visibilitychange', () => {
           });
         });
 
-        saveRound();
+       if (typeof saveRound === 'function') saveRound();
 
         els.startGame.disabled = players.length < 2;
 
@@ -1788,7 +1794,7 @@ window.addEventListener('visibilitychange', () => {
           players.sort((a, b) => a.name.localeCompare(b.name));
 
           inRound = true;
-          saveRound();
+          if (typeof saveRound === 'function') saveRound();
           acquireWakeLock();
 
           hideAll();
