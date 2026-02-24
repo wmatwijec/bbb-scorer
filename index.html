@@ -791,7 +791,12 @@ window.addEventListener('visibilitychange', () => {
   }
 });
 
-
+window.addEventListener('pagehide', () => {
+  if (inRound) {
+    console.log('pagehide fired — forcing final saveRound on exit');
+    saveRound(); // synchronous save
+  }
+});
 
 
     const urlParams = new URLSearchParams(location.search);
@@ -909,7 +914,7 @@ window.addEventListener('visibilitychange', () => {
       keepalive: true
     }).catch(() => {});
     pendingRoundData = null;
-  }, 5000);
+  }, 1000);
 }
 
 
@@ -1329,7 +1334,8 @@ window.addEventListener('visibilitychange', () => {
 
       precomputeAllTotals();
       updateHole();
-      if (typeof saveRound === 'function') saveRound();
+      saveRound();
+      console.log('Finished hole — saved synchronously');
       logScreen('FINISHED HOLE ' + currentHole);
 
       if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
@@ -1386,7 +1392,8 @@ window.addEventListener('visibilitychange', () => {
       }
 
       releaseWakeLock();
-      if (typeof saveRound === 'function') saveRound();
+      
+      saveRound();
     }
 
     // === REST OF YOUR ORIGINAL SCRIPT (unchanged except order) ===
