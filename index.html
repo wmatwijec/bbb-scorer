@@ -802,6 +802,77 @@
 
     // === EARLY FUNCTIONS ===
 
+  
+
+  // ... early functions already moved: logScreen, toggleScore, save, getCarryInForHole, precomputeAllTotals, getRunningTotal, renderTable, renderHoleSummary, renderRoundSummary, updateCourseInfoBar, attachNavListeners, finishCurrentHole ...
+
+function updateHole() {
+  console.log('=== UPDATEHOLE DEBUG START ===');
+  console.log('currentHole:', currentHole);
+  console.log('currentCourse (raw):', currentCourse);
+  console.log('typeof currentCourse:', typeof currentCourse);
+  console.log('courses array length:', courses.length);
+  console.log('courses[currentCourse]:', courses[currentCourse]);
+  console.log('courses[0]:', courses[0]);
+  console.log('courses[1]:', courses[1]);
+  console.log('courses[2]:', courses[2]);
+  console.log('=== UPDATEHOLE DEBUG END ===');
+
+  if (currentCourse === null || currentCourse === undefined || isNaN(Number(currentCourse))) {
+    console.log('currentCourse is invalid — FORCING to 0');
+    currentCourse = 0;
+  } else {
+    currentCourse = Number(currentCourse);
+  }
+
+  if (!inRound || players.length === 0 || !courses[currentCourse]) return;
+
+  precomputeAllTotals();
+
+  const holeIdx = currentHole - 1;
+  const courseObj = courses[currentCourse];
+  if (!courseObj || !courseObj.pars) return;
+
+  const par = courseObj.pars[holeIdx];
+  const isPar3 = par === 3;
+  const courseName = courseObj.name || 'Unknown';
+
+  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
+  els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
+
+  const isFinished = finishedHoles.has(currentHole);
+  const finishBtn = document.getElementById('finishHole');
+  const editBtn = document.getElementById('editHole');
+  if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
+  if (editBtn) editBtn.classList.toggle('hidden', !isFinished);
+
+  const carryIn = getCarryInForHole(currentHole);
+  renderTable(carryIn, isFinished);
+  renderHoleSummary();
+  renderRoundSummary();
+  updateCourseInfoBar();
+  updateNavButtons();
+  attachNavListeners();
+  save();
+
+  if (typeof debugMode !== 'undefined' && debugMode) renderDebugCarryTable();
+
+  console.log('updateHole() END — about to repaint');
+  const table = document.querySelector('#scoreTable');
+  if (table) {
+    console.log('Table found — forcing repaint');
+    table.style.display = 'none';
+    void table.offsetHeight;
+    table.style.display = '';
+  } else {
+    console.log('TABLE NOT FOUND IN DOM');
+  }
+}
+
+
+
+
+
 
   function getWaltPhone() {
   if (!roster || !Array.isArray(roster)) return;
