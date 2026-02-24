@@ -841,7 +841,7 @@
 
       score[point] = willBeChecked;
       console.log('Toggled score:', player.name, 'hole', holeIdx, point, '=', willBeChecked);
-      save();
+      saveRound();  // direct call to save immediately
       precomputeAllTotals();
       updateHole();
     }
@@ -1038,6 +1038,7 @@
           input.disabled = isFinished;
           input.onclick = (e) => {
             e.preventDefault();
+            console.log('Checkbox clicked:', point, 'for', p.name, 'hole', holeIdx);
             toggleScore(p, holeIdx, point);
           };
           cell.appendChild(input);
@@ -1619,7 +1620,8 @@
 
           players = selected.players.map(p => ({
             ...p,
-            scores: selected.scores?.[p.name] || Array(18).fill(null).map(() => ({})),
+            scores: selected.scores?.[p.name]?.map(s => ({ ...s })) || Array(18).fill(null).map(() => ({})),
+            gir: Array(18).fill(false),
             _cachedTotal: selected._cachedTotals?.[p.name] || 0,
             _cachedHoleTotals: {}
           }));
