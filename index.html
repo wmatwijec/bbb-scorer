@@ -566,14 +566,25 @@
     <p style="margin-top:30px; font-size:14px; color:#666;">
       Pro tip: Bookmark <em>this</em> page and add it to your home screen for one-tap access!
     </p>
+    <button onclick="document.getElementById('launchWrapper').remove();" 
+        style="margin-top:20px; padding:14px 40px; background:#2e7d32; color:white; border:none; border-radius:12px; font-size:1.2rem; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+  Continue to App
+</button>
   </div>
 
-  <!-- AUTO-HIDE LAUNCH -->
-  <script>
-    setTimeout(() => {
-      document.getElementById('launchWrapper')?.remove();
-    }, 800);
-  </script>
+  <!-- AUTO-HIDE LAUNCH SCREEN -->
+<script>
+  setTimeout(() => {
+    const wrapper = document.getElementById('launchWrapper');
+    if (wrapper) {
+      wrapper.style.opacity = '0';
+      wrapper.style.transition = 'opacity 0.5s ease-out';
+      setTimeout(() => {
+        wrapper.remove();
+      }, 500);  // fade out, then remove
+    }
+  }, 3500);  // 3.5 seconds — perfect balance (adjust to 4000 or 5000 if needed)
+</script>
 
   <!-- COURSE SETUP -->
   <section id="courseSetup" class="card center-block">
