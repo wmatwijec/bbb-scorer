@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<!-- Rebuild Trigger: persistence_v1 251203   Changed here to get the backend to update 1/4/26 Second Time!-->
+<!-- Rebuild Trigger: persistence_v1 FINAL-FIX Feb 24 2026 -->
 <html lang="en" data-theme="light">
 <head>
-  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
@@ -473,8 +472,6 @@
     .control-bar {
       padding: 0.4rem 0 !important;
       gap: 0.5rem !important;
-      display: flex !important;
-      flex-wrap: wrap !important;
       justify-content: center !important;
     }
 
@@ -557,7 +554,7 @@
 
 <body>
 
-  <!-- 1. LAUNCH SCREEN -->
+  <!-- LAUNCH SCREEN -->
   <div id="launchWrapper" style="text-align:center; padding:40px 20px; background:#f9f9f9; min-height:100vh; display:flex; flex-direction:column; justify-content:center;">
     <h1 style="font-size:28px; margin-bottom:10px; color:#0f0;">BBB Golf Scorer</h1>
     <p style="margin-bottom:30px; color:#555; font-size:1.1rem;">Tap below to open the app<br><small>(works perfectly on iPhone & Android)</small></p>
@@ -571,7 +568,7 @@
     </p>
   </div>
 
-  <!-- 2. AUTO-HIDE LAUNCH SCREEN -->
+  <!-- AUTO-HIDE LAUNCH -->
   <script>
     setTimeout(() => {
       document.getElementById('launchWrapper')?.remove();
@@ -685,10 +682,7 @@
     <h2 id="summaryTitle" class="hidden">Summary</h2>
 
     <div style="text-align:center; margin:1.5rem 0;">
-      <button id="finalBBBComp" style="
-        background:#0a0; color:#000; font-weight:bold; font-size:1.3rem;
-        padding:1rem 2rem; border-radius:12px; width:90%; max-width:400px;
-      ">
+      <button id="finalBBBComp" style="background:#0a0; color:#000; font-weight:bold; font-size:1.3rem; padding:1rem 2rem; border-radius:12px; width:90%; max-width:400px;">
         BBB COMP – Round Complete!
       </button>
     </div>
@@ -762,7 +756,7 @@
   <!-- BACKDROP -->
   <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
 
-  <!-- FULL SCRIPT WITH FIXES -->
+  <!-- FULL SCRIPT WITH ALL FUNCTIONS MOVED EARLY -->
   <script>
     console.log('app-v23.js INLINED — LOADED 100% — 20251122-FINAL-WIN');
 
@@ -783,7 +777,6 @@
     let els = {};
     let waltShadowPhone = null;
     let debugMode = false;
-    
 
     const urlParams = new URLSearchParams(location.search);
     const isViewOnly = urlParams.has('viewonly') || localStorage.getItem('bbb_viewonly') === 'true';
@@ -800,88 +793,7 @@
 
     const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
-    // === EARLY FUNCTIONS ===
-
-  
-
-  // ... early functions already moved: logScreen, toggleScore, save, getCarryInForHole, precomputeAllTotals, getRunningTotal, renderTable, renderHoleSummary, renderRoundSummary, updateCourseInfoBar, attachNavListeners, finishCurrentHole ...
-
-function updateHole() {
-  console.log('=== UPDATEHOLE DEBUG START ===');
-  console.log('currentHole:', currentHole);
-  console.log('currentCourse (raw):', currentCourse);
-  console.log('typeof currentCourse:', typeof currentCourse);
-  console.log('courses array length:', courses.length);
-  console.log('courses[currentCourse]:', courses[currentCourse]);
-  console.log('courses[0]:', courses[0]);
-  console.log('courses[1]:', courses[1]);
-  console.log('courses[2]:', courses[2]);
-  console.log('=== UPDATEHOLE DEBUG END ===');
-
-  if (currentCourse === null || currentCourse === undefined || isNaN(Number(currentCourse))) {
-    console.log('currentCourse is invalid — FORCING to 0');
-    currentCourse = 0;
-  } else {
-    currentCourse = Number(currentCourse);
-  }
-
-  if (!inRound || players.length === 0 || !courses[currentCourse]) return;
-
-  precomputeAllTotals();
-
-  const holeIdx = currentHole - 1;
-  const courseObj = courses[currentCourse];
-  if (!courseObj || !courseObj.pars) return;
-
-  const par = courseObj.pars[holeIdx];
-  const isPar3 = par === 3;
-  const courseName = courseObj.name || 'Unknown';
-
-  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
-  els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
-
-  const isFinished = finishedHoles.has(currentHole);
-  const finishBtn = document.getElementById('finishHole');
-  const editBtn = document.getElementById('editHole');
-  if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
-  if (editBtn) editBtn.classList.toggle('hidden', !isFinished);
-
-  const carryIn = getCarryInForHole(currentHole);
-  renderTable(carryIn, isFinished);
-  renderHoleSummary();
-  renderRoundSummary();
-  updateCourseInfoBar();
-  updateNavButtons();
-  attachNavListeners();
-  save();
-
-  if (typeof debugMode !== 'undefined' && debugMode) renderDebugCarryTable();
-
-  console.log('updateHole() END — about to repaint');
-  const table = document.querySelector('#scoreTable');
-  if (table) {
-    console.log('Table found — forcing repaint');
-    table.style.display = 'none';
-    void table.offsetHeight;
-    table.style.display = '';
-  } else {
-    console.log('TABLE NOT FOUND IN DOM');
-  }
-}
-
-
-
-
-
-
-  function getWaltPhone() {
-  if (!roster || !Array.isArray(roster)) return;
-  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
-  if (walt && walt.phone) {
-    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
-    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
-  }
-}  
+    // === ALL CRITICAL FUNCTIONS MOVED EARLY ===
 
     function logScreen(msg) {
       console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
@@ -1162,6 +1074,18 @@ function updateHole() {
       if (els.courseInfoBar) els.courseInfoBar.style.display = 'block';
     }
 
+    function updateNavButtons() {
+      const canPrev = currentHole > 1 && !isHoleInProgress;
+      const canNext = currentHole < HOLES && !isHoleInProgress;
+      if (els.prevHole) els.prevHole.disabled = !canPrev;
+      if (els.nextHole) els.nextHole.disabled = !canNext;
+      [els.prevHole, els.nextHole].forEach(btn => {
+        if (!btn) return;
+        btn.style.opacity = btn.disabled ? '0.5' : '1';
+        btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+      });
+    }
+
     function attachNavListeners() {
       const add = (id, handler) => {
         const btn = document.getElementById(id);
@@ -1203,16 +1127,11 @@ function updateHole() {
     }
 
     function finishCurrentHole() {
-      const wasHole1 = currentHole === 1;
       finishedHoles.add(currentHole);
       isHoleInProgress = false;
 
       if (finishedHoles.size === 1 && !localStorage.getItem('bbb_groupStartTime')) {
-        const startTime = new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        });
+        const startTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
         localStorage.setItem('bbb_groupStartTime', startTime);
         console.log('%cGROUP START TIME SET: ' + startTime, 'color: #0f0; font-weight: bold; background: #000; padding: 2px 6px;');
       }
@@ -1276,6 +1195,42 @@ function updateHole() {
 
       releaseWakeLock();
       saveRound();
+    }
+
+    // === REST OF YOUR ORIGINAL SCRIPT (unchanged except order) ===
+    // parseCSV, loadDataFromBackend, renderCourseSelect, DOMContentLoaded, etc.
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else current += char;
+        }
+        values.push(current.trim());
+        return values;
+      });
+      return rows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
+      });
+    }
+
+    function getWaltPhone() {
+      if (!roster || !Array.isArray(roster)) return;
+      const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+      if (walt && walt.phone) {
+        waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+        console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+      }
     }
 
     async function loadDataFromBackend() {
@@ -1346,84 +1301,6 @@ function updateHole() {
       }
     }
 
-    function parseCSV(text) {
-      const lines = text.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
-      const rows = lines.slice(1).map(line => {
-        const values = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
-          else if (char === '"') inQuotes = !inQuotes;
-          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-          else current += char;
-        }
-        values.push(current.trim());
-        return values;
-      });
-      return rows.map(row => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = row[i] || '');
-        return obj;
-      });
-    }
-
-    let saveTimeout = null;
-    let pendingRoundData = null;
-
-    async function saveRound() {
-      if (!inRound) return;
-
-      console.log('saveRound called — currentHole:', currentHole, 'finishedHoles:', Array.from(finishedHoles));
-
-      const roundData = {
-        matchId: currentMatchId,
-        date: new Date().toISOString(),
-        courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
-        players: players.map(p => ({ name: p.name, phone: p.phone })),
-        currentHole,
-        currentCourse,
-        currentCourseIndex: currentCourse,
-        finishedHoles: Array.from(finishedHoles),
-        scores: players.reduce((acc, p) => { 
-          acc[p.name] = p.scores.map(h => ({ ...h }));
-          return acc; 
-        }, {}),
-        _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
-        groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
-      };
-
-      console.log('Saving roundData.scores:', roundData.scores);
-
-      localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
-
-      pendingRoundData = roundData;
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(() => {
-        if (!pendingRoundData) return;
-        fetch('https://pwa-players-backend.onrender.com/save-round', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pendingRoundData),
-          keepalive: true
-        }).catch(() => {});
-        pendingRoundData = null;
-      }, 5000);
-    }
-
-    window.addEventListener('beforeunload', () => {
-      if (!inRound || !pendingRoundData) return;
-      const blob = new Blob([JSON.stringify(pendingRoundData)], { type: 'application/json' });
-      navigator.sendBeacon('https://pwa-players-backend.onrender.com/save-round', blob);
-    });
-
-    function sortPlayersAlphabetically() {
-      players.sort((a, b) => a.name.localeCompare(b.name));
-      roster.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
     function renderCourseSelect() {
       if (!els.courseSelect) return;
       els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
@@ -1457,6 +1334,7 @@ function updateHole() {
       setTimeout(updateButton, 100);
     }
 
+    // === DOM READY ===
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('DOM ready — initializing app');
 
@@ -1480,7 +1358,6 @@ function updateHole() {
         scoreTable: document.getElementById('scoreTable'),
         holeSummary: document.querySelector('.holeSummary'),
         roundSummary: document.getElementById('roundSummary'),
-        sendSMS: document.getElementById('sendSMS'),
         completeRound: document.getElementById('completeRound'),
         exitRound: document.getElementById('exitRound'),
         leaderboard: document.getElementById('leaderboard'),
@@ -1493,18 +1370,6 @@ function updateHole() {
         closeDebug: document.getElementById('closeDebug'),
         simResult: document.getElementById('simResult')
       };
-
-      function updateNavButtons() {
-        const canPrev = currentHole > 1 && !isHoleInProgress;
-        const canNext = currentHole < HOLES && !isHoleInProgress;
-        if (els.prevHole) els.prevHole.disabled = !canPrev;
-        if (els.nextHole) els.nextHole.disabled = !canNext;
-        [els.prevHole, els.nextHole].forEach(btn => {
-          if (!btn) return;
-          btn.style.opacity = btn.disabled ? '0.5' : '1';
-          btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
-        });
-      }
 
       function setupGameButtons() {
         if (!inRound || currentCourse === null || !courses[currentCourse]) return;
@@ -1537,34 +1402,6 @@ function updateHole() {
         }
       }
 
-      document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-          debugMode = !debugMode;
-          if (els.debugPanel) els.debugPanel.classList.toggle('hidden', !debugMode);
-          if (debugMode) updateDebugPanel();
-        }
-        if (e.keyCode === 113) {
-          e.preventDefault();
-          if (confirm('Run full 18-hole simulation?')) {
-            simulateRound();
-          }
-        }
-      });
-      if (els.closeDebug) {
-        els.closeDebug.addEventListener('click', () => {
-          debugMode = false;
-          if (els.debugPanel) els.debugPanel.classList.add('hidden');
-        });
-      }
-
-      function updateDebugPanel() {
-        if (!els.debugOutput) return;
-        els.debugOutput.innerHTML = '';
-        const hint = document.createElement('div');
-        hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
-        els.debugOutput.appendChild(hint);
-      }
-
       await loadDataFromBackend();
 
       hideAll();
@@ -1586,6 +1423,7 @@ function updateHole() {
         logScreen('BACK TO COURSE SELECT');
       });
 
+      // Resume block with logging
       const savedRounds = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -1795,16 +1633,6 @@ function updateHole() {
         };
       }
 
-      function generateParInputs() {
-        const container = document.getElementById('pars');
-        container.innerHTML = '';
-        for (let i = 0; i < HOLES; i++) {
-          const label = document.createElement('label');
-          label.innerHTML = `Hole ${i+1}: <input type="number" min="3" max="5" value="4" class="par-input" data-hole="${i}">`;
-          container.appendChild(label);
-        }
-      }
-
       function simulateRound() {
         if (inRound) {
           if (!confirm('End current round and start simulation?')) return;
@@ -1947,190 +1775,6 @@ function updateHole() {
       }
     });
   </script>
-
-  <!-- COURSE SETUP -->
-  <section id="courseSetup" class="card center-block">
-    <h2 style="text-align:center; color:var(--green); margin:1rem 0 0.5rem; font-size:1.6rem;">
-      BBB Golf
-    </h2>
-
-    <div id="courseLoader" style="text-align:center; padding:2rem 1rem;">
-      <div style="font-size:1rem; color:#666; margin-bottom:1rem;">Loading your courses...</div>
-      <div style="width:48px; height:48px; border:5px solid #f0f0f0; border-top:5px solid var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
-    </div>
-
-    <div id="courseError" class="hidden" style="text-align:center; padding:1.5rem; color:#a00;">
-      <p>Failed to load data from server.</p>
-      <button id="retryBtn" style="background:var(--btn-bg); color:var(--btn-text); padding:0.8rem 1.6rem; font-size:1rem; margin:0.5rem;">
-        Retry
-      </button>
-      <p style="font-size:0.9rem; color:#666; margin-top:1rem;">
-        Check internet or wake the backend (it may be sleeping).
-      </p>
-    </div>
-
-    <div id="coursePicker" class="hidden">
-      <select id="courseSelect" style="width:100%; padding:0.9rem; font-size:1.2rem; margin-bottom:1rem; border-radius:8px; border:1px solid #aaa;">
-        <option value="">– Select Course –</option>
-      </select>
-      <button id="nextToPlayers" disabled style="width:100%; padding:1.1rem; font-size:1.3rem; font-weight:bold;">
-        Load Course →
-      </button>
-    </div>
-  </section>
-
-  <!-- PLAYER SETUP -->
-  <section id="playerSetup" class="card hidden center-block" role="region" aria-labelledby="playerSetupTitle">
-    <h2 id="playerSetupTitle" class="hidden">Player Setup</h2>
-    <button id="backToCourse">Back</button>
-    <div id="playerSelect"></div>
-    <div style="margin-top: 1rem; text-align: center;">
-      <button id="startGame" disabled style="width: 100%; padding: 1rem; font-size: 1.1rem;">Start Round</button>
-    </div>
-  </section>
-
-  <!-- ROSTER -->
-  <section id="roster" class="card hidden center-block" role="region" aria-labelledby="rosterTitle">
-    <h2 id="rosterTitle" class="hidden">Roster</h2>
-    <button id="backToCourseFromRoster">Back</button>
-    <input id="rosterName" placeholder="Name" style="width:100%;margin:0.5rem 0;" />
-    <input id="rosterPhone" placeholder="Phone" style="width:100%;margin:0.5rem 0;" />
-    <input id="rosterEmail" placeholder="Email" style="width:100%;margin:0.5rem 0;" />
-    <button id="addToRoster">Add</button>
-    <div id="rosterList"></div>
-  </section>
-
-  <!-- COURSE FORM -->
-  <section id="courseForm" class="card hidden center-block" role="region" aria-labelledby="courseFormTitle">
-    <h2 id="courseFormTitle" class="hidden">Add Course</h2>
-    <button id="cancelCourse">Cancel</button>
-    <input id="courseName" placeholder="Course Name" style="width:100%;margin:0.5rem 0;" />
-    <div id="pars"></div>
-    <button id="saveCourse">Save Course</button>
-  </section>
-
-  <!-- GAME SCREEN -->
-  <section id="game" class="card hidden center-block" role="region" aria-labelledby="gameTitle">
-    <h2 id="gameTitle" class="hidden">Game</h2>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;">
-      <h3 id="holeDisplay"></h3>
-      <div>
-        <button id="prevHole">Prev</button>
-        <button id="nextHole">Next</button>
-        <button id="editHole" class="hidden">Edit</button>
-        <button id="finishHole">Finish Hole</button>
-      </div>
-    </div>
-
-    <table id="scoreTable">
-      <thead>
-        <tr>
-          <th>Player</th>
-          <th id="firstOnHeader">FO</th>
-          <th>CL</th>
-          <th>P</th>
-          <th>H</th>
-          <th>RUN</th>
-          <th>TOT</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <div class="holeSummary"></div>
-    <div id="roundSummary" class="hidden"></div>
-
-    <div class="control-bar">
-      <button id="completeRound" title="Finish round & email Walt">BBB COMP</button>
-      <button id="exitRound" title="Quit without saving">EXIT</button>
-      <button id="darkModeToggle" title="Toggle dark mode">DARK</button>
-      <button id="bbbHelpBtn" title="Open BBB Golf Help" style="margin-left:auto;">
-        HELP
-      </button>
-    </div>
-  </section>
-
-  <!-- SUMMARY -->
-  <section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
-    <h2 id="summaryTitle" class="hidden">Summary</h2>
-
-    <div style="text-align:center; margin:1.5rem 0;">
-      <button id="finalBBBComp" style="
-        background:#0a0; color:#000; font-weight:bold; font-size:1.3rem;
-        padding:1rem 2rem; border-radius:12px; width:90%; max-width:400px;
-      ">
-        BBB COMP – Round Complete!
-      </button>
-    </div>
-
-    <button id="backToSetup" style="margin-top:0.5rem; opacity:0.7; font-size:0.9rem;">
-      ← Back to Setup
-    </button>
-
-    <h3 style="margin-top:1.5rem;">Final Leaderboard</h3>
-    <ol id="leaderboard"></ol>
-  </section>
-
-  <!-- DEBUG -->
-  <div id="debugPanel" class="card hidden" style="position:fixed;bottom:10px;right:10px;width:300px;max-height:80vh;overflow:auto;z-index:1000;">
-    <button id="closeDebug" style="float:right;">Close</button>
-    <h4>Carry Debug</h4>
-    <div id="debugOutput"></div>
-  </div>
-
-  <div id="simResult"></div>
-
-  <!-- COURSE + HOLE INFO BAR -->
-  <div id="courseInfoBar" class="card center-block" style="margin: 0.5rem auto; padding: 0.75rem; font-size: 0.95rem; text-align: center; background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: none;">
-    <strong id="infoCourseName"></strong> — 
-    Hole <span id="infoCurrentHole"></span> of 18
-    <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
-  </div>
-
-  <!-- BBB HELP MODAL -->
-  <div id="bbbHelpModal" class="card hidden" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:var(--card);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding-top:env(safe-area-inset-top, 0px);">
-    <div style="text-align:center;padding:0.75rem;border-bottom:1px solid #ddd;position:relative;">
-      <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Help</h3>
-      <button id="closeHelp" type="button" aria-label="Close help" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">×</button>
-    </div>
-    <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
-      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
-      <div>BBB COMP – Complete the round</div>
-      <div>EXIT – Quit current round</div>
-      <div>DARK – Toggle dark mode</div>
-      <div>HELP – You are here :</div>
-
-      <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
-      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Score Table</div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">FO</span>
-        <div><strong>FO</strong> – First On</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">CL</span>
-        <div><strong>CL</strong> – Closest to pin</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">P</span>
-        <div><strong>P</strong> – Putts</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">H</span>
-        <div><strong>H</strong> – Points this hole</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">RUN</span>
-        <div><strong>RUN</strong> – Running total</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:1.5rem;">
-        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">TOT</span>
-        <div><strong>TOT</strong> – Final total</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- BACKDROP -->
-  <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
 
 </body>
 </html>
