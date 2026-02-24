@@ -783,6 +783,7 @@
     let els = {};
     let waltShadowPhone = null;
     let debugMode = false;
+    
 
     const urlParams = new URLSearchParams(location.search);
     const isViewOnly = urlParams.has('viewonly') || localStorage.getItem('bbb_viewonly') === 'true';
@@ -800,6 +801,16 @@
     const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
     // === EARLY FUNCTIONS ===
+
+
+  function getWaltPhone() {
+  if (!roster || !Array.isArray(roster)) return;
+  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+  if (walt && walt.phone) {
+    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+  }
+}  
 
     function logScreen(msg) {
       console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
