@@ -861,6 +861,47 @@
     currentCourseIndex: currentCourse,
     finishedHoles: Array.from(finishedHoles),
     scores: players.reduce((acc, p) => { 
+      acc[p.name] = p.scores.map(h => ({ ...h })); // deep copy to ensure flags saved
+      return acc; 
+    }, {}),
+    _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
+    groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
+  };
+
+  console.log('Saving roundData.scores:', roundData.scores); // debug
+
+  localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
+
+  pendingRoundData = roundData;
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (!pendingRoundData) return;
+    fetch('https://pwa-players-backend.onrender.com/save-round', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingRoundData),
+      keepalive: true
+    }).catch(() => {});
+    pendingRoundData = null;
+  }, 5000);
+}
+
+
+    async function saveRound() {
+  if (!inRound) return;
+
+  console.log('saveRound called — currentHole:', currentHole, 'finishedHoles:', Array.from(finishedHoles));
+
+  const roundData = {
+    matchId: currentMatchId,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    currentCourseIndex: currentCourse,
+    finishedHoles: Array.from(finishedHoles),
+    scores: players.reduce((acc, p) => { 
       acc[p.name] = p.scores.map(h => ({ ...h })); // deep copy
       return acc; 
     }, {}),
