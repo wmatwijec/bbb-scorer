@@ -1672,100 +1672,95 @@ function updateNavButtons() {
         });
       }
 
-      // RESUME LOGIC (your latest version with debug logs)
-      console.log('%cDEBUG: Starting resume check', 'color: purple; font-weight: bold');
+    // ==============================================================
+// 4. RESUME SAVED ROUND — WITH FULL DEBUG LOGGING
+// ==============================================================
+console.log('%cDEBUG: Starting resume check', 'color: purple; font-weight: bold');
 
-      for (let i = 0; i < localStorage.length; i++) {
-        console.log('%cLS key:', 'color: blue', localStorage.key(i));
+// Log ALL localStorage keys
+for (let i = 0; i < localStorage.length; i++) {
+  console.log('%cLS key:', 'color: blue', localStorage.key(i));
+}
+
+const savedRounds = [];
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  if (key?.startsWith('bbb_round_BBB-')) {
+    try {
+      const raw = localStorage.getItem(key);
+      console.log('%cRaw saved data for key:', 'color: orange', key, raw);  // ← shows exact saved JSON
+
+      const data = JSON.parse(raw);
+      console.log('%cSuccessfully parsed saved round:', 'color: green', key, data);
+
+      savedRounds.push({ ...data, key });
+    } catch (e) {
+      console.error('Failed to parse saved round:', key, e);  // ← will show exact error
+    }
+  }
+}
+
+console.log('%cFinal savedRounds array length:', 'color: orange; font-weight: bold', savedRounds.length);
+
+if (savedRounds.length > 0) {
+  savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+  savedRounds.forEach((r, i) => {
+    message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
+    message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
+    message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
+  });
+  message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
+
+  const choice = prompt(message);
+  console.log('%cUser entered choice:', 'color: blue', choice);
+
+  if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
+    const selected = savedRounds[choice - 1];
+    console.log('%cRestoring round:', 'color: lime', selected);
+
+    // Restore logic (your original code)
+    players = selected.players.map(p => ({
+      ...p,
+      scores: Array(18).fill(null).map(() => ({})),
+      _cachedTotal: selected._cachedTotals?.[p.name] || 0
+    }));
+
+    Object.keys(selected.scores || {}).forEach(name => {
+      const p = players.find(x => x.name === name);
+      if (p) p.scores = selected.scores[name];
+    });
+
+    currentHole = selected.currentHole;
+    currentCourse = selected.currentCourseIndex || courses.findIndex(c => c.name === selected.courseName);
+    if (currentCourse === -1) currentCourse = 0;
+    finishedHoles = new Set(selected.finishedHoles || []);
+    inRound = true;
+
+    hideAll();
+    els.game.classList.remove('hidden');
+
+    const checkCourses = () => {
+      if (courses.length > 0 && courses[currentCourse]) {
+        updateHole();
+        attachFinishHoleListener();
+        renderTable(getCarryInForHole(currentHole), finishedHoles.has(currentHole));
+        attachNavListeners();
+        setupGameButtons();
+        updateCourseInfoBar();
+        logScreen('RESUMED SAVED ROUND');
+      } else {
+        setTimeout(checkCourses, 50);
       }
+    };
+    checkCourses();
 
-      const savedRounds = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('bbb_round_BBB-')) {
-          try {
-            const data = JSON.parse(localStorage.getItem(key));
-            savedRounds.push({ ...data, key });
-            console.log('%cFound saved round key:', 'color: green', key);
-          } catch (e) {
-            console.warn(`Corrupted saved round skipped: ${key}`, e);
-          }
-        }
-      }
-
-      console.log('%cFound saved rounds:', 'color: orange; font-weight: bold', savedRounds.length);
-
-      if (savedRounds.length > 0) {
-        savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
-        savedRounds.forEach((r, i) => {
-          message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-          message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-          message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
-        });
-        message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
-
-        const choice = prompt(message);
-        console.log('%cUser choice:', 'color: blue', choice);
-
-        if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
-          const selected = savedRounds[choice - 1];
-
-          players = selected.players.map(p => ({
-            ...p,
-            scores: Array(18).fill(null).map(() => ({})),
-            gir: Array(18).fill(false),
-            _cachedTotal: selected._cachedTotals?.[p.name] || 0,
-            _cachedHoleTotals: {}
-          }));
-
-          Object.keys(selected.scores || {}).forEach(name => {
-            const player = players.find(x => x.name === name);
-            if (player) player.scores = selected.scores[name];
-          });
-
-          currentHole = Number(selected.currentHole) || 1;
-          currentCourse = Number(selected.currentCourseIndex) || courses.findIndex(c => c.name === selected.courseName);
-
-          if (currentCourse === -1 || isNaN(currentCourse)) {
-            console.warn('Course index not found — defaulting to first course');
-            currentCourse = 0;
-          }
-
-          finishedHoles = new Set(selected.finishedHoles || []);
-          inRound = true;
-          isHoleInProgress = false;
-
-          players.sort((a, b) => a.name.localeCompare(b.name));
-
-          hideAll();
-          if (els.game) els.game.classList.remove('hidden');
-
-          const checkCoursesAndRender = () => {
-            if (courses.length > 0 && courses[currentCourse]) {
-              updateHole();
-              attachFinishHoleListener();
-              attachNavListeners();
-              setupGameButtons();
-              updateCourseInfoBar();
-              logScreen(`RESUMED ROUND #${choice} — HOLE ${currentHole}`);
-            } else {
-              setTimeout(checkCoursesAndRender, 100);
-            }
-          };
-          checkCoursesAndRender();
-
-          return;
-        } else {
-          console.log('Resume cancelled or invalid input');
-          if (confirm("No valid round selected.\n\nClear ALL saved rounds and start fresh?")) {
-            savedRounds.forEach(r => localStorage.removeItem(r.key));
-            localStorage.removeItem('bbb_currentMatchId');
-            alert("All saved rounds cleared. Starting a new round.");
-          }
-        }
-      }
+    return;
+  }
+} else {
+  console.log('%cNo valid saved rounds found — starting fresh', 'color: red; font-weight: bold');
+} 
 
       // WAKE LOCK
       let wakeLock = null;
