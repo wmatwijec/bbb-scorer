@@ -767,6 +767,8 @@ async function loadDataFromBackend() {
 async function saveRound() {
   if (!inRound) return;
 
+  console.log('saveRound called — currentHole:', currentHole, 'finishedHoles:', Array.from(finishedHoles));
+
   const roundData = {
     matchId: currentMatchId,
     date: new Date().toISOString(),
@@ -776,10 +778,15 @@ async function saveRound() {
     currentCourse,
     currentCourseIndex: currentCourse,
     finishedHoles: Array.from(finishedHoles),
-    scores: players.reduce((acc, p) => { acc[p.name] = p.scores; return acc; }, {}),
+    scores: players.reduce((acc, p) => { 
+      acc[p.name] = p.scores.map(h => ({ ...h })); // deep copy to ensure flags saved
+      return acc; 
+    }, {}),
     _cachedTotals: players.reduce((acc, p) => { acc[p.name] = p._cachedTotal || 0; return acc; }, {}),
     groupStartTime: localStorage.getItem('bbb_groupStartTime') || null
   };
+
+  console.log('Saving roundData.scores:', roundData.scores); // debug
 
   // Local backup (immediate)
   localStorage.setItem(`bbb_round_${currentMatchId}`, JSON.stringify(roundData));
@@ -848,6 +855,7 @@ async function saveRound() {
     }
 
     score[point] = willBeChecked;
+    console.log('Toggled score:', player.name, holeIdx, point, score[point]);
     save();
     precomputeAllTotals();
     updateHole();
@@ -1722,10 +1730,12 @@ if (savedRounds.length > 0) {
 
     // Restore logic (your original code)
     players = selected.players.map(p => ({
-      ...p,
-      scores: Array(18).fill(null).map(() => ({})),
-      _cachedTotal: selected._cachedTotals?.[p.name] || 0
-    }));
+  ...p,
+  scores: selected.scores?.[p.name] || Array(18).fill(null).map(() => ({})),
+  gir: Array(18).fill(false),
+  _cachedTotal: selected._cachedTotals?.[p.name] || 0,
+  _cachedHoleTotals: {}
+}));
 
     Object.keys(selected.scores || {}).forEach(name => {
       const p = players.find(x => x.name === name);
