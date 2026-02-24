@@ -778,6 +778,18 @@
     let waltShadowPhone = null;
     let debugMode = false;
 
+
+// === NEW SAFETY NET: Save round when tab is hidden/minimized/closed ===
+window.addEventListener('visibilitychange', () => {
+  if (document.hidden && inRound) {
+    console.log('Tab hidden — forcing saveRound()');
+    saveRound();
+  }
+});
+
+
+
+
     const urlParams = new URLSearchParams(location.search);
     const isViewOnly = urlParams.has('viewonly') || localStorage.getItem('bbb_viewonly') === 'true';
     if (isViewOnly) {
@@ -1296,6 +1308,7 @@
 
       precomputeAllTotals();
       updateHole();
+      saveRound()
       logScreen('FINISHED HOLE ' + currentHole);
 
       if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
