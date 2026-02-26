@@ -103,7 +103,7 @@
         <div id="status" class="status"></div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Auto-fetch • Running totals & per-hole breakdowns
+            BBB Summarizer • Auto-fetch • Cumulative progress by category
         </div>
     </div>
 
@@ -151,7 +151,7 @@
                 console.warn(`Round ${round.matchId || '?'} missing players array`);
                 return { 
                     finalTotals: {}, holeBreakdowns: [], runningTotals: {},
-                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {},
+                    cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
                     roundInfo: round 
                 };
             }
@@ -172,10 +172,10 @@
 
             const playerTotals = {};
             const runningTotals = {};
-            const perHoleFO = {};
-            const perHoleGreenie = {};
-            const perHoleClosest = {};
-            const perHolePutt = {};
+            const cumFO = {};
+            const cumGreenie = {};
+            const cumClosest = {};
+            const cumPutt = {};
 
             round.players.forEach(p => {
                 const name = p.name;
@@ -183,12 +183,16 @@
 
                 playerTotals[name] = 0;
                 runningTotals[name] = new Array(18).fill(0);
-                perHoleFO[name]      = new Array(18).fill(0);
-                perHoleGreenie[name] = new Array(18).fill(0);
-                perHoleClosest[name] = new Array(18).fill(0);
-                perHolePutt[name]    = new Array(18).fill(0);
+                cumFO[name]      = new Array(18).fill(0);
+                cumGreenie[name] = new Array(18).fill(0);
+                cumClosest[name] = new Array(18).fill(0);
+                cumPutt[name]    = new Array(18).fill(0);
 
-                let cumulative = 0;
+                let totalCum = 0;
+                let foCum = 0;
+                let grCum = 0;
+                let clCum = 0;
+                let pCum = 0;
 
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
@@ -201,22 +205,26 @@
                         const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
                         pts += 1 + carry;
                         if (isPar3) {
-                            perHoleGreenie[name][idx] = 1 + carry;
+                            grCum += 1 + carry;
+                            cumGreenie[name][idx] = grCum;
                         } else {
-                            perHoleFO[name][idx] = 1 + carry;
+                            foCum += 1 + carry;
+                            cumFO[name][idx] = foCum;
                         }
                     }
                     if (s.closest) {
                         pts += 1 + carryIn.closest;
-                        perHoleClosest[name][idx] = 1 + carryIn.closest;
+                        clCum += 1 + carryIn.closest;
+                        cumClosest[name][idx] = clCum;
                     }
                     if (s.putt) {
                         pts += 1 + carryIn.putt;
-                        perHolePutt[name][idx] = 1 + carryIn.putt;
+                        pCum += 1 + carryIn.putt;
+                        cumPutt[name][idx] = pCum;
                     }
 
-                    cumulative += pts;
-                    runningTotals[name][idx] = cumulative;
+                    totalCum += pts;
+                    runningTotals[name][idx] = totalCum;
                     playerTotals[name] += pts;
                 }
             });
@@ -256,10 +264,10 @@
                 finalTotals: playerTotals,
                 holeBreakdowns,
                 runningTotals,
-                perHoleFO,
-                perHoleGreenie,
-                perHoleClosest,
-                perHolePutt,
+                cumFO,
+                cumGreenie,
+                cumClosest,
+                cumPutt,
                 roundInfo: round
             };
         }
@@ -354,7 +362,7 @@
             rounds.forEach((round, i) => {
                 const comp = window.currentComputed[i] || {
                     finalTotals: {}, runningTotals: {}, holeBreakdowns: [],
-                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}
+                    cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
                 };
 
                 Object.entries(comp.finalTotals).forEach(([name, pts]) => {
@@ -377,7 +385,7 @@
                             .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
                     </div>
 
-                    <h4>Cumulative Points Progress</h4>
+                    <h4>Cumulative Points Progress (All Categories)</h4>
                     <div style="height: 300px; margin-bottom: 25px;">
                         <canvas id="${chartId}"></canvas>
                     </div>
@@ -425,10 +433,10 @@
 
                 // Create charts
                 createProgressChart(chartId, comp.runningTotals, playerNames);
-                createMiniLineChart(`mini-fo-${chartId}`, comp.perHoleFO, 'FO Points per Hole', playerNames);
-                createMiniLineChart(`mini-gr-${chartId}`, comp.perHoleGreenie, 'Greenie Points per Hole', playerNames);
-                createMiniLineChart(`mini-cl-${chartId}`, comp.perHoleClosest, 'Closest Points per Hole', playerNames);
-                createMiniLineChart(`mini-p-${chartId}`, comp.perHolePutt, 'Putt Points per Hole', playerNames);
+                createMiniCumChart(`mini-fo-${chartId}`, comp.cumFO, 'Cumulative FO Points', playerNames);
+                createMiniCumChart(`mini-gr-${chartId}`, comp.cumGreenie, 'Cumulative Greenie Points', playerNames);
+                createMiniCumChart(`mini-cl-${chartId}`, comp.cumClosest, 'Cumulative Closest Points', playerNames);
+                createMiniCumChart(`mini-p-${chartId}`, comp.cumPutt, 'Cumulative Putt Points', playerNames);
             });
 
             const overall = document.createElement('div');
@@ -484,20 +492,19 @@
             });
         }
 
-        function createMiniLineChart(canvasId, dataByPlayer, title, playerNames) {
+        function createMiniCumChart(canvasId, cumData, title, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
 
             const datasets = playerNames.map((name, index) => ({
                 label: name,
-                data: dataByPlayer[name] || new Array(18).fill(0),
+                data: cumData[name] || new Array(18).fill(0),
                 borderColor: getPlayerColor(index),
-                backgroundColor: getPlayerColor(index) + '44',
-                tension: 0,
-                pointRadius: 4,
-                pointHoverRadius: 6,
+                backgroundColor: getPlayerColor(index) + '33',
+                tension: 0.1,
+                pointRadius: 3,
+                pointHoverRadius: 5,
                 fill: false,
-                borderWidth: 2,
-                stepped: false
+                borderWidth: 2
             }));
 
             new Chart(ctx, {
@@ -516,7 +523,7 @@
                         },
                         y: { 
                             beginAtZero: true,
-                            suggestedMax: 5,
+                            suggestedMax: Math.max(...playerNames.flatMap(n => cumData[n] || []), 5),
                             ticks: { stepSize: 1 }
                         }
                     },
