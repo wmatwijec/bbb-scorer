@@ -447,90 +447,99 @@
     }
 
     function addCrosshair(chart, playerNames, dataByPlayer, title) {
-        const canvas = chart.canvas;
+    const canvas = chart.canvas;
+    const parent = canvas.parentElement;
+    parent.style.position = 'relative';  // Force it (redundant but safe)
+    parent.style.overflow = 'hidden';    // Prevent overflow on iOS
+
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const index = Math.round(chart.scales.x.getValueForPixel(x));
+        if (index < 0 || index >= 18) return hideCrosshair(chart);
+
+        // Create or move crosshair
+        if (!chart.crosshairLine) {
+            const line = document.createElement('div');
+            line.className = 'crosshair';
+            line.style.position = 'absolute';
+            line.style.left = '0';
+            line.style.top = '0';
+            line.style.bottom = '0';
+            line.style.width = '1px';
+            line.style.background = 'rgba(0,0,0,0.4)';
+            line.style.pointerEvents = 'none';
+            line.style.zIndex = '10';
+            parent.appendChild(line);
+            chart.crosshairLine = line;
+        }
+        chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
+        chart.crosshairLine.style.display = 'block';
+
+        // Tooltip (unchanged, but ensure it's positioned relative to page)
         const tooltip = document.getElementById('chart-tooltip');
-
-        canvas.addEventListener('mousemove', e => {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const index = Math.round(chart.scales.x.getValueForPixel(x));
-            if (index < 0 || index >= 18) return hideCrosshair(chart);
-
-            // Move crosshair
-            if (!chart.crosshairLine) {
-                const line = document.createElement('div');
-                line.className = 'crosshair';
-                line.style.position = 'absolute';
-                line.style.left = '0';
-                line.style.top = '0';
-                line.style.bottom = '0';
-                line.style.width = '1px';
-                line.style.background = 'rgba(0,0,0,0.4)';
-                line.style.pointerEvents = 'none';
-                canvas.parentElement.appendChild(line);
-                chart.crosshairLine = line;
-            }
-            chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
-            chart.crosshairLine.style.display = 'block';
-
-            // Update tooltip
-            tooltip.classList.add('active');
-            let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
-            playerNames.forEach(name => {
-                content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
-            });
-            content += `</table>`;
-            tooltip.innerHTML = content;
-
-            tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
-            tooltip.style.top = (rect.top + 20) + 'px';
+        tooltip.classList.add('active');
+        let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
+        playerNames.forEach(name => {
+            content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
         });
+        content += `</table>`;
+        tooltip.innerHTML = content;
 
-        canvas.addEventListener('mouseout', () => hideCrosshair(chart));
-        canvas.addEventListener('touchmove', e => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
-            const x = touch.clientX - rect.left;
-            const index = Math.round(chart.scales.x.getValueForPixel(x));
-            if (index < 0 || index >= 18) return;
+        // Position tooltip relative to viewport
+        tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
+        tooltip.style.top = (rect.top + 20) + 'px';
+    });
 
-            // Same as mousemove
-            if (!chart.crosshairLine) {
-                const line = document.createElement('div');
-                line.className = 'crosshair';
-                line.style.position = 'absolute';
-                line.style.left = '0';
-                line.style.top = '0';
-                line.style.bottom = '0';
-                line.style.width = '1px';
-                line.style.background = 'rgba(0,0,0,0.4)';
-                line.style.pointerEvents = 'none';
-                canvas.parentElement.appendChild(line);
-                chart.crosshairLine = line;
-            }
-            chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
-            chart.crosshairLine.style.display = 'block';
+    canvas.addEventListener('mouseout', () => hideCrosshair(chart));
 
-            tooltip.classList.add('active');
-            let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
-            playerNames.forEach(name => {
-                content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
-            });
-            content += `</table>`;
-            tooltip.innerHTML = content;
+    // Touch support (same logic)
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const index = Math.round(chart.scales.x.getValueForValue(x));
+        if (index < 0 || index >= 18) return;
 
-            tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
-            tooltip.style.top = (rect.top + 20) + 'px';
-        }, { passive: false });
+        // Reuse same crosshair logic as mousemove
+        if (!chart.crosshairLine) {
+            const line = document.createElement('div');
+            line.className = 'crosshair';
+            line.style.position = 'absolute';
+            line.style.left = '0';
+            line.style.top = '0';
+            line.style.bottom = '0';
+            line.style.width = '1px';
+            line.style.background = 'rgba(0,0,0,0.4)';
+            line.style.pointerEvents = 'none';
+            line.style.zIndex = '10';
+            parent.appendChild(line);
+            chart.crosshairLine = line;
+        }
+        chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
+        chart.crosshairLine.style.display = 'block';
 
-        canvas.addEventListener('touchend', () => hideCrosshair(chart));
-    }
+        const tooltip = document.getElementById('chart-tooltip');
+        tooltip.classList.add('active');
+        let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
+        playerNames.forEach(name => {
+            content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
+        });
+        content += `</table>`;
+        tooltip.innerHTML = content;
 
-    function hideCrosshair(chart) {
-        if (chart.crosshairLine) chart.crosshairLine.style.display = 'none';
-        document.getElementById('chart-tooltip').classList.remove('active');
-    }
+        tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
+        tooltip.style.top = (rect.top + 20) + 'px';
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => hideCrosshair(chart));
+}
+
+function hideCrosshair(chart) {
+    if (chart.crosshairLine) chart.crosshairLine.style.display = 'none';
+    document.getElementById('chart-tooltip').classList.remove('active');
+}
 
     function getPlayerColor(index) {
         const colors = [
