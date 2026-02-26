@@ -46,21 +46,6 @@
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 0.95em;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        th { background: #f1f3f5; font-weight: 600; }
-        .player-total { font-weight: bold; color: #198754; }
-        .running-cell { white-space: pre-line; font-size: 0.9em; }
-        .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
         .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
         .mini-charts {
             display: flex;
@@ -108,10 +93,12 @@
     </div>
 
     <script>
+        // DEFAULT PARS (Franklin Bridge) — fallback
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
 
+        // CARRY LOGIC
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -197,7 +184,7 @@
                 }
             });
 
-            // Hole breakdowns (unchanged)
+            // Hole breakdowns (kept for data, but table commented out in render)
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
@@ -295,7 +282,7 @@
                 const chartId = `chart-${round.matchId || i}`;
                 const playerNames = Object.keys(comp.runningTotals || {});
 
-                // Global max for all mini charts (same Y-scale for fair comparison)
+                // Global max for mini charts (same Y-scale)
                 let globalMax = 5;
                 ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
                     Object.values(comp[k]||{}).forEach(arr => {
@@ -327,6 +314,8 @@
                         <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
                     </div>
 
+                    <!-- Hole-by-hole table commented out per request -->
+                    <!--
                     <h4>Hole-by-Hole Breakdown</h4>
                     <table>
                         <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Running Totals</th></tr>
@@ -341,10 +330,11 @@
                             </tr>`;
                         }).join('')}
                     </table>
+                    -->
                 `;
                 container.appendChild(card);
 
-                // Main chart: lines + dots
+                // Main chart: full lines
                 createMainChart(chartId, comp.runningTotals, playerNames);
 
                 // Mini charts: dots only, shared Y-scale
@@ -386,11 +376,14 @@
 
             new Chart(ctx, {
                 type: 'line',
-                data: { labels: Array.from({length:18},(_,i)=>`Hole ${i+1}`), datasets },
+                data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true }, x: { title: { display:true, text:'Hole'} } },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
+                        x: { title: { display: true, text: 'Hole' } }
+                    },
                     plugins: { legend: { position:'top' }, tooltip: { mode:'index', intersect:false } }
                 }
             });
@@ -403,7 +396,7 @@
                 data: dataByPlayer[name] || new Array(18).fill(0),
                 borderColor: getPlayerColor(i),
                 backgroundColor: getPlayerColor(i),
-                pointRadius: 4,           // 20% smaller
+                pointRadius: 4,
                 pointHoverRadius: 6,
                 showLine: false,
                 borderWidth: 0
@@ -411,17 +404,16 @@
 
             new Chart(ctx, {
                 type: 'line',
-                data: { labels: Array.from({length:18},(_,i)=>`Hole ${i+1}`), datasets },
+                data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, suggestedMax: yMax },
-                        x: { ticks: { maxTicksLimit: 10 } }
+                        y: { beginAtZero: true, suggestedMax: yMax, title: { display: true, text: title } },
+                        x: { title: { display: true, text: 'Hole' } }
                     },
                     plugins: {
                         legend: { display: false },
-                        title: { display: true, text: title, font: {size:13} },
                         tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} pts` }}
                     }
                 }
