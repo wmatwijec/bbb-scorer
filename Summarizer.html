@@ -136,7 +136,7 @@
             const holeScores = {};
 
             if (!round.players || !Array.isArray(round.players)) return { finalTotals: {}, holeBreakdowns: [], runningTotals: {},
-                cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, roundInfo: round };
+                cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}, roundInfo: round };
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
                 Object.entries(round.scores).forEach(([name, arr]) => {
@@ -150,6 +150,7 @@
 
             const playerTotals = {}, runningTotals = {};
             const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
+            const perHoleFO = {}, perHoleGreenie = {}, perHoleClosest = {}, perHolePutt = {};
 
             round.players.forEach(p => {
                 const name = p.name; if (!name) return;
@@ -159,6 +160,10 @@
                 cumGreenie[name] = new Array(18).fill(0);
                 cumClosest[name] = new Array(18).fill(0);
                 cumPutt[name] = new Array(18).fill(0);
+                perHoleFO[name] = new Array(18).fill(0);
+                perHoleGreenie[name] = new Array(18).fill(0);
+                perHoleClosest[name] = new Array(18).fill(0);
+                perHolePutt[name] = new Array(18).fill(0);
 
                 let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
 
@@ -166,15 +171,29 @@
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
                     const isPar3 = pars[idx] === 3;
-                    let pts = 0;
+                    let pts = 0, foPts = 0, grPts = 0, clPts = 0, puPts = 0;
 
                     if (s.firstOn) {
                         const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
                         pts += 1 + carry;
-                        if (isPar3) gr += 1 + carry; else fo += 1 + carry;
+                        if (isPar3) {
+                            grPts = 1 + carry;
+                            gr += grPts;
+                        } else {
+                            foPts = 1 + carry;
+                            fo += foPts;
+                        }
                     }
-                    if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
-                    if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
+                    if (s.closest) {
+                        clPts = 1 + carryIn.closest;
+                        pts += clPts;
+                        cl += clPts;
+                    }
+                    if (s.putt) {
+                        puPts = 1 + carryIn.putt;
+                        pts += puPts;
+                        pu += puPts;
+                    }
 
                     total += pts;
                     runningTotals[name][idx] = total;
@@ -182,6 +201,10 @@
                     cumGreenie[name][idx] = gr;
                     cumClosest[name][idx] = cl;
                     cumPutt[name][idx] = pu;
+                    perHoleFO[name][idx] = foPts;
+                    perHoleGreenie[name][idx] = grPts;
+                    perHoleClosest[name][idx] = clPts;
+                    perHolePutt[name][idx] = puPts;
                     playerTotals[name] += pts;
                 }
             });
@@ -190,6 +213,7 @@
                 finalTotals: playerTotals,
                 runningTotals,
                 cumFO, cumGreenie, cumClosest, cumPutt,
+                perHoleFO, perHoleGreenie, perHoleClosest, perHolePutt,
                 roundInfo: round
             };
         }
@@ -262,7 +286,7 @@
                     });
                 });
 
-                // === BEER BET LOGIC (exactly as requested) ===
+                // Beer bet logic
                 const sorted = Object.entries(comp.finalTotals)
                     .sort((a,b) => b[1] - a[1])
                     .map(([name, pts]) => ({name, pts}));
@@ -271,26 +295,68 @@
                 let winners = [], buyers = [];
 
                 if (numPlayers >= 3) {
-                    winners = [sorted[0]];
-                    if (sorted[1] && sorted[1].pts === sorted[0].pts) winners.push(sorted[1]);
+                    winners = sorted.slice(0, 2);  // top two
 
-                    if (numPlayers === 3) {
-                        buyers = winners.length === 2 ? [] : [sorted[2]];   // top two tie → bottom off the hook
+                    if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
+                        buyers = [];  // let the bottom guy off the hook
+                    } else if (numPlayers === 3) {
+                        buyers = [sorted[2]];
                     } else {
-                        buyers = sorted.slice(-2);   // bottom two buy
+                        buyers = sorted.slice(-2);  // bottom two
                     }
                 }
+
+                // Category winners
+                const categories = [
+                    {name: 'FO', data: comp.cumFO},
+                    {name: 'Greenies', data: comp.cumGreenie},
+                    {name: 'Closest', data: comp.cumClosest},
+                    {name: 'Putts', data: comp.cumPutt}
+                ];
+
+                const categoryHTML = categories.map(cat => {
+                    const maxPts = Math.max(...playerNames.map(n => cat.data[n][17] || 0));
+                    const winners = playerNames.filter(n => (cat.data[n][17] || 0) === maxPts).join(' & ');
+                    return maxPts > 0 ? `• Most ${cat.name}: ${winners} (${maxPts} pts)` : '';
+                }).filter(h => h).join('<br>');
+
+                // Streaks (using perHole)
+                const streakHTML = categories.map(cat => {
+                    const perHole = comp[`perHole${cat.name.replace('Putts','Putt').replace('Closest','Closest').replace('Greenies','Greenie').replace('FO','FO')}`];
+                    let maxStreak = {sum: 0, length: 0, start: 1, end: 1, player: ''};
+                    let maxDrought = {length: 0, start: 1, end: 1, player: ''};
+
+                    playerNames.forEach(n => {
+                        const streak = getMaxStreak(perHole[n], true);  // positive
+                        if (streak.sum > maxStreak.sum || (streak.sum === maxStreak.sum && streak.length > maxStreak.length)) {
+                            maxStreak = {sum: streak.sum, length: streak.length, start: streak.start, end: streak.end, player: n};
+                        }
+
+                        const drought = getMaxStreak(perHole[n], false);  // negative
+                        if (drought.length > maxDrought.length) {
+                            maxDrought = {length: drought.length, start: drought.start, end: drought.end, player: n};
+                        }
+                    });
+
+                    let html = '';
+                    if (maxStreak.sum > 0) {
+                        html += `• Longest ${cat.name} streak: ${maxStreak.player} (${maxStreak.sum} pts over ${maxStreak.length} holes: ${maxStreak.start}-${maxStreak.end})<br>`;
+                    }
+                    if (maxDrought.length > 0) {
+                        html += `• Longest ${cat.name} drought: ${maxDrought.player} (${maxDrought.length} holes: ${maxDrought.start}-${maxDrought.end})<br>`;
+                    }
+                    return html;
+                }).join('');
 
                 const beerHTML = winners.length ? `
                     <div class="beer-bet">
                         <strong>🍺 Beer Bet Highlights 🍺</strong><br>
                         <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} 🍺`).join(' & ')}<br>
                         <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
-                        <strong>Category Highlights:</strong><br>
-                        • Most FO: ${Object.entries(comp.cumFO).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
-                        • Most Greenies: ${Object.entries(comp.cumGreenie).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
-                        • Most Closest: ${Object.entries(comp.cumClosest).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
-                        • Most Putts: ${Object.entries(comp.cumPutt).sort((a,b)=>b[1][17]-a[1][17])[0][0]}
+                        <strong>Category Winners:</strong><br>
+                        ${categoryHTML}<br><br>
+                        <strong>Streaks & Droughts:</strong><br>
+                        ${streakHTML}
                     </div>` : '';
 
                 const card = document.createElement('div');
@@ -342,6 +408,29 @@
             document.getElementById('results').style.display = 'block';
         }
 
+        function getMaxStreak(perHole, isPositive = true) {
+            let maxLength = 0, currentLength = 0, maxSum = 0, currentSum = 0, maxStart = 1, maxEnd = 1, start = 1;
+            for (let i = 0; i < 18; i++) {
+                const val = perHole[i];
+                if (isPositive ? val > 0 : val === 0) {
+                    currentLength++;
+                    if (isPositive) currentSum += val;
+                    const updateVal = isPositive ? currentSum : currentLength;
+                    if (updateVal > (isPositive ? maxSum : maxLength)) {
+                        if (isPositive) maxSum = updateVal;
+                        else maxLength = updateVal;
+                        maxStart = start;
+                        maxEnd = i + 1;
+                    }
+                } else {
+                    currentLength = 0;
+                    currentSum = 0;
+                    start = i + 2;
+                }
+            }
+            return isPositive ? {sum: maxSum, length: maxLength, start: maxStart, end: maxEnd} : {length: maxLength, start: maxStart, end: maxEnd};
+        }
+
         function createMainChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             const datasets = playerNames.map((name, i) => ({
@@ -377,12 +466,13 @@
             const datasets = playerNames.map((name, i) => ({
                 label: name,
                 data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i) + '88',   // fainter
+                borderColor: getPlayerColor(i) + '88',  // fainter
                 backgroundColor: getPlayerColor(i),
-                pointRadius: 3,          // 20% smaller
+                pointRadius: 3,  // 20% smaller
                 pointHoverRadius: 5,
+                tension: 0.1,
+                borderWidth: 1,  // half thickness
                 showLine: true,
-                borderWidth: 1,          // half thickness, fainter
                 fill: false
             }));
 
@@ -398,7 +488,7 @@
                     },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} pts` }}
+                        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} pts` } }
                     }
                 }
             });
