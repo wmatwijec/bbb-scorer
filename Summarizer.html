@@ -131,401 +131,424 @@
     <div id="chart-tooltip" class="chartjs-tooltip"></div>
 
     <script>
-        const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
+    const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
-        let currentDate = '';
-        let activeChart = null;
-        let lastHoveredIndex = -1;
+    let currentDate = '';
 
-        function getCarryInForHole(holeScores, pars, holeNumber) {
-            const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-            for (let h = 1; h < holeNumber; h++) {
-                const idx = h - 1;
-                if (!holeScores[idx]) continue;
-                const par = pars[idx] || 4;
-                const isPar3 = par === 3;
-                const scores = holeScores[idx];
+    function getCarryInForHole(holeScores, pars, holeNumber) {
+        const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+        for (let h = 1; h < holeNumber; h++) {
+            const idx = h - 1;
+            if (!holeScores[idx]) continue;
+            const par = pars[idx] || 4;
+            const isPar3 = par === 3;
+            const scores = holeScores[idx];
 
-                if (isPar3) {
-                    if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
-                    else carry.greenie++;
-                } else {
-                    if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
-                    else carry.firstOn++;
-                }
-
-                if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
-                else carry.closest++;
-
-                if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
-                else carry.putt++;
+            if (isPar3) {
+                if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                else carry.greenie++;
+            } else {
+                if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                else carry.firstOn++;
             }
-            return carry;
+
+            if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+            else carry.closest++;
+
+            if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+            else carry.putt++;
+        }
+        return carry;
+    }
+
+    function computeAllForRound(round) {
+        const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
+            ? round.pars : DEFAULT_PARS;
+
+        const holeScores = {};
+
+        if (!round.players || !Array.isArray(round.players)) {
+            return { finalTotals: {}, runningTotals: {},
+                     cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
+                     roundInfo: round };
         }
 
-        function computeAllForRound(round) {
-            const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
-                ? round.pars : DEFAULT_PARS;
+        if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
+            Object.entries(round.scores).forEach(([name, arr]) => {
+                if (!Array.isArray(arr) || arr.length !== 18) return;
+                arr.forEach((s, idx) => {
+                    if (!holeScores[idx]) holeScores[idx] = {};
+                    holeScores[idx][name] = s || {};
+                });
+            });
+        }
 
-            const holeScores = {};
+        const playerTotals = {}, runningTotals = {};
+        const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
 
-            if (!round.players || !Array.isArray(round.players)) {
-                return { finalTotals: {}, runningTotals: {},
-                         cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
-                         roundInfo: round };
+        round.players.forEach(p => {
+            const name = p.name; if (!name) return;
+            playerTotals[name] = 0;
+            runningTotals[name] = new Array(18).fill(0);
+            cumFO[name] = new Array(18).fill(0);
+            cumGreenie[name] = new Array(18).fill(0);
+            cumClosest[name] = new Array(18).fill(0);
+            cumPutt[name] = new Array(18).fill(0);
+
+            let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
+
+            for (let idx = 0; idx < 18; idx++) {
+                const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
+                const s = holeScores[idx]?.[name] || {};
+                const isPar3 = pars[idx] === 3;
+                let pts = 0;
+
+                if (s.firstOn) {
+                    const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
+                    pts += 1 + carry;
+                    if (isPar3) gr += 1 + carry; else fo += 1 + carry;
+                }
+                if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
+                if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
+
+                total += pts;
+                runningTotals[name][idx] = total;
+                cumFO[name][idx] = fo;
+                cumGreenie[name][idx] = gr;
+                cumClosest[name][idx] = cl;
+                cumPutt[name][idx] = pu;
+                playerTotals[name] += pts;
             }
+        });
 
-            if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
-                Object.entries(round.scores).forEach(([name, arr]) => {
-                    if (!Array.isArray(arr) || arr.length !== 18) return;
-                    arr.forEach((s, idx) => {
-                        if (!holeScores[idx]) holeScores[idx] = {};
-                        holeScores[idx][name] = s || {};
-                    });
+        return {
+            finalTotals: playerTotals,
+            runningTotals,
+            cumFO, cumGreenie, cumClosest, cumPutt,
+            roundInfo: round
+        };
+    }
+
+    async function fetchAndProcessRounds() {
+        document.getElementById('status').textContent = 'Loading rounds...';
+        document.getElementById('results').style.display = 'none';
+
+        let date = document.getElementById('dateInput').value.trim();
+        if (!date) {
+            const today = new Date();
+            date = today.getFullYear() + '-' +
+                   String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(today.getDate()).padStart(2, '0');
+        }
+
+        currentDate = date;
+
+        const bypassFilter = document.getElementById('bypassFilter').checked;
+
+        try {
+            const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
+
+            const data = await res.json();
+            let rounds = data.rounds || [];
+
+            if (!bypassFilter) {
+                const cutoffDate = new Date('2026-01-07T00:00:00Z');
+
+                rounds = rounds.filter(round => {
+                    const hasFullScores = round.scores && 
+                        Object.values(round.scores).every(playerArray => 
+                            Array.isArray(playerArray) && playerArray.length === 18 &&
+                            playerArray.every(s => s !== null && typeof s === 'object')
+                        );
+
+                    const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
+
+                    if (!finishedOk && !hasFullScores) return false;
+
+                    const roundDate = new Date(round.date);
+                    if (roundDate < cutoffDate) return false;
+
+                    const totalPoints = Object.values(round._cachedTotals || {})
+                        .reduce((sum, score) => sum + (score || 0), 0);
+                    if (totalPoints < 40) return false;
+
+                    return true;
                 });
             }
 
-            const playerTotals = {}, runningTotals = {};
-            const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
-
-            round.players.forEach(p => {
-                const name = p.name; if (!name) return;
-                playerTotals[name] = 0;
-                runningTotals[name] = new Array(18).fill(0);
-                cumFO[name] = new Array(18).fill(0);
-                cumGreenie[name] = new Array(18).fill(0);
-                cumClosest[name] = new Array(18).fill(0);
-                cumPutt[name] = new Array(18).fill(0);
-
-                let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
-
-                for (let idx = 0; idx < 18; idx++) {
-                    const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
-                    const s = holeScores[idx]?.[name] || {};
-                    const isPar3 = pars[idx] === 3;
-                    let pts = 0;
-
-                    if (s.firstOn) {
-                        const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
-                        pts += 1 + carry;
-                        if (isPar3) gr += 1 + carry; else fo += 1 + carry;
-                    }
-                    if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
-                    if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
-
-                    total += pts;
-                    runningTotals[name][idx] = total;
-                    cumFO[name][idx] = fo;
-                    cumGreenie[name][idx] = gr;
-                    cumClosest[name][idx] = cl;
-                    cumPutt[name][idx] = pu;
-                    playerTotals[name] += pts;
-                }
-            });
-
-            return {
-                finalTotals: playerTotals,
-                runningTotals,
-                cumFO, cumGreenie, cumClosest, cumPutt,
-                roundInfo: round
-            };
-        }
-
-        async function fetchAndProcessRounds() {
-            document.getElementById('status').textContent = 'Loading rounds...';
-            document.getElementById('results').style.display = 'none';
-
-            let date = document.getElementById('dateInput').value.trim();
-            if (!date) {
-                const today = new Date();
-                date = today.getFullYear() + '-' +
-                       String(today.getMonth() + 1).padStart(2, '0') + '-' +
-                       String(today.getDate()).padStart(2, '0');
-            }
-
-            currentDate = date;
-
-            const bypassFilter = document.getElementById('bypassFilter').checked;
-
-            try {
-                const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
-                const res = await fetch(url);
-                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
-
-                const data = await res.json();
-                let rounds = data.rounds || [];
-
-                if (!bypassFilter) {
-                    const cutoffDate = new Date('2026-01-07T00:00:00Z');
-
-                    rounds = rounds.filter(round => {
-                        const hasFullScores = round.scores && 
-                            Object.values(round.scores).every(playerArray => 
-                                Array.isArray(playerArray) && playerArray.length === 18 &&
-                                playerArray.every(s => s !== null && typeof s === 'object')
-                            );
-
-                        const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
-
-                        if (!finishedOk && !hasFullScores) return false;
-
-                        const roundDate = new Date(round.date);
-                        if (roundDate < cutoffDate) return false;
-
-                        const totalPoints = Object.values(round._cachedTotals || {})
-                            .reduce((sum, score) => sum + (score || 0), 0);
-                        if (totalPoints < 40) return false;
-
-                        return true;
-                    });
-                }
-
-                if (rounds.length === 0) {
-                    document.getElementById('status').textContent = 
-                        bypassFilter 
-                            ? `No rounds found for ${date}.` 
-                            : `No valid rounds found for ${date} after cleanup. Try "Show all rounds".`;
-                    return;
-                }
-
+            if (rounds.length === 0) {
                 document.getElementById('status').textContent = 
                     bypassFilter 
-                        ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (filter bypassed).` 
-                        : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
-
-                window.currentRoundsData = rounds;
-                window.currentComputed = rounds.map(r => computeAllForRound(r));
-
-                renderResults(rounds);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').textContent = `Error: ${err.message}`;
+                        ? `No rounds found for ${date}.` 
+                        : `No valid rounds found for ${date} after cleanup. Try "Show all rounds".`;
+                return;
             }
+
+            document.getElementById('status').textContent = 
+                bypassFilter 
+                    ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (filter bypassed).` 
+                    : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
+
+            window.currentRoundsData = rounds;
+            window.currentComputed = rounds.map(r => computeAllForRound(r));
+
+            renderResults(rounds);
+        } catch (err) {
+            console.error(err);
+            document.getElementById('status').textContent = `Error: ${err.message}`;
         }
+    }
 
-        function renderResults(rounds) {
-            const container = document.getElementById('roundsContainer');
-            container.innerHTML = '';
+    function renderResults(rounds) {
+        const container = document.getElementById('roundsContainer');
+        container.innerHTML = '';
 
-            let allTotals = {};
+        let allTotals = {};
 
-            rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i] || {
-                    finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
-                };
+        rounds.forEach((round, i) => {
+            const comp = window.currentComputed[i] || {
+                finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
+            };
 
-                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
-                    allTotals[name] = (allTotals[name] || 0) + (pts || 0);
-                });
+            Object.entries(comp.finalTotals).forEach(([name, pts]) => {
+                allTotals[name] = (allTotals[name] || 0) + (pts || 0);
+            });
 
-                const chartId = `chart-${round.matchId || i}`;
-                const playerNames = Object.keys(comp.runningTotals || {});
+            const chartId = `chart-${round.matchId || i}`;
+            const playerNames = Object.keys(comp.runningTotals || {});
 
-                let globalMax = 5;
-                ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
-                    Object.values(comp[k]||{}).forEach(arr => {
-                        if (arr) globalMax = Math.max(globalMax, ...arr);
-                    });
-                });
-
-                const card = document.createElement('div');
-                card.className = 'round-card';
-                card.innerHTML = `
-                    <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
-
-                    <div class="carry-in">
-                        <strong>Final Standings:</strong><br>
-                        ${Object.entries(comp.finalTotals)
-                            .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
-                    </div>
-
-                    <h4>Cumulative Points Progress (All Categories)</h4>
-                    <div style="height: 300px; margin-bottom: 25px; position: relative;">
-                        <canvas id="${chartId}"></canvas>
-                    </div>
-
-                    <div class="mini-charts">
-                        <div class="mini-chart-container"><canvas id="mini-fo-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-gr-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
-                    </div>
-                `;
-                container.appendChild(card);
-
-                // Create charts
-                const mainChart = createMainChart(chartId, comp.runningTotals, playerNames);
-                const miniFO = createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
-                const miniGR = createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
-                const miniCL = createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
-                const miniP  = createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt', globalMax);
-
-                const allCharts = [mainChart, miniFO, miniGR, miniCL, miniP];
-
-                allCharts.forEach(chart => {
-                    chart.canvas.addEventListener('mousemove', e => syncCrosshair(e, chart, allCharts, comp, playerNames));
-                    chart.canvas.addEventListener('mouseout', hideCrosshair);
-                    chart.canvas.addEventListener('touchmove', e => {
-                        e.preventDefault();
-                        syncCrosshair(e.touches[0], chart, allCharts, comp, playerNames);
-                    }, { passive: false });
-                    chart.canvas.addEventListener('touchend', hideCrosshair);
+            let globalMax = 5;
+            ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
+                Object.values(comp[k]||{}).forEach(arr => {
+                    if (arr) globalMax = Math.max(globalMax, ...arr);
                 });
             });
 
-            const overall = document.createElement('div');
-            overall.className = 'round-card';
-            overall.innerHTML = `
-                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
-                <table>
-                    <tr><th>Player</th><th>Total Points</th></tr>
-                    ${Object.entries(allTotals)
+            const card = document.createElement('div');
+            card.className = 'round-card';
+            card.innerHTML = `
+                <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
+                <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
+
+                <div class="carry-in">
+                    <strong>Final Standings:</strong><br>
+                    ${Object.entries(comp.finalTotals)
                         .sort((a,b) => b[1] - a[1])
-                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
-                </table>
+                        .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
+                </div>
+
+                <h4>Cumulative Points Progress (All Categories)</h4>
+                <div style="height: 300px; margin-bottom: 25px; position: relative;">
+                    <canvas id="${chartId}"></canvas>
+                </div>
+
+                <div class="mini-charts">
+                    <div class="mini-chart-container"><canvas id="mini-fo-${chartId}"></canvas></div>
+                    <div class="mini-chart-container"><canvas id="mini-gr-${chartId}"></canvas></div>
+                    <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
+                    <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
+                </div>
             `;
-            container.appendChild(overall);
+            container.appendChild(card);
 
-            document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
-            document.getElementById('results').style.display = 'block';
-        }
+            // Create charts
+            createMainChart(chartId, comp.runningTotals, playerNames);
+            createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
+            createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
+            createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
+            createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt', globalMax);
+        });
 
-        function createMainChart(canvasId, runningTotals, playerNames) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            const datasets = playerNames.map((name, i) => ({
-                label: name,
-                data: runningTotals[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i),
-                backgroundColor: getPlayerColor(i) + '33',
-                tension: 0.1,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                borderWidth: 2,
-                showLine: true,
-                fill: false
-            }));
+        const overall = document.createElement('div');
+        overall.className = 'round-card';
+        overall.innerHTML = `
+            <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
+            <table>
+                <tr><th>Player</th><th>Total Points</th></tr>
+                ${Object.entries(allTotals)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
+            </table>
+        `;
+        container.appendChild(overall);
 
-            return new Chart(ctx, {
-                type: 'line',
-                data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
-                        x: { title: { display: true, text: 'Hole' } }
-                    },
-                    plugins: { legend: { position:'top' } },
-                    interaction: { mode: 'index', intersect: false }
-                }
-            });
-        }
+        document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
+        document.getElementById('results').style.display = 'block';
+    }
 
-        function createDotChart(canvasId, dataByPlayer, playerNames, title, yMax) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            const datasets = playerNames.map((name, i) => ({
-                label: name,
-                data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i) + '88',
-                backgroundColor: getPlayerColor(i),
-                pointRadius: 3,
-                pointHoverRadius: 5,
-                tension: 0.1,
-                borderWidth: 1,
-                showLine: true,
-                fill: false
-            }));
+    function createMainChart(canvasId, runningTotals, playerNames) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const datasets = playerNames.map((name, i) => ({
+            label: name,
+            data: runningTotals[name] || new Array(18).fill(0),
+            borderColor: getPlayerColor(i),
+            backgroundColor: getPlayerColor(i) + '33',
+            tension: 0.1,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            borderWidth: 2,
+            showLine: true,
+            fill: false
+        }));
 
-            return new Chart(ctx, {
-                type: 'line',
-                data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, suggestedMax: yMax, title: { display: true, text: title } },
-                        x: { title: { display: true, text: 'Hole' } }
-                    },
-                    plugins: { legend: { display: false } },
-                    interaction: { mode: 'index', intersect: false }
-                }
-            });
-        }
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
+                    x: { title: { display: true, text: 'Hole' } }
+                },
+                plugins: { legend: { position:'top' } },
+                interaction: { mode: 'index', intersect: false }
+            }
+        });
 
-        function syncCrosshair(e, sourceChart, allCharts, comp, playerNames) {
-            const rect = sourceChart.canvas.getBoundingClientRect();
+        addCrosshair(chart, playerNames, runningTotals, 'Total');
+        return chart;
+    }
+
+    function createDotChart(canvasId, dataByPlayer, playerNames, title, yMax) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        const datasets = playerNames.map((name, i) => ({
+            label: name,
+            data: dataByPlayer[name] || new Array(18).fill(0),
+            borderColor: getPlayerColor(i) + '88',
+            backgroundColor: getPlayerColor(i),
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.1,
+            borderWidth: 1,
+            showLine: true,
+            fill: false
+        }));
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, suggestedMax: yMax, title: { display: true, text: title } },
+                    x: { title: { display: true, text: 'Hole' } }
+                },
+                plugins: { legend: { display: false } },
+                interaction: { mode: 'index', intersect: false }
+            }
+        });
+
+        addCrosshair(chart, playerNames, dataByPlayer, title);
+        return chart;
+    }
+
+    function addCrosshair(chart, playerNames, dataByPlayer, title) {
+        const canvas = chart.canvas;
+        const tooltip = document.getElementById('chart-tooltip');
+
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
-            const nearestIndex = Math.round(sourceChart.scales.x.getValueForPixel(x));
-            if (nearestIndex < 0 || nearestIndex >= 18) return hideCrosshair();
+            const index = Math.round(chart.scales.x.getValueForPixel(x));
+            if (index < 0 || index >= 18) return hideCrosshair(chart);
 
-            // Move crosshair on all charts
-            allCharts.forEach(chart => {
-                if (!chart.crosshairLine) {
-                    const line = document.createElement('div');
-                    line.className = 'crosshair';
-                    line.style.position = 'absolute';
-                    line.style.left = '0';
-                    line.style.top = '0';
-                    line.style.bottom = '0';
-                    line.style.width = '1px';
-                    line.style.background = 'rgba(0,0,0,0.4)';
-                    line.style.pointerEvents = 'none';
-                    chart.canvas.parentElement.appendChild(line);
-                    chart.crosshairLine = line;
-                }
-                chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(nearestIndex) + 'px';
-                chart.crosshairLine.style.display = 'block';
-            });
+            // Move crosshair
+            if (!chart.crosshairLine) {
+                const line = document.createElement('div');
+                line.className = 'crosshair';
+                line.style.position = 'absolute';
+                line.style.left = '0';
+                line.style.top = '0';
+                line.style.bottom = '0';
+                line.style.width = '1px';
+                line.style.background = 'rgba(0,0,0,0.4)';
+                line.style.pointerEvents = 'none';
+                canvas.parentElement.appendChild(line);
+                chart.crosshairLine = line;
+            }
+            chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
+            chart.crosshairLine.style.display = 'block';
 
-            // Update shared tooltip
-            const tooltip = document.getElementById('chart-tooltip');
+            // Update tooltip
             tooltip.classList.add('active');
-
-            let content = `<div class="title">Hole ${nearestIndex + 1}</div><table>`;
+            let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
             playerNames.forEach(name => {
-                content += `<tr>
-                    <td><strong>${name}</strong></td>
-                    <td>Total: ${comp.runningTotals[name]?.[nearestIndex] || 0}</td>
-                    <td>FO: ${comp.cumFO[name]?.[nearestIndex] || 0}</td>
-                    <td>Greenie: ${comp.cumGreenie[name]?.[nearestIndex] || 0}</td>
-                    <td>Closest: ${comp.cumClosest[name]?.[nearestIndex] || 0}</td>
-                    <td>Putt: ${comp.cumPutt[name]?.[nearestIndex] || 0}</td>
-                </tr>`;
+                content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
             });
             content += `</table>`;
-
             tooltip.innerHTML = content;
 
-            // Position tooltip
-            const chartRect = sourceChart.canvas.getBoundingClientRect();
-            tooltip.style.left = (chartRect.left + chart.scales.x.getPixelForValue(nearestIndex) + 20) + 'px';
-            tooltip.style.top = (chartRect.top + 20) + 'px';
-        }
+            tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
+            tooltip.style.top = (rect.top + 20) + 'px';
+        });
 
-        function hideCrosshair() {
-            document.querySelectorAll('.crosshair').forEach(el => el.style.display = 'none');
-            document.getElementById('chart-tooltip').classList.remove('active');
-        }
+        canvas.addEventListener('mouseout', () => hideCrosshair(chart));
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const index = Math.round(chart.scales.x.getValueForPixel(x));
+            if (index < 0 || index >= 18) return;
 
-        function getPlayerColor(index) {
-            const colors = [
-                '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
-                '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
-            ];
-            return colors[index % colors.length];
-        }
+            // Same as mousemove
+            if (!chart.crosshairLine) {
+                const line = document.createElement('div');
+                line.className = 'crosshair';
+                line.style.position = 'absolute';
+                line.style.left = '0';
+                line.style.top = '0';
+                line.style.bottom = '0';
+                line.style.width = '1px';
+                line.style.background = 'rgba(0,0,0,0.4)';
+                line.style.pointerEvents = 'none';
+                canvas.parentElement.appendChild(line);
+                chart.crosshairLine = line;
+            }
+            chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(index) + 'px';
+            chart.crosshairLine.style.display = 'block';
 
-        function clearAll() {
-            document.getElementById('dateInput').value = '';
-            document.getElementById('bypassFilter').checked = false;
-            document.getElementById('results').style.display = 'none';
-            document.getElementById('status').textContent = '';
-            currentDate = '';
-            window.currentRoundsData = null;
-            window.currentComputed = null;
-        }
-    </script>
+            tooltip.classList.add('active');
+            let content = `<div class="title">${title} - Hole ${index + 1}</div><table>`;
+            playerNames.forEach(name => {
+                content += `<tr><td><strong>${name}</strong></td><td>${dataByPlayer[name]?.[index] || 0} pts</td></tr>`;
+            });
+            content += `</table>`;
+            tooltip.innerHTML = content;
+
+            tooltip.style.left = (rect.left + chart.scales.x.getPixelForValue(index) + 20) + 'px';
+            tooltip.style.top = (rect.top + 20) + 'px';
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => hideCrosshair(chart));
+    }
+
+    function hideCrosshair(chart) {
+        if (chart.crosshairLine) chart.crosshairLine.style.display = 'none';
+        document.getElementById('chart-tooltip').classList.remove('active');
+    }
+
+    function getPlayerColor(index) {
+        const colors = [
+            '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
+            '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
+        ];
+        return colors[index % colors.length];
+    }
+
+    function clearAll() {
+        document.getElementById('dateInput').value = '';
+        document.getElementById('bypassFilter').checked = false;
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('status').textContent = '';
+        currentDate = '';
+        window.currentRoundsData = null;
+        window.currentComputed = null;
+    }
+</script>
 </body>
 </html>
