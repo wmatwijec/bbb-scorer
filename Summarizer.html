@@ -24,9 +24,7 @@
             margin-bottom: 30px;
             text-align: center;
         }
-        input[type="date"], input[type="checkbox"] {
-            margin: 10px 0;
-        }
+        input[type="date"], input[type="checkbox"] { margin: 10px 0; }
         button {
             background: #0d6efd;
             color: white;
@@ -45,6 +43,14 @@
             padding: 20px;
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .beer-bet {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 1.05em;
         }
         .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
         .mini-charts {
@@ -88,17 +94,15 @@
         <div id="status" class="status"></div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Cumulative progress by category
+            BBB Summarizer • Cumulative progress by category • Beer Bet Highlights
         </div>
     </div>
 
     <script>
-        // DEFAULT PARS (Franklin Bridge) — fallback
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
 
-        // CARRY LOGIC
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -184,7 +188,6 @@
                 }
             });
 
-            // Hole breakdowns (kept for data, but table commented out in render)
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
@@ -243,9 +246,7 @@
                         const fullScores = r.scores && Object.values(r.scores).every(a => Array.isArray(a) && a.length===18 && a.every(s=>s!=null));
                         const finishedOk = r.finishedHoles && r.finishedHoles.length === 18;
                         if (!finishedOk && !fullScores) return false;
-
                         if (new Date(r.date) < cutoff) return false;
-
                         const total = Object.values(r._cachedTotals || {}).reduce((a,b)=>a+(b||0),0);
                         return total >= 40;
                     });
@@ -282,7 +283,6 @@
                 const chartId = `chart-${round.matchId || i}`;
                 const playerNames = Object.keys(comp.runningTotals || {});
 
-                // Global max for mini charts (same Y-scale)
                 let globalMax = 5;
                 ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
                     Object.values(comp[k]||{}).forEach(arr => {
@@ -290,17 +290,57 @@
                     });
                 });
 
+                // === BEER BET LOGIC ===
+                const sorted = Object.entries(comp.finalTotals)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([name, pts]) => ({name, pts}));
+
+                const numPlayers = sorted.length;
+                let winners = [], buyers = [];
+
+                if (numPlayers >= 3) {
+                    winners = [sorted[0]];
+                    if (sorted.length > 1 && sorted[1].pts === sorted[0].pts) {
+                        winners.push(sorted[1]);           // top two tied
+                    } else if (sorted.length > 1) {
+                        winners.push(sorted[1]);
+                    }
+
+                    if (numPlayers === 3) {
+                        buyers = winners.length === 2 ? [] : [sorted[2]];   // top two tie → bottom free
+                    } else {
+                        buyers = [sorted[sorted.length-2], sorted[sorted.length-1]]; // bottom two
+                        if (sorted[sorted.length-2].pts === sorted[sorted.length-1].pts && numPlayers === 4) {
+                            // middle two tie → still bottom buys
+                        }
+                    }
+                }
+
+                const beerHTML = winners.length ? `
+                    <div class="beer-bet">
+                        <strong>🍺 Beer Bet Highlights 🍺</strong><br>
+                        <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} 🍺`).join(' & ')}<br>
+                        <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (tie!)'}<br><br>
+                        <strong>Category Kings:</strong><br>
+                        • Most FO: ${Object.entries(comp.cumFO).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
+                        • Most Greenies: ${Object.entries(comp.cumGreenie).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
+                        • Most Closest: ${Object.entries(comp.cumClosest).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
+                        • Most Putts: ${Object.entries(comp.cumPutt).sort((a,b)=>b[1][17]-a[1][17])[0][0]}
+                    </div>` : '';
+
                 const card = document.createElement('div');
                 card.className = 'round-card';
                 card.innerHTML = `
                     <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
+                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${numPlayers} players</p>
 
                     <div class="carry-in">
                         <strong>Final Standings:</strong><br>
                         ${Object.entries(comp.finalTotals).sort((a,b)=>b[1]-a[1])
                             .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>')}
                     </div>
+
+                    ${beerHTML}
 
                     <h4>Cumulative Points Progress (All Categories)</h4>
                     <div style="height: 300px; margin-bottom: 25px;">
@@ -313,31 +353,10 @@
                         <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
                         <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
                     </div>
-
-                    <!-- Hole-by-hole table commented out per request -->
-                    <!--
-                    <h4>Hole-by-Hole Breakdown</h4>
-                    <table>
-                        <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Running Totals</th></tr>
-                        ${comp.holeBreakdowns.map(hb => {
-                            const runStr = Object.entries(comp.runningTotals)
-                                .map(([n,c]) => `${n}: ${c[hb.hole-1]||0}`).sort().join(' | ');
-                            return `<tr>
-                                <td><strong>${hb.hole}</strong></td>
-                                <td>${formatCarryIn(hb.carryIn)}</td>
-                                <td>${hb.winners.map(w=>`${w.name} (${w.detail})`).join('<br>')||'—'}</td>
-                                <td class="running-cell">${runStr}</td>
-                            </tr>`;
-                        }).join('')}
-                    </table>
-                    -->
                 `;
                 container.appendChild(card);
 
-                // Main chart: full lines
                 createMainChart(chartId, comp.runningTotals, playerNames);
-
-                // Mini charts: dots only, shared Y-scale
                 createDotChart(`mini-fo-${chartId}`, comp.cumFO,      playerNames, 'Cumulative FO',      globalMax);
                 createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
                 createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
@@ -359,6 +378,7 @@
             document.getElementById('results').style.display = 'block';
         }
 
+        // Chart functions (unchanged from previous version)
         function createMainChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             const datasets = playerNames.map((name, i) => ({
