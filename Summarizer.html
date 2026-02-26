@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BBB Daily Summaries</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -14,7 +15,7 @@
             line-height: 1.6;
         }
         .container { max-width: 1000px; margin: 0 auto; }
-        h1, h2 { color: #0d6efd; }
+        h1, h2, h3, h4 { color: #0d6efd; }
         .input-area {
             background: white;
             padding: 20px;
@@ -23,14 +24,8 @@
             margin-bottom: 30px;
             text-align: center;
         }
-        input[type="date"] {
-            width: 100%;
-            max-width: 300px;
-            padding: 12px;
-            margin: 15px 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
+        input[type="date"], input[type="checkbox"] {
+            margin: 10px 0;
         }
         button {
             background: #0d6efd;
@@ -78,17 +73,16 @@
             <label for="dateInput"><strong>Select Date (YYYY-MM-DD) — blank = today:</strong></label><br>
             <input type="date" id="dateInput">
 
-        <div style="margin: 15px 0; text-align: left;">
-            <input type="checkbox" id="bypassFilter">
-            <label for="bypassFilter">Show all rounds (including incomplete/test)</label>
-        </div>
+            <div style="margin: 15px 0; text-align: left;">
+                <input type="checkbox" id="bypassFilter">
+                <label for="bypassFilter">Show all rounds (including incomplete/test)</label>
+            </div>
 
-        <div style="margin-top: 25px;">
-            <button onclick="fetchAndProcessRounds()">Load & Summarize Rounds</button>
-            <button onclick="clearAll()" style="background:#6c757d;">Clear</button>
+            <div style="margin-top: 25px;">
+                <button onclick="fetchAndProcessRounds()">Load & Summarize Rounds</button>
+                <button onclick="clearAll()" style="background:#6c757d;">Clear</button>
+            </div>
         </div>
-    </div>
-        
 
         <div id="results" class="results">
             <h2 id="summaryTitle">Rounds</h2>
@@ -103,297 +97,347 @@
     </div>
 
     <script>
-    // === DEFAULT PARS (Franklin Bridge) — fallback ===
-    const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
+        // === DEFAULT PARS (Franklin Bridge) — fallback ===
+        const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
-    let currentDate = '';
+        let currentDate = '';
 
-    // === CARRY LOGIC === (unchanged)
-    function getCarryInForHole(holeScores, pars, holeNumber) {
-        const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-        for (let h = 1; h < holeNumber; h++) {
-            const idx = h - 1;
-            if (!holeScores[idx]) continue;
-            const par = pars[idx] || 4;
-            const isPar3 = par === 3;
-            const scores = holeScores[idx];
+        // === CARRY LOGIC ===
+        function getCarryInForHole(holeScores, pars, holeNumber) {
+            const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+            for (let h = 1; h < holeNumber; h++) {
+                const idx = h - 1;
+                if (!holeScores[idx]) continue;
+                const par = pars[idx] || 4;
+                const isPar3 = par === 3;
+                const scores = holeScores[idx];
 
-            if (isPar3) {
-                if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
-                else carry.greenie++;
-            } else {
-                if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
-                else carry.firstOn++;
+                if (isPar3) {
+                    if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                    else carry.greenie++;
+                } else {
+                    if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                    else carry.firstOn++;
+                }
+
+                if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+                else carry.closest++;
+
+                if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+                else carry.putt++;
+            }
+            return carry;
+        }
+
+        function computeAllForRound(round) {
+            const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
+                ? round.pars 
+                : DEFAULT_PARS;
+
+            const holeScores = {};
+
+            if (!round.players || !Array.isArray(round.players)) {
+                console.warn(`Round ${round.matchId || '?'} missing players array`);
+                return { finalTotals: {}, holeBreakdowns: [], runningTotals: {}, roundInfo: round };
             }
 
-            if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
-            else carry.closest++;
+            if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
+                Object.entries(round.scores).forEach(([playerName, playerHoleArray]) => {
+                    if (!Array.isArray(playerHoleArray) || playerHoleArray.length !== 18) {
+                        console.warn(`Invalid scores for ${playerName} in ${round.matchId}`);
+                        return;
+                    }
 
-            if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
-            else carry.putt++;
+                    playerHoleArray.forEach((scoreObj, idx) => {
+                        if (!holeScores[idx]) holeScores[idx] = {};
+                        holeScores[idx][playerName] = scoreObj || {};
+                    });
+                });
+            }
+
+            const playerTotals = {};
+            const runningTotals = {};
+            round.players.forEach(p => {
+                const name = p.name;
+                if (!name) return;
+
+                playerTotals[name] = 0;
+                runningTotals[name] = new Array(18).fill(0);
+                let cumulative = 0;
+
+                for (let idx = 0; idx < 18; idx++) {
+                    const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
+                    const s = holeScores[idx]?.[name] || {};
+                    let pts = 0;
+
+                    if (s.firstOn) pts += 1 + (pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn);
+                    if (s.closest) pts += 1 + carryIn.closest;
+                    if (s.putt)   pts += 1 + carryIn.putt;
+
+                    cumulative += pts;
+                    runningTotals[name][idx] = cumulative;
+                    playerTotals[name] += pts;
+                }
+            });
+
+            const holeBreakdowns = [];
+            for (let h = 1; h <= 18; h++) {
+                const idx = h - 1;
+                const carryIn = getCarryInForHole(holeScores, pars, h);
+                const winners = [];
+
+                Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
+                    if (!s.firstOn && !s.closest && !s.putt) return;
+                    let detailParts = [];
+
+                    if (s.firstOn) {
+                        const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
+                        detailParts.push(`${1 + carry}${pars[idx] === 3 ? 'GR' : 'FO'}`);
+                    }
+                    if (s.closest) detailParts.push(`${1 + carryIn.closest}CL`);
+                    if (s.putt) detailParts.push(`${1 + carryIn.putt}P`);
+
+                    const detail = detailParts.join(', ');
+                    const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0] || 0), 0);
+
+                    winners.push({name, pts, detail});
+                });
+
+                holeBreakdowns.push({
+                    hole: h,
+                    carryIn,
+                    winners,
+                    runningTotals
+                });
+            }
+
+            return {
+                finalTotals: playerTotals,
+                holeBreakdowns,
+                runningTotals,
+                roundInfo: round
+            };
         }
-        return carry;
-    }
 
-    function computeAllForRound(round) {
-        const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
-            ? round.pars 
-            : DEFAULT_PARS;
-
-        const holeScores = {};
-
-        if (!round.players || !Array.isArray(round.players)) {
-            console.warn(`Round ${round.matchId || '?'} missing players array`);
-            return { finalTotals: {}, holeBreakdowns: [], runningTotals: {}, roundInfo: round };
+        function formatCarryIn(carry) {
+            const parts = [];
+            if (carry.firstOn) parts.push(`FO:${carry.firstOn}`);
+            if (carry.greenie) parts.push(`GR:${carry.greenie}`);
+            if (carry.closest) parts.push(`CL:${carry.closest}`);
+            if (carry.putt) parts.push(`P:${carry.putt}`);
+            return parts.length ? parts.join(' ') : '0';
         }
 
-        if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
-            Object.entries(round.scores).forEach(([playerName, playerHoleArray]) => {
-                if (!Array.isArray(playerHoleArray) || playerHoleArray.length !== 18) {
-                    console.warn(`Invalid scores for ${playerName} in ${round.matchId}`);
+        async function fetchAndProcessRounds() {
+            document.getElementById('status').textContent = 'Loading rounds...';
+            document.getElementById('results').style.display = 'none';
+
+            let date = document.getElementById('dateInput').value.trim();
+            if (!date) {
+                const today = new Date();
+                date = today.getFullYear() + '-' +
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(today.getDate()).padStart(2, '0');
+            }
+
+            currentDate = date;
+
+            const bypassFilter = document.getElementById('bypassFilter').checked;
+
+            try {
+                const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
+
+                const data = await res.json();
+                let rounds = data.rounds || [];
+
+                if (!bypassFilter) {
+                    const cutoffDate = new Date('2026-01-07T00:00:00Z');
+
+                    rounds = rounds.filter(round => {
+                        // Rule 1: Full 18 holes — prefer scores presence
+                        const hasFullScores = round.scores && 
+                            Object.values(round.scores).every(playerArray => 
+                                Array.isArray(playerArray) && playerArray.length === 18 &&
+                                playerArray.every(s => s !== null && typeof s === 'object')
+                            );
+
+                        const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
+
+                        if (!finishedOk && !hasFullScores) return false;
+
+                        // Rule 2
+                        const roundDate = new Date(round.date);
+                        if (roundDate < cutoffDate) return false;
+
+                        // Rule 3
+                        const totalPoints = Object.values(round._cachedTotals || {})
+                            .reduce((sum, score) => sum + (score || 0), 0);
+                        if (totalPoints < 40) return false;
+
+                        return true;
+                    });
+                }
+
+                if (rounds.length === 0) {
+                    document.getElementById('status').textContent = 
+                        bypassFilter 
+                            ? `No rounds found for ${date}.` 
+                            : `No valid rounds found for ${date} after cleanup. Try "Show all rounds".`;
                     return;
                 }
 
-                playerHoleArray.forEach((scoreObj, idx) => {
-                    if (!holeScores[idx]) holeScores[idx] = {};
-                    holeScores[idx][playerName] = scoreObj || {};
-                });
-            });
-        }
-
-        const playerTotals = {};
-        const runningTotals = {};
-        round.players.forEach(p => {
-            const name = p.name;
-            if (!name) return;
-
-            playerTotals[name] = 0;
-            runningTotals[name] = new Array(18).fill(0);
-            let cumulative = 0;
-
-            for (let idx = 0; idx < 18; idx++) {
-                const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
-                const s = holeScores[idx]?.[name] || {};
-                let pts = 0;
-
-                if (s.firstOn) pts += 1 + (pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn);
-                if (s.closest) pts += 1 + carryIn.closest;
-                if (s.putt)   pts += 1 + carryIn.putt;
-
-                cumulative += pts;
-                runningTotals[name][idx] = cumulative;
-                playerTotals[name] += pts;
-            }
-        });
-
-        const holeBreakdowns = [];
-        for (let h = 1; h <= 18; h++) {
-            const idx = h - 1;
-            const carryIn = getCarryInForHole(holeScores, pars, h);
-            const winners = [];
-
-            Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
-                if (!s.firstOn && !s.closest && !s.putt) return;
-                let detailParts = [];
-
-                if (s.firstOn) {
-                    const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
-                    detailParts.push(`${1 + carry}${pars[idx] === 3 ? 'GR' : 'FO'}`);
-                }
-                if (s.closest) detailParts.push(`${1 + carryIn.closest}CL`);
-                if (s.putt) detailParts.push(`${1 + carryIn.putt}P`);
-
-                const detail = detailParts.join(', ');
-                const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0] || 0), 0);
-
-                winners.push({name, pts, detail});
-            });
-
-            holeBreakdowns.push({
-                hole: h,
-                carryIn,
-                winners,
-                runningTotals
-            });
-        }
-
-        return {
-            finalTotals: playerTotals,
-            holeBreakdowns,
-            runningTotals,
-            roundInfo: round
-        };
-    }
-
-    function formatCarryIn(carry) {
-        const parts = [];
-        if (carry.firstOn) parts.push(`FO:${carry.firstOn}`);
-        if (carry.greenie) parts.push(`GR:${carry.greenie}`);
-        if (carry.closest) parts.push(`CL:${carry.closest}`);
-        if (carry.putt) parts.push(`P:${carry.putt}`);
-        return parts.length ? parts.join(' ') : '0';
-    }
-
-    async function fetchAndProcessRounds() {
-        document.getElementById('status').textContent = 'Loading rounds...';
-        document.getElementById('results').style.display = 'none';
-
-        let date = document.getElementById('dateInput').value.trim();
-        if (!date) {
-            const today = new Date();
-            date = today.getFullYear() + '-' +
-                   String(today.getMonth() + 1).padStart(2, '0') + '-' +
-                   String(today.getDate()).padStart(2, '0');
-        }
-
-        currentDate = date;
-
-        const bypassFilter = document.getElementById('bypassFilter').checked;
-
-        try {
-            const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
-
-            const data = await res.json();
-            let rounds = data.rounds || [];
-
-            if (!bypassFilter) {
-                // Apply strict cleaning only if checkbox is NOT checked
-                const cutoffDate = new Date('2026-01-07T00:00:00Z');
-
-                rounds = rounds.filter(round => {
-                    // Rule 1: Full 18 holes — prefer scores presence over finishedHoles
-                    const hasFullScores = round.scores && 
-                        Object.values(round.scores).every(playerArray => 
-                            Array.isArray(playerArray) && playerArray.length === 18 &&
-                            playerArray.every(s => s !== null && typeof s === 'object')
-                        );
-
-                    const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
-
-                    if (!finishedOk && !hasFullScores) {
-                        return false;
-                    }
-
-                    // Rule 2: Date on/after Jan 7, 2026
-                    const roundDate = new Date(round.date);
-                    if (roundDate < cutoffDate) {
-                        return false;
-                    }
-
-                    // Rule 3: Total points >= 40
-                    const totalPoints = Object.values(round._cachedTotals || {})
-                        .reduce((sum, score) => sum + (score || 0), 0);
-                    if (totalPoints < 40) {
-                        return false;
-                    }
-
-                    return true;
-                });
-            }
-
-            if (rounds.length === 0) {
                 document.getElementById('status').textContent = 
                     bypassFilter 
-                        ? `No rounds at all found for ${date}.` 
-                        : `No valid/completed rounds found for ${date} (strict filter applied). Try unchecking "Show all rounds".`;
-                return;
+                        ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (filter bypassed).` 
+                        : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
+
+                window.currentRoundsData = rounds;
+                window.currentComputed = rounds.map(r => computeAllForRound(r));
+
+                renderResults(rounds);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').textContent = `Error: ${err.message}`;
             }
-
-            document.getElementById('status').textContent = 
-                bypassFilter 
-                    ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (all rounds shown — filter bypassed).` 
-                    : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
-
-            window.currentRoundsData = rounds;
-            window.currentComputed = rounds.map(r => computeAllForRound(r));
-
-            renderResults(rounds);
-        } catch (err) {
-            console.error(err);
-            document.getElementById('status').textContent = `Error: ${err.message}`;
         }
-    }
 
-    function renderResults(rounds) {
-        const container = document.getElementById('roundsContainer');
-        container.innerHTML = '';
+        function renderResults(rounds) {
+            const container = document.getElementById('roundsContainer');
+            container.innerHTML = '';
 
-        let allTotals = {};
+            let allTotals = {};
 
-        rounds.forEach((round, i) => {
-            const comp = window.currentComputed[i] || { finalTotals: {}, runningTotals: {} };
+            rounds.forEach((round, i) => {
+                const comp = window.currentComputed[i] || { finalTotals: {}, runningTotals: {}, holeBreakdowns: [] };
 
-            Object.entries(comp.finalTotals).forEach(([name, pts]) => {
-                allTotals[name] = (allTotals[name] || 0) + (pts || 0);
+                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
+                    allTotals[name] = (allTotals[name] || 0) + (pts || 0);
+                });
+
+                const chartId = `chart-${round.matchId || i}`;
+
+                const card = document.createElement('div');
+                card.className = 'round-card';
+                card.innerHTML = `
+                    <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
+                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
+
+                    <div class="carry-in">
+                        <strong>Final Standings:</strong><br>
+                        ${Object.entries(comp.finalTotals)
+                            .sort((a,b) => b[1] - a[1])
+                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
+                    </div>
+
+                    <h4>Cumulative Points Progress</h4>
+                    <div style="height: 300px; margin-bottom: 25px;">
+                        <canvas id="${chartId}"></canvas>
+                    </div>
+
+                    <h4>Hole-by-Hole Breakdown</h4>
+                    <table>
+                        <tr>
+                            <th>Hole</th>
+                            <th>Carry In</th>
+                            <th>Winners & Points</th>
+                            <th>Running Totals</th>
+                        </tr>
+                        ${comp.holeBreakdowns?.map(hb => {
+                            const runningStr = Object.entries(comp.runningTotals || {})
+                                .map(([name, cumuls]) => `${name}: ${cumuls[hb.hole - 1] || 0}`)
+                                .sort()
+                                .join(' | ');
+                            return `
+                                <tr>
+                                    <td><strong>${hb.hole}</strong></td>
+                                    <td>${formatCarryIn(hb.carryIn)}</td>
+                                    <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
+                                    <td class="running-cell">${runningStr || '—'}</td>
+                                </tr>
+                            `;
+                        }).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
+                    </table>
+                `;
+                container.appendChild(card);
+
+                createProgressChart(chartId, comp.runningTotals, Object.keys(comp.runningTotals || {}));
             });
 
-            const card = document.createElement('div');
-            card.className = 'round-card';
-            card.innerHTML = `
-                <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
-                <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
-
-                <div class="carry-in">
-                    <strong>Final Standings:</strong><br>
-                    ${Object.entries(comp.finalTotals)
-                        .sort((a,b) => b[1] - a[1])
-                        .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
-                </div>
-
-                <h4>Hole-by-Hole Breakdown</h4>
+            const overall = document.createElement('div');
+            overall.className = 'round-card';
+            overall.innerHTML = `
+                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
                 <table>
-                    <tr>
-                        <th>Hole</th>
-                        <th>Carry In</th>
-                        <th>Winners & Points</th>
-                        <th>Running Totals</th>
-                    </tr>
-                    ${comp.holeBreakdowns?.map(hb => {
-                        const runningStr = Object.entries(comp.runningTotals || {})
-                            .map(([name, cumuls]) => `${name}: ${cumuls[hb.hole - 1] || 0}`)
-                            .sort()
-                            .join(' | ');
-                        return `
-                            <tr>
-                                <td><strong>${hb.hole}</strong></td>
-                                <td>${formatCarryIn(hb.carryIn)}</td>
-                                <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
-                                <td class="running-cell">${runningStr || '—'}</td>
-                            </tr>
-                        `;
-                    }).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
+                    <tr><th>Player</th><th>Total Points</th></tr>
+                    ${Object.entries(allTotals)
+                        .sort((a,b) => b[1] - a[1])
+                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
                 </table>
             `;
-            container.appendChild(card);
-        });
+            container.appendChild(overall);
 
-        const overall = document.createElement('div');
-        overall.className = 'round-card';
-        overall.innerHTML = `
-            <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
-            <table>
-                <tr><th>Player</th><th>Total Points</th></tr>
-                ${Object.entries(allTotals)
-                    .sort((a,b) => b[1] - a[1])
-                    .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
-            </table>
-        `;
-        container.appendChild(overall);
+            document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
+            document.getElementById('results').style.display = 'block';
+        }
 
-        document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
-        document.getElementById('results').style.display = 'block';
-    }
+        function createProgressChart(canvasId, runningTotals, playerNames) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
 
-    function clearAll() {
-        document.getElementById('dateInput').value = '';
-        document.getElementById('results').style.display = 'none';
-        document.getElementById('status').textContent = '';
-        currentDate = '';
-        window.currentRoundsData = null;
-        window.currentComputed = null;
-    }
-</script>
+            const datasets = playerNames.map((name, index) => {
+                const data = runningTotals[name] || new Array(18).fill(0);
+                return {
+                    label: name,
+                    data: data,
+                    borderColor: getPlayerColor(index),
+                    backgroundColor: getPlayerColor(index) + '33',
+                    tension: 0.1,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    fill: false,
+                    borderWidth: 2
+                };
+            });
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 18}, (_, i) => `Hole ${i+1}`),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
+                        x: { title: { display: true, text: 'Hole' } }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        }
+
+        function getPlayerColor(index) {
+            const colors = [
+                '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
+                '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
+            ];
+            return colors[index % colors.length];
+        }
+
+        function clearAll() {
+            document.getElementById('dateInput').value = '';
+            document.getElementById('bypassFilter').checked = false;
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('status').textContent = '';
+            currentDate = '';
+            window.currentRoundsData = null;
+            window.currentComputed = null;
+        }
+    </script>
 </body>
 </html>
