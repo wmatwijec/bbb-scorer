@@ -53,6 +53,20 @@
             margin: 18px 0;
             font-size: 1.05em;
         }
+        table.beer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        table.beer-table th, table.beer-table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        table.beer-table th {
+            background: #ffeaa7;
+            font-weight: bold;
+        }
         .mini-charts {
             display: flex;
             flex-wrap: wrap;
@@ -66,7 +80,6 @@
         }
         .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
 
-        /* Crosshair & tooltip */
         .chartjs-tooltip {
             position: absolute;
             background: rgba(255, 255, 255, 0.92);
@@ -80,12 +93,9 @@
             box-shadow: 0 3px 10px rgba(0,0,0,0.15);
             z-index: 100;
             max-width: 240px;
-            white-space: nowrap;
         }
         .chartjs-tooltip.active { opacity: 1; }
         .chartjs-tooltip .title { font-weight: bold; margin-bottom: 4px; font-size: 13px; }
-        .chartjs-tooltip table { margin: 0; padding: 0; border-collapse: collapse; }
-        .chartjs-tooltip td { padding: 2px 6px; text-align: right; }
         .crosshair {
             position: absolute;
             top: 0; bottom: 0;
@@ -128,7 +138,6 @@
         </div>
     </div>
 
-    <!-- Shared tooltip (used independently by each chart) -->
     <div id="chart-tooltip" class="chartjs-tooltip"></div>
 
     <script>
@@ -362,6 +371,68 @@
                     return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
                 }).filter(r => r).join('');
 
+                // Streaks & Droughts
+                const streakRows = [];
+                const categories = [
+                    {name: 'FO', data: comp.cumFO},
+                    {name: 'Greenies', data: comp.cumGreenie},
+                    {name: 'Closest', data: comp.cumClosest},
+                    {name: 'Putts', data: comp.cumPutt}
+                ];
+
+                categories.forEach(cat => {
+                    let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
+                    let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
+
+                    playerNames.forEach(player => {
+                        const arr = cat.data[player] || new Array(18).fill(0);
+
+                        // Longest streak (consecutive holes with points > 0)
+                        let currLen = 0, currSum = 0, currStart = 1;
+                        for (let h = 0; h < 18; h++) {
+                            if (arr[h] > 0) {
+                                currLen++;
+                                currSum += arr[h];
+                                if (currLen === 1) currStart = h + 1;
+                                if (currLen > maxStreakLen || (currLen === maxStreakLen && currSum > maxStreakSum)) {
+                                    maxStreakLen = currLen;
+                                    maxStreakSum = currSum;
+                                    maxStreakPlayer = player;
+                                    maxStreakStart = currStart;
+                                    maxStreakEnd = h + 1;
+                                }
+                            } else {
+                                currLen = 0;
+                                currSum = 0;
+                            }
+                        }
+
+                        // Longest drought (consecutive holes with 0 points)
+                        currLen = 0; currStart = 1;
+                        for (let h = 0; h < 18; h++) {
+                            if (arr[h] === 0) {
+                                currLen++;
+                                if (currLen === 1) currStart = h + 1;
+                                if (currLen > maxDroughtLen) {
+                                    maxDroughtLen = currLen;
+                                    maxDroughtPlayer = player;
+                                    maxDroughtStart = currStart;
+                                    maxDroughtEnd = h + 1;
+                                }
+                            } else {
+                                currLen = 0;
+                            }
+                        }
+                    });
+
+                    if (maxStreakLen > 1) {
+                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest streak</td><td>${maxStreakPlayer}</td><td>${maxStreakSum} pts over ${maxStreakLen} holes (${maxStreakStart}-${maxStreakEnd})</td></tr>`);
+                    }
+                    if (maxDroughtLen > 2) {
+                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest drought</td><td>${maxDroughtPlayer}</td><td>${maxDroughtLen} holes (${maxDroughtStart}-${maxDroughtEnd})</td></tr>`);
+                    }
+                });
+
                 const beerHTML = winners.length ? `
                     <div class="beer-bet">
                         <strong>🍺 Beer Bet Highlights 🍺</strong><br>
@@ -369,9 +440,15 @@
                         <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
 
                         <strong>Category Winners</strong>
-                        <table style="width:100%; margin:10px 0; border-collapse:collapse;">
-                            <tr style="background:#ffeaa7;"><th>Category</th><th>Leader</th><th>Points</th></tr>
+                        <table class="beer-table">
+                            <tr><th>Category</th><th>Leader</th><th>Points</th></tr>
                             ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
+                        </table>
+
+                        <strong>Streaks & Droughts</strong>
+                        <table class="beer-table">
+                            <tr><th>Category</th><th>Type</th><th>Player</th><th>Details</th></tr>
+                            ${streakRows.length ? streakRows.join('') : '<tr><td colspan="4">No notable streaks/droughts</td></tr>'}
                         </table>
                     </div>` : '';
 
@@ -404,7 +481,6 @@
                 `;
                 container.appendChild(card);
 
-                // Create charts
                 const mainChart = createMainChart(chartId, comp.runningTotals, playerNames);
                 const miniFO = createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
                 const miniGR = createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
