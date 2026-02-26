@@ -43,7 +43,7 @@
             background: white;
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
         table {
@@ -62,6 +62,17 @@
         .running-cell { white-space: pre-line; font-size: 0.9em; }
         .carry-in { background: #e7f3ff; padding: 10px; border-radius: 8px; margin: 12px 0; }
         .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
+        .mini-charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        .mini-chart-container {
+            flex: 1;
+            min-width: 240px;
+            height: 180px;
+        }
     </style>
 </head>
 <body>
@@ -92,17 +103,17 @@
         <div id="status" class="status"></div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Auto-fetch • Running totals per hole
+            BBB Summarizer • Auto-fetch • Running totals & per-hole breakdowns
         </div>
     </div>
 
     <script>
-        // === DEFAULT PARS (Franklin Bridge) — fallback ===
+        // DEFAULT PARS (Franklin Bridge) — fallback
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
 
-        // === CARRY LOGIC ===
+        // CARRY LOGIC
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -138,7 +149,11 @@
 
             if (!round.players || !Array.isArray(round.players)) {
                 console.warn(`Round ${round.matchId || '?'} missing players array`);
-                return { finalTotals: {}, holeBreakdowns: [], runningTotals: {}, roundInfo: round };
+                return { 
+                    finalTotals: {}, holeBreakdowns: [], runningTotals: {},
+                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {},
+                    roundInfo: round 
+                };
             }
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
@@ -157,22 +172,48 @@
 
             const playerTotals = {};
             const runningTotals = {};
+            const perHoleFO = {};
+            const perHoleGreenie = {};
+            const perHoleClosest = {};
+            const perHolePutt = {};
+
             round.players.forEach(p => {
                 const name = p.name;
                 if (!name) return;
 
                 playerTotals[name] = 0;
                 runningTotals[name] = new Array(18).fill(0);
+                perHoleFO[name]      = new Array(18).fill(0);
+                perHoleGreenie[name] = new Array(18).fill(0);
+                perHoleClosest[name] = new Array(18).fill(0);
+                perHolePutt[name]    = new Array(18).fill(0);
+
                 let cumulative = 0;
 
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
+                    const par = pars[idx];
+                    const isPar3 = par === 3;
                     let pts = 0;
 
-                    if (s.firstOn) pts += 1 + (pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn);
-                    if (s.closest) pts += 1 + carryIn.closest;
-                    if (s.putt)   pts += 1 + carryIn.putt;
+                    if (s.firstOn) {
+                        const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
+                        pts += 1 + carry;
+                        if (isPar3) {
+                            perHoleGreenie[name][idx] = 1 + carry;
+                        } else {
+                            perHoleFO[name][idx] = 1 + carry;
+                        }
+                    }
+                    if (s.closest) {
+                        pts += 1 + carryIn.closest;
+                        perHoleClosest[name][idx] = 1 + carryIn.closest;
+                    }
+                    if (s.putt) {
+                        pts += 1 + carryIn.putt;
+                        perHolePutt[name][idx] = 1 + carryIn.putt;
+                    }
 
                     cumulative += pts;
                     runningTotals[name][idx] = cumulative;
@@ -215,6 +256,10 @@
                 finalTotals: playerTotals,
                 holeBreakdowns,
                 runningTotals,
+                perHoleFO,
+                perHoleGreenie,
+                perHoleClosest,
+                perHolePutt,
                 roundInfo: round
             };
         }
@@ -256,7 +301,6 @@
                     const cutoffDate = new Date('2026-01-07T00:00:00Z');
 
                     rounds = rounds.filter(round => {
-                        // Rule 1: Full 18 holes — prefer scores presence
                         const hasFullScores = round.scores && 
                             Object.values(round.scores).every(playerArray => 
                                 Array.isArray(playerArray) && playerArray.length === 18 &&
@@ -267,11 +311,9 @@
 
                         if (!finishedOk && !hasFullScores) return false;
 
-                        // Rule 2
                         const roundDate = new Date(round.date);
                         if (roundDate < cutoffDate) return false;
 
-                        // Rule 3
                         const totalPoints = Object.values(round._cachedTotals || {})
                             .reduce((sum, score) => sum + (score || 0), 0);
                         if (totalPoints < 40) return false;
@@ -310,13 +352,17 @@
             let allTotals = {};
 
             rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i] || { finalTotals: {}, runningTotals: {}, holeBreakdowns: [] };
+                const comp = window.currentComputed[i] || {
+                    finalTotals: {}, runningTotals: {}, holeBreakdowns: [],
+                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}
+                };
 
                 Object.entries(comp.finalTotals).forEach(([name, pts]) => {
                     allTotals[name] = (allTotals[name] || 0) + (pts || 0);
                 });
 
                 const chartId = `chart-${round.matchId || i}`;
+                const playerNames = Object.keys(comp.runningTotals || {});
 
                 const card = document.createElement('div');
                 card.className = 'round-card';
@@ -334,6 +380,21 @@
                     <h4>Cumulative Points Progress</h4>
                     <div style="height: 300px; margin-bottom: 25px;">
                         <canvas id="${chartId}"></canvas>
+                    </div>
+
+                    <div class="mini-charts">
+                        <div class="mini-chart-container">
+                            <canvas id="mini-fo-${chartId}"></canvas>
+                        </div>
+                        <div class="mini-chart-container">
+                            <canvas id="mini-gr-${chartId}"></canvas>
+                        </div>
+                        <div class="mini-chart-container">
+                            <canvas id="mini-cl-${chartId}"></canvas>
+                        </div>
+                        <div class="mini-chart-container">
+                            <canvas id="mini-p-${chartId}"></canvas>
+                        </div>
                     </div>
 
                     <h4>Hole-by-Hole Breakdown</h4>
@@ -362,7 +423,12 @@
                 `;
                 container.appendChild(card);
 
-                createProgressChart(chartId, comp.runningTotals, Object.keys(comp.runningTotals || {}));
+                // Create charts
+                createProgressChart(chartId, comp.runningTotals, playerNames);
+                createMiniLineChart(`mini-fo-${chartId}`, comp.perHoleFO, 'FO Points per Hole', playerNames);
+                createMiniLineChart(`mini-gr-${chartId}`, comp.perHoleGreenie, 'Greenie Points per Hole', playerNames);
+                createMiniLineChart(`mini-cl-${chartId}`, comp.perHoleClosest, 'Closest Points per Hole', playerNames);
+                createMiniLineChart(`mini-p-${chartId}`, comp.perHolePutt, 'Putt Points per Hole', playerNames);
             });
 
             const overall = document.createElement('div');
@@ -385,26 +451,23 @@
         function createProgressChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
 
-            const datasets = playerNames.map((name, index) => {
-                const data = runningTotals[name] || new Array(18).fill(0);
-                return {
-                    label: name,
-                    data: data,
-                    borderColor: getPlayerColor(index),
-                    backgroundColor: getPlayerColor(index) + '33',
-                    tension: 0.1,
-                    pointRadius: 4,
-                    pointHoverRadius: 7,
-                    fill: false,
-                    borderWidth: 2
-                };
-            });
+            const datasets = playerNames.map((name, index) => ({
+                label: name,
+                data: runningTotals[name] || new Array(18).fill(0),
+                borderColor: getPlayerColor(index),
+                backgroundColor: getPlayerColor(index) + '33',
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 7,
+                fill: false,
+                borderWidth: 2
+            }));
 
             new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: Array.from({length: 18}, (_, i) => `Hole ${i+1}`),
-                    datasets: datasets
+                    datasets
                 },
                 options: {
                     responsive: true,
@@ -416,6 +479,60 @@
                     plugins: {
                         legend: { position: 'top' },
                         tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        }
+
+        function createMiniLineChart(canvasId, dataByPlayer, title, playerNames) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            const datasets = playerNames.map((name, index) => ({
+                label: name,
+                data: dataByPlayer[name] || new Array(18).fill(0),
+                borderColor: getPlayerColor(index),
+                backgroundColor: getPlayerColor(index) + '44',
+                tension: 0,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: false,
+                borderWidth: 2,
+                stepped: false
+            }));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 18}, (_, i) => i + 1),
+                    datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            title: { display: false },
+                            ticks: { maxTicksLimit: 10 }
+                        },
+                        y: { 
+                            beginAtZero: true,
+                            suggestedMax: 5,
+                            ticks: { stepSize: 1 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: title,
+                            font: { size: 13 },
+                            padding: { bottom: 4 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${ctx.raw} pts`
+                            }
+                        }
                     }
                 }
             });
