@@ -431,12 +431,12 @@
                 `;
                 container.appendChild(card);
 
-                // Create charts
-                createProgressChart(chartId, comp.runningTotals, playerNames);
-                createMiniCumChart(`mini-fo-${chartId}`, comp.cumFO, 'Cumulative FO Points', playerNames);
-                createMiniCumChart(`mini-gr-${chartId}`, comp.cumGreenie, 'Cumulative Greenie Points', playerNames);
-                createMiniCumChart(`mini-cl-${chartId}`, comp.cumClosest, 'Cumulative Closest Points', playerNames);
-                createMiniCumChart(`mini-p-${chartId}`, comp.cumPutt, 'Cumulative Putt Points', playerNames);
+                // Create charts (dots only, no lines)
+                createDotChart(chartId, comp.runningTotals, playerNames, 'Cumulative Points (All)');
+                createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO Points');
+                createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie Points');
+                createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest Points');
+                createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt Points');
             });
 
             const overall = document.createElement('div');
@@ -456,23 +456,23 @@
             document.getElementById('results').style.display = 'block';
         }
 
-        function createProgressChart(canvasId, runningTotals, playerNames) {
+        function createDotChart(canvasId, dataByPlayer, playerNames, title = '') {
             const ctx = document.getElementById(canvasId).getContext('2d');
 
             const datasets = playerNames.map((name, index) => ({
                 label: name,
-                data: runningTotals[name] || new Array(18).fill(0),
+                data: dataByPlayer[name] || new Array(18).fill(0),
                 borderColor: getPlayerColor(index),
-                backgroundColor: getPlayerColor(index) + '33',
-                tension: 0.1,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                fill: false,
-                borderWidth: 2
+                backgroundColor: getPlayerColor(index),
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                showLine: false,           // no connecting lines
+                borderWidth: 0,
+                fill: false
             }));
 
             new Chart(ctx, {
-                type: 'line',
+                type: 'line',  // still 'line' type, but showLine: false makes it scatter-like
                 data: {
                     labels: Array.from({length: 18}, (_, i) => `Hole ${i+1}`),
                     datasets
@@ -481,61 +481,17 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
+                        y: { 
+                            beginAtZero: true,
+                            title: { display: !!title, text: title || 'Cumulative Points' }
+                        },
                         x: { title: { display: true, text: 'Hole' } }
                     },
                     plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
-                    }
-                }
-            });
-        }
-
-        function createMiniCumChart(canvasId, cumData, title, playerNames) {
-            const ctx = document.getElementById(canvasId).getContext('2d');
-
-            const datasets = playerNames.map((name, index) => ({
-                label: name,
-                data: cumData[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(index),
-                backgroundColor: getPlayerColor(index) + '33',
-                tension: 0.1,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-                fill: false,
-                borderWidth: 2
-            }));
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array.from({length: 18}, (_, i) => i + 1),
-                    datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { 
-                            title: { display: false },
-                            ticks: { maxTicksLimit: 10 }
-                        },
-                        y: { 
-                            beginAtZero: true,
-                            suggestedMax: Math.max(...playerNames.flatMap(n => cumData[n] || []), 5),
-                            ticks: { stepSize: 1 }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        title: {
-                            display: true,
-                            text: title,
-                            font: { size: 13 },
-                            padding: { bottom: 4 }
-                        },
+                        legend: { position: title ? 'top' : 'none' },
                         tooltip: {
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
                                 label: ctx => `${ctx.dataset.label}: ${ctx.raw} pts`
                             }
