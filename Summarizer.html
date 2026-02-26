@@ -286,7 +286,7 @@
                     });
                 });
 
-                // Beer bet logic
+                // Beer bet logic (unchanged)
                 const sorted = Object.entries(comp.finalTotals)
                     .sort((a,b) => b[1] - a[1])
                     .map(([name, pts]) => ({name, pts}));
@@ -298,7 +298,7 @@
                     winners = sorted.slice(0, 2);  // top two
 
                     if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
-                        buyers = [];  // let the bottom guy off the hook
+                        buyers = [];  // top two tied → bottom off the hook
                     } else if (numPlayers === 3) {
                         buyers = [sorted[2]];
                     } else {
@@ -306,57 +306,100 @@
                     }
                 }
 
-                // Category winners
+                const beerMug = '🍺';
+
+                // Category winners table
+                const categoryRows = [
+                    {cat: 'FO', data: comp.cumFO},
+                    {cat: 'Greenies', data: comp.cumGreenie},
+                    {cat: 'Closest', data: comp.cumClosest},
+                    {cat: 'Putts', data: comp.cumPutt}
+                ].map(c => {
+                    const max = Math.max(...playerNames.map(n => c.data[n]?.[17] || 0));
+                    if (max === 0) return null;
+                    const leaders = playerNames.filter(n => (c.data[n]?.[17] || 0) === max);
+                    return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
+                }).filter(r => r).join('');
+
+                // Streaks & Droughts table
+                const streakRows = [];
                 const categories = [
-                    {name: 'FO', data: comp.cumFO},
-                    {name: 'Greenies', data: comp.cumGreenie},
-                    {name: 'Closest', data: comp.cumClosest},
-                    {name: 'Putts', data: comp.cumPutt}
+                    {name: 'FO', data: comp.perHoleFO},
+                    {name: 'Greenies', data: comp.perHoleGreenie},
+                    {name: 'Closest', data: comp.perHoleClosest},
+                    {name: 'Putts', data: comp.perHolePutt}
                 ];
 
-                const categoryHTML = categories.map(cat => {
-                    const maxPts = Math.max(...playerNames.map(n => cat.data[n][17] || 0));
-                    const winners = playerNames.filter(n => (cat.data[n][17] || 0) === maxPts).join(' & ');
-                    return maxPts > 0 ? `• Most ${cat.name}: ${winners} (${maxPts} pts)` : '';
-                }).filter(h => h).join('<br>');
+                categories.forEach(cat => {
+                    let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
+                    let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
 
-                // Streaks (using perHole)
-                const streakHTML = categories.map(cat => {
-                    const perHole = comp[`perHole${cat.name.replace('Putts','Putt').replace('Closest','Closest').replace('Greenies','Greenie').replace('FO','FO')}`];
-                    let maxStreak = {sum: 0, length: 0, start: 1, end: 1, player: ''};
-                    let maxDrought = {length: 0, start: 1, end: 1, player: ''};
+                    playerNames.forEach(player => {
+                        const arr = cat.data[player] || new Array(18).fill(0);
 
-                    playerNames.forEach(n => {
-                        const streak = getMaxStreak(perHole[n], true);  // positive
-                        if (streak.sum > maxStreak.sum || (streak.sum === maxStreak.sum && streak.length > maxStreak.length)) {
-                            maxStreak = {sum: streak.sum, length: streak.length, start: streak.start, end: streak.end, player: n};
+                        // Positive streak
+                        let currLen = 0, currSum = 0, currStart = 1;
+                        for (let h = 0; h < 18; h++) {
+                            if (arr[h] > 0) {
+                                currLen++;
+                                currSum += arr[h];
+                                if (currLen === 1) currStart = h + 1;
+                                if (currLen > maxStreakLen || (currLen === maxStreakLen && currSum > maxStreakSum)) {
+                                    maxStreakLen = currLen;
+                                    maxStreakSum = currSum;
+                                    maxStreakPlayer = player;
+                                    maxStreakStart = currStart;
+                                    maxStreakEnd = h + 1;
+                                }
+                            } else {
+                                currLen = 0;
+                                currSum = 0;
+                            }
                         }
 
-                        const drought = getMaxStreak(perHole[n], false);  // negative
-                        if (drought.length > maxDrought.length) {
-                            maxDrought = {length: drought.length, start: drought.start, end: drought.end, player: n};
+                        // Drought (zero points)
+                        currLen = 0; currStart = 1;
+                        for (let h = 0; h < 18; h++) {
+                            if (arr[h] === 0) {
+                                currLen++;
+                                if (currLen === 1) currStart = h + 1;
+                                if (currLen > maxDroughtLen) {
+                                    maxDroughtLen = currLen;
+                                    maxDroughtPlayer = player;
+                                    maxDroughtStart = currStart;
+                                    maxDroughtEnd = h + 1;
+                                }
+                            } else {
+                                currLen = 0;
+                            }
                         }
                     });
 
-                    let html = '';
-                    if (maxStreak.sum > 0) {
-                        html += `• Longest ${cat.name} streak: ${maxStreak.player} (${maxStreak.sum} pts over ${maxStreak.length} holes: ${maxStreak.start}-${maxStreak.end})<br>`;
+                    if (maxStreakLen > 1) {
+                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest streak</td><td>${maxStreakPlayer}</td><td>${maxStreakSum} pts over ${maxStreakLen} holes (${maxStreakStart}-${maxStreakEnd})</td></tr>`);
                     }
-                    if (maxDrought.length > 0) {
-                        html += `• Longest ${cat.name} drought: ${maxDrought.player} (${maxDrought.length} holes: ${maxDrought.start}-${maxDrought.end})<br>`;
+                    if (maxDroughtLen > 2) {  // only show droughts of 3+ holes to reduce noise
+                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest drought</td><td>${maxDroughtPlayer}</td><td>${maxDroughtLen} holes (${maxDroughtStart}-${maxDroughtEnd})</td></tr>`);
                     }
-                    return html;
-                }).join('');
+                });
 
                 const beerHTML = winners.length ? `
                     <div class="beer-bet">
                         <strong>🍺 Beer Bet Highlights 🍺</strong><br>
-                        <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} 🍺`).join(' & ')}<br>
+                        <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
                         <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
-                        <strong>Category Winners:</strong><br>
-                        ${categoryHTML}<br><br>
-                        <strong>Streaks & Droughts:</strong><br>
-                        ${streakHTML}
+
+                        <strong>Category Winners</strong>
+                        <table style="width:100%; margin:10px 0; border-collapse:collapse;">
+                            <tr style="background:#ffeaa7;"><th>Category</th><th>Leader</th><th>Points</th></tr>
+                            ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
+                        </table>
+
+                        <strong>Streaks & Droughts</strong>
+                        <table style="width:100%; margin:10px 0; border-collapse:collapse;">
+                            <tr style="background:#ffeaa7;"><th>Category</th><th>Type</th><th>Player</th><th>Details</th></tr>
+                            ${streakRows.length ? streakRows.join('') : '<tr><td colspan="4">No notable streaks/droughts</td></tr>'}
+                        </table>
                     </div>` : '';
 
                 const card = document.createElement('div');
