@@ -446,22 +446,23 @@
                     const streakHTML = streakItems.length ? streakItems.join('') : '<div>No notable streaks or droughts</div>';
 
                     const beerHTML = winners.length ? `
-                        <div class="beer-bet">
-                            <strong>🍺 Beer Bet Highlights 🍺</strong><br>
-                            <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
-                            <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
+                            <div class="beer-bet">
+                                <strong>🍺 Beer Bet Highlights 🍺</strong><br>
+                                <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
+                                <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
 
-                            <strong>Category Winners</strong>
-                            <table class="beer-table">
-                                <tr><th>Category</th><th>Leader</th><th>Points</th></tr>
-                                ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
-                            </table>
+                                <strong>Category Winners</strong>
+                                <table class="beer-table">
+                                    <tr><th>Category</th><th>Leader</th><th>Points</th></tr>
+                                    ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
+                                </table>
 
-                            <strong>Streaks & Droughts</strong>
-                            <div style="margin-top:8px; line-height:1.4;">
-                                ${streakHTML}
-                            </div>
-                        </div>` : '';
+                                <strong>Streaks & Droughts</strong><br>
+                                <small style="color:#555; font-size:0.95em;">S = Longest streak (consecutive holes with points) • D = Longest drought (consecutive holes with zero points)</small>
+                                <div style="margin-top:8px; line-height:1.4;">
+                                    ${streakHTML}
+                                </div>
+                            </div>` : '';
 
                 const card = document.createElement('div');
                 card.className = 'round-card';
