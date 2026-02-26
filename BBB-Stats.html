@@ -80,7 +80,7 @@
                 </tbody>
             </table>
 
-            <h2>Group Sumary (sorted by Mean Points per Round)</h2>
+            <h2>Group Summary (sorted by Mean Points per Round)</h2>
             <table id="leaderboard">
                 <tr><th>Player</th><th>Rounds</th><th>Mean / Round</th><th>Median / Round</th><th>Total Points</th></tr>
             </table>
@@ -138,23 +138,42 @@
         }
 
         async function loadData() {
-            document.getElementById('status').textContent = 'Fetching rounds...';
+            document.getElementById('status').textContent = 'Fetching & cleaning rounds...';
 
             try {
                 const res = await fetch(`${BACKEND}/rounds`);
                 if (!res.ok) throw new Error(`Backend error: ${res.status}`);
 
                 const data = await res.json();
-                allRounds = data.rounds || [];
+                let rounds = data.rounds || [];
 
-                // Filter completed rounds only
-                allRounds = allRounds.filter(r => 
-                    r.finishedHoles && r.finishedHoles.length === 18 &&
-                    Object.values(r.scores || {}).some(arr => arr.some(s => s?.firstOn || s?.closest || s?.putt))
-                );
+                // Updated cleanup: same strict rules as the daily summarizer
+                const cutoffDate = new Date('2026-01-07T00:00:00Z');
+
+                allRounds = rounds.filter(round => {
+                    // Rule 1: Must be a full 18-hole round
+                    if (!round.finishedHoles || round.finishedHoles.length !== 18) {
+                        return false;
+                    }
+
+                    // Rule 2: Date on or after Jan 7, 2026
+                    const roundDate = new Date(round.date);
+                    if (roundDate < cutoffDate) {
+                        return false;
+                    }
+
+                    // Rule 3: Total points across all players >= 40
+                    const totalPoints = Object.values(round.cachedTotals || {})
+                        .reduce((sum, score) => sum + (score || 0), 0);
+                    if (totalPoints < 40) {
+                        return false;
+                    }
+
+                    return true;
+                });
 
                 if (allRounds.length === 0) {
-                    document.getElementById('status').textContent = 'No completed rounds found in database.';
+                    document.getElementById('status').textContent = 'No valid completed rounds found after cleanup.';
                     return;
                 }
 
@@ -171,7 +190,7 @@
                 uniquePlayers = Array.from(playerSet).sort();
 
                 if (uniquePlayers.length === 0) {
-                    document.getElementById('status').textContent = 'No players found in completed rounds.';
+                    document.getElementById('status').textContent = 'No players found in valid completed rounds.';
                     return;
                 }
 
@@ -190,7 +209,7 @@
 
                 select.addEventListener('change', e => showStats(e.target.value));
 
-                document.getElementById('status').textContent = `Loaded ${allRounds.length} completed rounds • ${uniquePlayers.length} players`;
+                document.getElementById('status').textContent = `Loaded ${allRounds.length} valid completed rounds • ${uniquePlayers.length} players`;
             } catch (err) {
                 console.error(err);
                 document.getElementById('status').textContent = `Error loading data: ${err.message}`;
