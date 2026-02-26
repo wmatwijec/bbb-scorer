@@ -103,17 +103,15 @@
         <div id="status" class="status"></div>
 
         <div style="text-align:center; margin-top:40px; color:#777; font-size:0.9em;">
-            BBB Summarizer • Auto-fetch • Cumulative progress by category
+            BBB Summarizer • Cumulative progress by category
         </div>
     </div>
 
     <script>
-        // DEFAULT PARS (Franklin Bridge) — fallback
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
 
-        // CARRY LOGIC
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
             for (let h = 1; h < holeNumber; h++) {
@@ -142,143 +140,96 @@
 
         function computeAllForRound(round) {
             const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 
-                ? round.pars 
-                : DEFAULT_PARS;
+                ? round.pars : DEFAULT_PARS;
 
             const holeScores = {};
 
             if (!round.players || !Array.isArray(round.players)) {
-                console.warn(`Round ${round.matchId || '?'} missing players array`);
-                return { 
-                    finalTotals: {}, holeBreakdowns: [], runningTotals: {},
-                    cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
-                    roundInfo: round 
-                };
+                return { finalTotals: {}, holeBreakdowns: [], runningTotals: {},
+                         cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, roundInfo: round };
             }
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
-                Object.entries(round.scores).forEach(([playerName, playerHoleArray]) => {
-                    if (!Array.isArray(playerHoleArray) || playerHoleArray.length !== 18) {
-                        console.warn(`Invalid scores for ${playerName} in ${round.matchId}`);
-                        return;
-                    }
-
-                    playerHoleArray.forEach((scoreObj, idx) => {
+                Object.entries(round.scores).forEach(([name, arr]) => {
+                    if (!Array.isArray(arr) || arr.length !== 18) return;
+                    arr.forEach((s, idx) => {
                         if (!holeScores[idx]) holeScores[idx] = {};
-                        holeScores[idx][playerName] = scoreObj || {};
+                        holeScores[idx][name] = s || {};
                     });
                 });
             }
 
-            const playerTotals = {};
-            const runningTotals = {};
-            const cumFO = {};
-            const cumGreenie = {};
-            const cumClosest = {};
-            const cumPutt = {};
+            const playerTotals = {}, runningTotals = {};
+            const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
 
             round.players.forEach(p => {
-                const name = p.name;
-                if (!name) return;
-
+                const name = p.name; if (!name) return;
                 playerTotals[name] = 0;
                 runningTotals[name] = new Array(18).fill(0);
-                cumFO[name]      = new Array(18).fill(0);
+                cumFO[name] = new Array(18).fill(0);
                 cumGreenie[name] = new Array(18).fill(0);
                 cumClosest[name] = new Array(18).fill(0);
-                cumPutt[name]    = new Array(18).fill(0);
+                cumPutt[name] = new Array(18).fill(0);
 
-                let totalCum = 0;
-                let foCum = 0;
-                let grCum = 0;
-                let clCum = 0;
-                let pCum = 0;
+                let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
 
                 for (let idx = 0; idx < 18; idx++) {
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
-                    const par = pars[idx];
-                    const isPar3 = par === 3;
+                    const isPar3 = pars[idx] === 3;
                     let pts = 0;
 
                     if (s.firstOn) {
                         const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
                         pts += 1 + carry;
-                        if (isPar3) {
-                            grCum += 1 + carry;
-                            cumGreenie[name][idx] = grCum;
-                        } else {
-                            foCum += 1 + carry;
-                            cumFO[name][idx] = foCum;
-                        }
+                        if (isPar3) gr += 1 + carry; else fo += 1 + carry;
                     }
-                    if (s.closest) {
-                        pts += 1 + carryIn.closest;
-                        clCum += 1 + carryIn.closest;
-                        cumClosest[name][idx] = clCum;
-                    }
-                    if (s.putt) {
-                        pts += 1 + carryIn.putt;
-                        pCum += 1 + carryIn.putt;
-                        cumPutt[name][idx] = pCum;
-                    }
+                    if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
+                    if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
 
-                    totalCum += pts;
-                    runningTotals[name][idx] = totalCum;
+                    total += pts;
+                    runningTotals[name][idx] = total;
+                    cumFO[name][idx] = fo;
+                    cumGreenie[name][idx] = gr;
+                    cumClosest[name][idx] = cl;
+                    cumPutt[name][idx] = pu;
                     playerTotals[name] += pts;
                 }
             });
 
+            // Hole breakdowns (unchanged)
             const holeBreakdowns = [];
             for (let h = 1; h <= 18; h++) {
                 const idx = h - 1;
                 const carryIn = getCarryInForHole(holeScores, pars, h);
                 const winners = [];
-
                 Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
                     if (!s.firstOn && !s.closest && !s.putt) return;
-                    let detailParts = [];
-
-                    if (s.firstOn) {
-                        const carry = pars[idx] === 3 ? carryIn.greenie : carryIn.firstOn;
-                        detailParts.push(`${1 + carry}${pars[idx] === 3 ? 'GR' : 'FO'}`);
-                    }
-                    if (s.closest) detailParts.push(`${1 + carryIn.closest}CL`);
-                    if (s.putt) detailParts.push(`${1 + carryIn.putt}P`);
-
-                    const detail = detailParts.join(', ');
-                    const pts = detailParts.reduce((sum, d) => sum + parseInt(d.match(/\d+/)[0] || 0), 0);
-
-                    winners.push({name, pts, detail});
+                    let parts = [];
+                    if (s.firstOn) parts.push(`${1 + (pars[idx]===3?carryIn.greenie:carryIn.firstOn)}${pars[idx]===3?'GR':'FO'}`);
+                    if (s.closest) parts.push(`${1 + carryIn.closest}CL`);
+                    if (s.putt)    parts.push(`${1 + carryIn.putt}P`);
+                    winners.push({name, detail: parts.join(', ')});
                 });
-
-                holeBreakdowns.push({
-                    hole: h,
-                    carryIn,
-                    winners,
-                    runningTotals
-                });
+                holeBreakdowns.push({hole: h, carryIn, winners, runningTotals});
             }
 
             return {
                 finalTotals: playerTotals,
                 holeBreakdowns,
                 runningTotals,
-                cumFO,
-                cumGreenie,
-                cumClosest,
-                cumPutt,
+                cumFO, cumGreenie, cumClosest, cumPutt,
                 roundInfo: round
             };
         }
 
         function formatCarryIn(carry) {
-            const parts = [];
-            if (carry.firstOn) parts.push(`FO:${carry.firstOn}`);
-            if (carry.greenie) parts.push(`GR:${carry.greenie}`);
-            if (carry.closest) parts.push(`CL:${carry.closest}`);
-            if (carry.putt) parts.push(`P:${carry.putt}`);
-            return parts.length ? parts.join(' ') : '0';
+            const p = [];
+            if (carry.firstOn) p.push(`FO:${carry.firstOn}`);
+            if (carry.greenie) p.push(`GR:${carry.greenie}`);
+            if (carry.closest) p.push(`CL:${carry.closest}`);
+            if (carry.putt) p.push(`P:${carry.putt}`);
+            return p.length ? p.join(' ') : '0';
         }
 
         async function fetchAndProcessRounds() {
@@ -288,68 +239,45 @@
             let date = document.getElementById('dateInput').value.trim();
             if (!date) {
                 const today = new Date();
-                date = today.getFullYear() + '-' +
-                       String(today.getMonth() + 1).padStart(2, '0') + '-' +
-                       String(today.getDate()).padStart(2, '0');
+                date = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
             }
-
             currentDate = date;
 
-            const bypassFilter = document.getElementById('bypassFilter').checked;
+            const bypass = document.getElementById('bypassFilter').checked;
 
             try {
-                const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
-                const res = await fetch(url);
-                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
-
+                const res = await fetch(`https://pwa-players-backend.onrender.com/rounds?date=${date}`);
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
-                if (!bypassFilter) {
-                    const cutoffDate = new Date('2026-01-07T00:00:00Z');
+                if (!bypass) {
+                    const cutoff = new Date('2026-01-07T00:00:00Z');
+                    rounds = rounds.filter(r => {
+                        const fullScores = r.scores && Object.values(r.scores).every(a => Array.isArray(a) && a.length===18 && a.every(s=>s!=null));
+                        const finishedOk = r.finishedHoles && r.finishedHoles.length === 18;
+                        if (!finishedOk && !fullScores) return false;
 
-                    rounds = rounds.filter(round => {
-                        const hasFullScores = round.scores && 
-                            Object.values(round.scores).every(playerArray => 
-                                Array.isArray(playerArray) && playerArray.length === 18 &&
-                                playerArray.every(s => s !== null && typeof s === 'object')
-                            );
+                        if (new Date(r.date) < cutoff) return false;
 
-                        const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
-
-                        if (!finishedOk && !hasFullScores) return false;
-
-                        const roundDate = new Date(round.date);
-                        if (roundDate < cutoffDate) return false;
-
-                        const totalPoints = Object.values(round._cachedTotals || {})
-                            .reduce((sum, score) => sum + (score || 0), 0);
-                        if (totalPoints < 40) return false;
-
-                        return true;
+                        const total = Object.values(r._cachedTotals || {}).reduce((a,b)=>a+(b||0),0);
+                        return total >= 40;
                     });
                 }
 
                 if (rounds.length === 0) {
-                    document.getElementById('status').textContent = 
-                        bypassFilter 
-                            ? `No rounds found for ${date}.` 
-                            : `No valid rounds found for ${date} after cleanup. Try "Show all rounds".`;
+                    document.getElementById('status').textContent = bypass ? `No rounds for ${date}.` : `No valid rounds for ${date}. Try "Show all".`;
                     return;
                 }
 
-                document.getElementById('status').textContent = 
-                    bypassFilter 
-                        ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (filter bypassed).` 
-                        : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
+                document.getElementById('status').textContent = bypass 
+                    ? `Loaded ${rounds.length} round${rounds.length>1?'s':''} (filter off).` 
+                    : `Loaded ${rounds.length} valid round${rounds.length>1?'s':''}.`;
 
                 window.currentRoundsData = rounds;
                 window.currentComputed = rounds.map(r => computeAllForRound(r));
-
                 renderResults(rounds);
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status').textContent = `Error: ${err.message}`;
+            } catch(e) {
+                document.getElementById('status').textContent = `Error: ${e.message}`;
             }
         }
 
@@ -360,17 +288,20 @@
             let allTotals = {};
 
             rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i] || {
-                    finalTotals: {}, runningTotals: {}, holeBreakdowns: [],
-                    cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
-                };
+                const comp = window.currentComputed[i];
 
-                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
-                    allTotals[name] = (allTotals[name] || 0) + (pts || 0);
-                });
+                Object.entries(comp.finalTotals).forEach(([n,p]) => allTotals[n] = (allTotals[n]||0) + p);
 
                 const chartId = `chart-${round.matchId || i}`;
                 const playerNames = Object.keys(comp.runningTotals || {});
+
+                // Global max for all mini charts (same Y-scale for fair comparison)
+                let globalMax = 5;
+                ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
+                    Object.values(comp[k]||{}).forEach(arr => {
+                        if (arr) globalMax = Math.max(globalMax, ...arr);
+                    });
+                });
 
                 const card = document.createElement('div');
                 card.className = 'round-card';
@@ -380,9 +311,8 @@
 
                     <div class="carry-in">
                         <strong>Final Standings:</strong><br>
-                        ${Object.entries(comp.finalTotals)
-                            .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
+                        ${Object.entries(comp.finalTotals).sort((a,b)=>b[1]-a[1])
+                            .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>')}
                     </div>
 
                     <h4>Cumulative Points Progress (All Categories)</h4>
@@ -391,122 +321,116 @@
                     </div>
 
                     <div class="mini-charts">
-                        <div class="mini-chart-container">
-                            <canvas id="mini-fo-${chartId}"></canvas>
-                        </div>
-                        <div class="mini-chart-container">
-                            <canvas id="mini-gr-${chartId}"></canvas>
-                        </div>
-                        <div class="mini-chart-container">
-                            <canvas id="mini-cl-${chartId}"></canvas>
-                        </div>
-                        <div class="mini-chart-container">
-                            <canvas id="mini-p-${chartId}"></canvas>
-                        </div>
+                        <div class="mini-chart-container"><canvas id="mini-fo-${chartId}"></canvas></div>
+                        <div class="mini-chart-container"><canvas id="mini-gr-${chartId}"></canvas></div>
+                        <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
+                        <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
                     </div>
 
                     <h4>Hole-by-Hole Breakdown</h4>
                     <table>
-                        <tr>
-                            <th>Hole</th>
-                            <th>Carry In</th>
-                            <th>Winners & Points</th>
-                            <th>Running Totals</th>
-                        </tr>
-                        ${comp.holeBreakdowns?.map(hb => {
-                            const runningStr = Object.entries(comp.runningTotals || {})
-                                .map(([name, cumuls]) => `${name}: ${cumuls[hb.hole - 1] || 0}`)
-                                .sort()
-                                .join(' | ');
-                            return `
-                                <tr>
-                                    <td><strong>${hb.hole}</strong></td>
-                                    <td>${formatCarryIn(hb.carryIn)}</td>
-                                    <td>${hb.winners.map(w => `${w.name} (${w.detail})`).join('<br>') || '—'}</td>
-                                    <td class="running-cell">${runningStr || '—'}</td>
-                                </tr>
-                            `;
-                        }).join('') || '<tr><td colspan="4">No hole data</td></tr>'}
+                        <tr><th>Hole</th><th>Carry In</th><th>Winners & Points</th><th>Running Totals</th></tr>
+                        ${comp.holeBreakdowns.map(hb => {
+                            const runStr = Object.entries(comp.runningTotals)
+                                .map(([n,c]) => `${n}: ${c[hb.hole-1]||0}`).sort().join(' | ');
+                            return `<tr>
+                                <td><strong>${hb.hole}</strong></td>
+                                <td>${formatCarryIn(hb.carryIn)}</td>
+                                <td>${hb.winners.map(w=>`${w.name} (${w.detail})`).join('<br>')||'—'}</td>
+                                <td class="running-cell">${runStr}</td>
+                            </tr>`;
+                        }).join('')}
                     </table>
                 `;
                 container.appendChild(card);
 
-                // Create charts (dots only, no lines)
-                createDotChart(chartId, comp.runningTotals, playerNames, 'Cumulative Points (All)');
-                createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO Points');
-                createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie Points');
-                createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest Points');
-                createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt Points');
+                // Main chart: lines + dots
+                createMainChart(chartId, comp.runningTotals, playerNames);
+
+                // Mini charts: dots only, shared Y-scale
+                createDotChart(`mini-fo-${chartId}`, comp.cumFO,      playerNames, 'Cumulative FO',      globalMax);
+                createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
+                createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
+                createDotChart(`mini-p-${chartId}`,  comp.cumPutt,    playerNames, 'Cumulative Putt',    globalMax);
             });
 
+            // Overall leaderboard
             const overall = document.createElement('div');
             overall.className = 'round-card';
             overall.innerHTML = `
-                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
-                <table>
-                    <tr><th>Player</th><th>Total Points</th></tr>
-                    ${Object.entries(allTotals)
-                        .sort((a,b) => b[1] - a[1])
-                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
-                </table>
-            `;
+                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length>1?'s':''})</h3>
+                <table><tr><th>Player</th><th>Total Points</th></tr>
+                ${Object.entries(allTotals).sort((a,b)=>b[1]-a[1])
+                    .map(([n,p])=>`<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('')}
+                </table>`;
             container.appendChild(overall);
 
             document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
             document.getElementById('results').style.display = 'block';
         }
 
-        function createDotChart(canvasId, dataByPlayer, playerNames, title = '') {
+        function createMainChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-
-            const datasets = playerNames.map((name, index) => ({
+            const datasets = playerNames.map((name, i) => ({
                 label: name,
-                data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(index),
-                backgroundColor: getPlayerColor(index),
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                showLine: false,           // no connecting lines
-                borderWidth: 0,
+                data: runningTotals[name] || new Array(18).fill(0),
+                borderColor: getPlayerColor(i),
+                backgroundColor: getPlayerColor(i) + '33',
+                tension: 0.1,
+                pointRadius: 4,
+                pointHoverRadius: 7,
+                borderWidth: 2,
+                showLine: true,
                 fill: false
             }));
 
             new Chart(ctx, {
-                type: 'line',  // still 'line' type, but showLine: false makes it scatter-like
-                data: {
-                    labels: Array.from({length: 18}, (_, i) => `Hole ${i+1}`),
-                    datasets
-                },
+                type: 'line',
+                data: { labels: Array.from({length:18},(_,i)=>`Hole ${i+1}`), datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true }, x: { title: { display:true, text:'Hole'} } },
+                    plugins: { legend: { position:'top' }, tooltip: { mode:'index', intersect:false } }
+                }
+            });
+        }
+
+        function createDotChart(canvasId, dataByPlayer, playerNames, title, yMax) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const datasets = playerNames.map((name, i) => ({
+                label: name,
+                data: dataByPlayer[name] || new Array(18).fill(0),
+                borderColor: getPlayerColor(i),
+                backgroundColor: getPlayerColor(i),
+                pointRadius: 4,           // 20% smaller
+                pointHoverRadius: 6,
+                showLine: false,
+                borderWidth: 0
+            }));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: { labels: Array.from({length:18},(_,i)=>`Hole ${i+1}`), datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { 
-                            beginAtZero: true,
-                            title: { display: !!title, text: title || 'Cumulative Points' }
-                        },
-                        x: { title: { display: true, text: 'Hole' } }
+                        y: { beginAtZero: true, suggestedMax: yMax },
+                        x: { ticks: { maxTicksLimit: 10 } }
                     },
                     plugins: {
-                        legend: { position: title ? 'top' : 'none' },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: ctx => `${ctx.dataset.label}: ${ctx.raw} pts`
-                            }
-                        }
+                        legend: { display: false },
+                        title: { display: true, text: title, font: {size:13} },
+                        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} pts` }}
                     }
                 }
             });
         }
 
-        function getPlayerColor(index) {
-            const colors = [
-                '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
-                '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
-            ];
-            return colors[index % colors.length];
+        function getPlayerColor(i) {
+            const c = ['#0d6efd','#198754','#dc3545','#ffc107','#6f42c1','#fd7e14','#20c997','#6610f2','#d63384','#0dcaf0'];
+            return c[i % c.length];
         }
 
         function clearAll() {
