@@ -48,11 +48,10 @@
             background: #fff3cd;
             border: 2px solid #ffc107;
             border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
+            padding: 16px;
+            margin: 18px 0;
             font-size: 1.05em;
         }
-        .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
         .mini-charts {
             display: flex;
             flex-wrap: wrap;
@@ -64,6 +63,7 @@
             min-width: 240px;
             height: 180px;
         }
+        .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
     </style>
 </head>
 <body>
@@ -135,10 +135,8 @@
 
             const holeScores = {};
 
-            if (!round.players || !Array.isArray(round.players)) {
-                return { finalTotals: {}, holeBreakdowns: [], runningTotals: {},
-                         cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, roundInfo: round };
-            }
+            if (!round.players || !Array.isArray(round.players)) return { finalTotals: {}, holeBreakdowns: [], runningTotals: {},
+                cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, roundInfo: round };
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
                 Object.entries(round.scores).forEach(([name, arr]) => {
@@ -188,38 +186,12 @@
                 }
             });
 
-            const holeBreakdowns = [];
-            for (let h = 1; h <= 18; h++) {
-                const idx = h - 1;
-                const carryIn = getCarryInForHole(holeScores, pars, h);
-                const winners = [];
-                Object.entries(holeScores[idx] || {}).forEach(([name, s]) => {
-                    if (!s.firstOn && !s.closest && !s.putt) return;
-                    let parts = [];
-                    if (s.firstOn) parts.push(`${1 + (pars[idx]===3?carryIn.greenie:carryIn.firstOn)}${pars[idx]===3?'GR':'FO'}`);
-                    if (s.closest) parts.push(`${1 + carryIn.closest}CL`);
-                    if (s.putt)    parts.push(`${1 + carryIn.putt}P`);
-                    winners.push({name, detail: parts.join(', ')});
-                });
-                holeBreakdowns.push({hole: h, carryIn, winners, runningTotals});
-            }
-
             return {
                 finalTotals: playerTotals,
-                holeBreakdowns,
                 runningTotals,
                 cumFO, cumGreenie, cumClosest, cumPutt,
                 roundInfo: round
             };
-        }
-
-        function formatCarryIn(carry) {
-            const p = [];
-            if (carry.firstOn) p.push(`FO:${carry.firstOn}`);
-            if (carry.greenie) p.push(`GR:${carry.greenie}`);
-            if (carry.closest) p.push(`CL:${carry.closest}`);
-            if (carry.putt) p.push(`P:${carry.putt}`);
-            return p.length ? p.join(' ') : '0';
         }
 
         async function fetchAndProcessRounds() {
@@ -290,7 +262,7 @@
                     });
                 });
 
-                // === BEER BET LOGIC ===
+                // === BEER BET LOGIC (exactly as requested) ===
                 const sorted = Object.entries(comp.finalTotals)
                     .sort((a,b) => b[1] - a[1])
                     .map(([name, pts]) => ({name, pts}));
@@ -300,19 +272,12 @@
 
                 if (numPlayers >= 3) {
                     winners = [sorted[0]];
-                    if (sorted.length > 1 && sorted[1].pts === sorted[0].pts) {
-                        winners.push(sorted[1]);           // top two tied
-                    } else if (sorted.length > 1) {
-                        winners.push(sorted[1]);
-                    }
+                    if (sorted[1] && sorted[1].pts === sorted[0].pts) winners.push(sorted[1]);
 
                     if (numPlayers === 3) {
-                        buyers = winners.length === 2 ? [] : [sorted[2]];   // top two tie → bottom free
+                        buyers = winners.length === 2 ? [] : [sorted[2]];   // top two tie → bottom off the hook
                     } else {
-                        buyers = [sorted[sorted.length-2], sorted[sorted.length-1]]; // bottom two
-                        if (sorted[sorted.length-2].pts === sorted[sorted.length-1].pts && numPlayers === 4) {
-                            // middle two tie → still bottom buys
-                        }
+                        buyers = sorted.slice(-2);   // bottom two buy
                     }
                 }
 
@@ -320,8 +285,8 @@
                     <div class="beer-bet">
                         <strong>🍺 Beer Bet Highlights 🍺</strong><br>
                         <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} 🍺`).join(' & ')}<br>
-                        <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (tie!)'}<br><br>
-                        <strong>Category Kings:</strong><br>
+                        <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
+                        <strong>Category Highlights:</strong><br>
                         • Most FO: ${Object.entries(comp.cumFO).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
                         • Most Greenies: ${Object.entries(comp.cumGreenie).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
                         • Most Closest: ${Object.entries(comp.cumClosest).sort((a,b)=>b[1][17]-a[1][17])[0][0]}<br>
@@ -363,7 +328,6 @@
                 createDotChart(`mini-p-${chartId}`,  comp.cumPutt,    playerNames, 'Cumulative Putt',    globalMax);
             });
 
-            // Overall leaderboard
             const overall = document.createElement('div');
             overall.className = 'round-card';
             overall.innerHTML = `
@@ -378,7 +342,6 @@
             document.getElementById('results').style.display = 'block';
         }
 
-        // Chart functions (unchanged from previous version)
         function createMainChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             const datasets = playerNames.map((name, i) => ({
@@ -414,12 +377,13 @@
             const datasets = playerNames.map((name, i) => ({
                 label: name,
                 data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i),
+                borderColor: getPlayerColor(i) + '88',   // fainter
                 backgroundColor: getPlayerColor(i),
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                showLine: false,
-                borderWidth: 0
+                pointRadius: 3,          // 20% smaller
+                pointHoverRadius: 5,
+                showLine: true,
+                borderWidth: 1,          // half thickness, fainter
+                fill: false
             }));
 
             new Chart(ctx, {
