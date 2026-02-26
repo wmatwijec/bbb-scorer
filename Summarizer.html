@@ -254,23 +254,25 @@
                 const cutoffDate = new Date('2026-01-07T00:00:00Z');
 
                 rounds = rounds.filter(round => {
-                    // Rule 1: Full 18-hole round
-                    if (!round.finishedHoles || round.finishedHoles.length !== 18) {
+                    // Rule 1: Either finishedHoles claims 18, OR scores exist for all 18 holes
+                    const hasFullScores = round.scores && 
+                        Object.values(round.scores).every(playerArray => 
+                            Array.isArray(playerArray) && playerArray.length === 18 && 
+                            playerArray.every(s => s !== null && typeof s === 'object')
+                        );
+
+                    if (!round.finishedHoles || (round.finishedHoles.length !== 18 && !hasFullScores)) {
                         return false;
                     }
 
-                    // Rule 2: Date on/after Jan 7, 2026
+                    // Rule 2 unchanged
                     const roundDate = new Date(round.date);
-                    if (roundDate < cutoffDate) {
-                        return false;
-                    }
+                    if (roundDate < cutoffDate) return false;
 
-                    // Rule 3: Total cached points >= 40
+                    // Rule 3 unchanged (or lower to 20 if you want more leniency)
                     const totalPoints = Object.values(round._cachedTotals || {})
                         .reduce((sum, score) => sum + (score || 0), 0);
-                    if (totalPoints < 40) {
-                        return false;
-                    }
+                    if (totalPoints < 40) return false;
 
                     return true;
                 });

@@ -150,27 +150,38 @@
                 // Updated cleanup: same strict rules as the daily summarizer
                 const cutoffDate = new Date('2026-01-07T00:00:00Z');
 
-                allRounds = rounds.filter(round => {
-                    // Rule 1: Must be a full 18-hole round
-                    if (!round.finishedHoles || round.finishedHoles.length !== 18) {
-                        return false;
-                    }
+                // Updated cleanup: more forgiving on finishedHoles if scores look complete
+                    allRounds = rounds.filter(round => {
+                        // Rule 1: Full 18 holes — prefer scores presence over finishedHoles array
+                        const hasFullScores = round.scores && 
+                            Object.values(round.scores).every(playerArray => 
+                                Array.isArray(playerArray) && playerArray.length === 18 &&
+                                playerArray.every(s => s !== null && typeof s === 'object')  // basic check for valid score objects
+                            );
 
-                    // Rule 2: Date on or after Jan 7, 2026
-                    const roundDate = new Date(round.date);
-                    if (roundDate < cutoffDate) {
-                        return false;
-                    }
+                        const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
 
-                    // Rule 3: Total points across all players >= 40
-                    const totalPoints = Object.values(round._cachedTotals || {})
-                        .reduce((sum, score) => sum + (score || 0), 0);
-                    if (totalPoints < 40) {
-                        return false;
-                    }
+                        if (!finishedOk && !hasFullScores) {
+                            console.log(`Rejected ${round.matchId || 'unknown'}: incomplete holes (finished: ${round.finishedHoles?.length || 'missing'}, scores full?: ${hasFullScores})`);
+                            return false;
+                        }
 
-                    return true;
-                });
+                        // Rule 2: Date on or after Jan 7, 2026
+                        const roundDate = new Date(round.date);
+                        if (roundDate < cutoffDate) {
+                            return false;
+                        }
+
+                        // Rule 3: Total points >= 40 (you can lower to 20 or 25 if you want Feb 25 to pass)
+                        const totalPoints = Object.values(round._cachedTotals || {})
+                            .reduce((sum, score) => sum + (score || 0), 0);
+                        if (totalPoints < 40) {
+                            console.log(`Rejected ${round.matchId || 'unknown'}: low total points (${totalPoints})`);
+                            return false;
+                        }
+
+                        return true;
+                    });
 
                 if (allRounds.length === 0) {
                     document.getElementById('status').textContent = 'No valid completed rounds found after cleanup.';
