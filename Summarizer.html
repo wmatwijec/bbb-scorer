@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBB Daily Summaries</title>
+    <title>BBB Daily Round Summaries</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -43,6 +43,7 @@
             padding: 20px;
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            position: relative;
         }
         .beer-bet {
             background: #fff3cd;
@@ -64,6 +65,34 @@
             height: 180px;
         }
         .status { color: #666; margin: 20px 0; font-style: italic; text-align: center; }
+
+        /* Crosshair & tooltip */
+        .chartjs-tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 10px;
+            pointer-events: none;
+            opacity: 0;
+            transition: all .1s ease;
+            font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 100;
+            max-width: 280px;
+        }
+        .chartjs-tooltip.active { opacity: 1; }
+        .chartjs-tooltip .title { font-weight: bold; margin-bottom: 6px; }
+        .chartjs-tooltip table { margin: 0; padding: 0; border-collapse: collapse; width: 100%; }
+        .chartjs-tooltip td { padding: 2px 6px; }
+        .crosshair {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 1px;
+            background: rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+            z-index: 99;
+        }
     </style>
 </head>
 <body>
@@ -98,10 +127,15 @@
         </div>
     </div>
 
+    <!-- Shared tooltip -->
+    <div id="chart-tooltip" class="chartjs-tooltip"></div>
+
     <script>
         const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
 
         let currentDate = '';
+        let activeChart = null;
+        let lastHoveredIndex = -1;
 
         function getCarryInForHole(holeScores, pars, holeNumber) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
@@ -135,8 +169,11 @@
 
             const holeScores = {};
 
-            if (!round.players || !Array.isArray(round.players)) return { finalTotals: {}, holeBreakdowns: [], runningTotals: {},
-                cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}, perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}, roundInfo: round };
+            if (!round.players || !Array.isArray(round.players)) {
+                return { finalTotals: {}, runningTotals: {},
+                         cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
+                         roundInfo: round };
+            }
 
             if (round.scores && typeof round.scores === 'object' && !Array.isArray(round.scores)) {
                 Object.entries(round.scores).forEach(([name, arr]) => {
@@ -150,7 +187,6 @@
 
             const playerTotals = {}, runningTotals = {};
             const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
-            const perHoleFO = {}, perHoleGreenie = {}, perHoleClosest = {}, perHolePutt = {};
 
             round.players.forEach(p => {
                 const name = p.name; if (!name) return;
@@ -160,10 +196,6 @@
                 cumGreenie[name] = new Array(18).fill(0);
                 cumClosest[name] = new Array(18).fill(0);
                 cumPutt[name] = new Array(18).fill(0);
-                perHoleFO[name] = new Array(18).fill(0);
-                perHoleGreenie[name] = new Array(18).fill(0);
-                perHoleClosest[name] = new Array(18).fill(0);
-                perHolePutt[name] = new Array(18).fill(0);
 
                 let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
 
@@ -171,29 +203,15 @@
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
                     const isPar3 = pars[idx] === 3;
-                    let pts = 0, foPts = 0, grPts = 0, clPts = 0, puPts = 0;
+                    let pts = 0;
 
                     if (s.firstOn) {
                         const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
                         pts += 1 + carry;
-                        if (isPar3) {
-                            grPts = 1 + carry;
-                            gr += grPts;
-                        } else {
-                            foPts = 1 + carry;
-                            fo += foPts;
-                        }
+                        if (isPar3) gr += 1 + carry; else fo += 1 + carry;
                     }
-                    if (s.closest) {
-                        clPts = 1 + carryIn.closest;
-                        pts += clPts;
-                        cl += clPts;
-                    }
-                    if (s.putt) {
-                        puPts = 1 + carryIn.putt;
-                        pts += puPts;
-                        pu += puPts;
-                    }
+                    if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
+                    if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
 
                     total += pts;
                     runningTotals[name][idx] = total;
@@ -201,10 +219,6 @@
                     cumGreenie[name][idx] = gr;
                     cumClosest[name][idx] = cl;
                     cumPutt[name][idx] = pu;
-                    perHoleFO[name][idx] = foPts;
-                    perHoleGreenie[name][idx] = grPts;
-                    perHoleClosest[name][idx] = clPts;
-                    perHolePutt[name][idx] = puPts;
                     playerTotals[name] += pts;
                 }
             });
@@ -213,7 +227,6 @@
                 finalTotals: playerTotals,
                 runningTotals,
                 cumFO, cumGreenie, cumClosest, cumPutt,
-                perHoleFO, perHoleGreenie, perHoleClosest, perHolePutt,
                 roundInfo: round
             };
         }
@@ -225,43 +238,68 @@
             let date = document.getElementById('dateInput').value.trim();
             if (!date) {
                 const today = new Date();
-                date = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+                date = today.getFullYear() + '-' +
+                       String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                       String(today.getDate()).padStart(2, '0');
             }
+
             currentDate = date;
 
-            const bypass = document.getElementById('bypassFilter').checked;
+            const bypassFilter = document.getElementById('bypassFilter').checked;
 
             try {
-                const res = await fetch(`https://pwa-players-backend.onrender.com/rounds?date=${date}`);
+                const url = `https://pwa-players-backend.onrender.com/rounds?date=${date}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Backend: ${res.status} ${res.statusText}`);
+
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
-                if (!bypass) {
-                    const cutoff = new Date('2026-01-07T00:00:00Z');
-                    rounds = rounds.filter(r => {
-                        const fullScores = r.scores && Object.values(r.scores).every(a => Array.isArray(a) && a.length===18 && a.every(s=>s!=null));
-                        const finishedOk = r.finishedHoles && r.finishedHoles.length === 18;
-                        if (!finishedOk && !fullScores) return false;
-                        if (new Date(r.date) < cutoff) return false;
-                        const total = Object.values(r._cachedTotals || {}).reduce((a,b)=>a+(b||0),0);
-                        return total >= 40;
+                if (!bypassFilter) {
+                    const cutoffDate = new Date('2026-01-07T00:00:00Z');
+
+                    rounds = rounds.filter(round => {
+                        const hasFullScores = round.scores && 
+                            Object.values(round.scores).every(playerArray => 
+                                Array.isArray(playerArray) && playerArray.length === 18 &&
+                                playerArray.every(s => s !== null && typeof s === 'object')
+                            );
+
+                        const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
+
+                        if (!finishedOk && !hasFullScores) return false;
+
+                        const roundDate = new Date(round.date);
+                        if (roundDate < cutoffDate) return false;
+
+                        const totalPoints = Object.values(round._cachedTotals || {})
+                            .reduce((sum, score) => sum + (score || 0), 0);
+                        if (totalPoints < 40) return false;
+
+                        return true;
                     });
                 }
 
                 if (rounds.length === 0) {
-                    document.getElementById('status').textContent = bypass ? `No rounds for ${date}.` : `No valid rounds for ${date}. Try "Show all".`;
+                    document.getElementById('status').textContent = 
+                        bypassFilter 
+                            ? `No rounds found for ${date}.` 
+                            : `No valid rounds found for ${date} after cleanup. Try "Show all rounds".`;
                     return;
                 }
 
-                document.getElementById('status').textContent = bypass 
-                    ? `Loaded ${rounds.length} round${rounds.length>1?'s':''} (filter off).` 
-                    : `Loaded ${rounds.length} valid round${rounds.length>1?'s':''}.`;
+                document.getElementById('status').textContent = 
+                    bypassFilter 
+                        ? `Loaded ${rounds.length} round${rounds.length === 1 ? '' : 's'} (filter bypassed).` 
+                        : `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
 
                 window.currentRoundsData = rounds;
                 window.currentComputed = rounds.map(r => computeAllForRound(r));
+
                 renderResults(rounds);
-            } catch(e) {
-                document.getElementById('status').textContent = `Error: ${e.message}`;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status').textContent = `Error: ${err.message}`;
             }
         }
 
@@ -272,9 +310,13 @@
             let allTotals = {};
 
             rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i];
+                const comp = window.currentComputed[i] || {
+                    finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
+                };
 
-                Object.entries(comp.finalTotals).forEach(([n,p]) => allTotals[n] = (allTotals[n]||0) + p);
+                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
+                    allTotals[name] = (allTotals[name] || 0) + (pts || 0);
+                });
 
                 const chartId = `chart-${round.matchId || i}`;
                 const playerNames = Object.keys(comp.runningTotals || {});
@@ -286,138 +328,21 @@
                     });
                 });
 
-                // Beer bet logic (unchanged)
-                const sorted = Object.entries(comp.finalTotals)
-                    .sort((a,b) => b[1] - a[1])
-                    .map(([name, pts]) => ({name, pts}));
-
-                const numPlayers = sorted.length;
-                let winners = [], buyers = [];
-
-                if (numPlayers >= 3) {
-                    winners = sorted.slice(0, 2);  // top two
-
-                    if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
-                        buyers = [];  // top two tied → bottom off the hook
-                    } else if (numPlayers === 3) {
-                        buyers = [sorted[2]];
-                    } else {
-                        buyers = sorted.slice(-2);  // bottom two
-                    }
-                }
-
-                const beerMug = '🍺';
-
-                // Category winners table
-                const categoryRows = [
-                    {cat: 'FO', data: comp.cumFO},
-                    {cat: 'Greenies', data: comp.cumGreenie},
-                    {cat: 'Closest', data: comp.cumClosest},
-                    {cat: 'Putts', data: comp.cumPutt}
-                ].map(c => {
-                    const max = Math.max(...playerNames.map(n => c.data[n]?.[17] || 0));
-                    if (max === 0) return null;
-                    const leaders = playerNames.filter(n => (c.data[n]?.[17] || 0) === max);
-                    return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
-                }).filter(r => r).join('');
-
-                // Streaks & Droughts table
-                const streakRows = [];
-                const categories = [
-                    {name: 'FO', data: comp.perHoleFO},
-                    {name: 'Greenies', data: comp.perHoleGreenie},
-                    {name: 'Closest', data: comp.perHoleClosest},
-                    {name: 'Putts', data: comp.perHolePutt}
-                ];
-
-                categories.forEach(cat => {
-                    let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
-                    let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
-
-                    playerNames.forEach(player => {
-                        const arr = cat.data[player] || new Array(18).fill(0);
-
-                        // Positive streak
-                        let currLen = 0, currSum = 0, currStart = 1;
-                        for (let h = 0; h < 18; h++) {
-                            if (arr[h] > 0) {
-                                currLen++;
-                                currSum += arr[h];
-                                if (currLen === 1) currStart = h + 1;
-                                if (currLen > maxStreakLen || (currLen === maxStreakLen && currSum > maxStreakSum)) {
-                                    maxStreakLen = currLen;
-                                    maxStreakSum = currSum;
-                                    maxStreakPlayer = player;
-                                    maxStreakStart = currStart;
-                                    maxStreakEnd = h + 1;
-                                }
-                            } else {
-                                currLen = 0;
-                                currSum = 0;
-                            }
-                        }
-
-                        // Drought (zero points)
-                        currLen = 0; currStart = 1;
-                        for (let h = 0; h < 18; h++) {
-                            if (arr[h] === 0) {
-                                currLen++;
-                                if (currLen === 1) currStart = h + 1;
-                                if (currLen > maxDroughtLen) {
-                                    maxDroughtLen = currLen;
-                                    maxDroughtPlayer = player;
-                                    maxDroughtStart = currStart;
-                                    maxDroughtEnd = h + 1;
-                                }
-                            } else {
-                                currLen = 0;
-                            }
-                        }
-                    });
-
-                    if (maxStreakLen > 1) {
-                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest streak</td><td>${maxStreakPlayer}</td><td>${maxStreakSum} pts over ${maxStreakLen} holes (${maxStreakStart}-${maxStreakEnd})</td></tr>`);
-                    }
-                    if (maxDroughtLen > 2) {  // only show droughts of 3+ holes to reduce noise
-                        streakRows.push(`<tr><td>${cat.name}</td><td>Longest drought</td><td>${maxDroughtPlayer}</td><td>${maxDroughtLen} holes (${maxDroughtStart}-${maxDroughtEnd})</td></tr>`);
-                    }
-                });
-
-                const beerHTML = winners.length ? `
-                    <div class="beer-bet">
-                        <strong>🍺 Beer Bet Highlights 🍺</strong><br>
-                        <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
-                        <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
-
-                        <strong>Category Winners</strong>
-                        <table style="width:100%; margin:10px 0; border-collapse:collapse;">
-                            <tr style="background:#ffeaa7;"><th>Category</th><th>Leader</th><th>Points</th></tr>
-                            ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
-                        </table>
-
-                        <strong>Streaks & Droughts</strong>
-                        <table style="width:100%; margin:10px 0; border-collapse:collapse;">
-                            <tr style="background:#ffeaa7;"><th>Category</th><th>Type</th><th>Player</th><th>Details</th></tr>
-                            ${streakRows.length ? streakRows.join('') : '<tr><td colspan="4">No notable streaks/droughts</td></tr>'}
-                        </table>
-                    </div>` : '';
-
                 const card = document.createElement('div');
                 card.className = 'round-card';
                 card.innerHTML = `
                     <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${numPlayers} players</p>
+                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
 
                     <div class="carry-in">
                         <strong>Final Standings:</strong><br>
-                        ${Object.entries(comp.finalTotals).sort((a,b)=>b[1]-a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p}</span> pts`).join('<br>')}
+                        ${Object.entries(comp.finalTotals)
+                            .sort((a,b) => b[1] - a[1])
+                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
                     </div>
 
-                    ${beerHTML}
-
                     <h4>Cumulative Points Progress (All Categories)</h4>
-                    <div style="height: 300px; margin-bottom: 25px;">
+                    <div style="height: 300px; margin-bottom: 25px; position: relative;">
                         <canvas id="${chartId}"></canvas>
                     </div>
 
@@ -430,48 +355,41 @@
                 `;
                 container.appendChild(card);
 
-                createMainChart(chartId, comp.runningTotals, playerNames);
-                createDotChart(`mini-fo-${chartId}`, comp.cumFO,      playerNames, 'Cumulative FO',      globalMax);
-                createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
-                createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
-                createDotChart(`mini-p-${chartId}`,  comp.cumPutt,    playerNames, 'Cumulative Putt',    globalMax);
+                // Create charts
+                const mainChart = createMainChart(chartId, comp.runningTotals, playerNames);
+                const miniFO = createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
+                const miniGR = createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
+                const miniCL = createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
+                const miniP  = createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt', globalMax);
+
+                const allCharts = [mainChart, miniFO, miniGR, miniCL, miniP];
+
+                allCharts.forEach(chart => {
+                    chart.canvas.addEventListener('mousemove', e => syncCrosshair(e, chart, allCharts, comp, playerNames));
+                    chart.canvas.addEventListener('mouseout', hideCrosshair);
+                    chart.canvas.addEventListener('touchmove', e => {
+                        e.preventDefault();
+                        syncCrosshair(e.touches[0], chart, allCharts, comp, playerNames);
+                    }, { passive: false });
+                    chart.canvas.addEventListener('touchend', hideCrosshair);
+                });
             });
 
             const overall = document.createElement('div');
             overall.className = 'round-card';
             overall.innerHTML = `
-                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length>1?'s':''})</h3>
-                <table><tr><th>Player</th><th>Total Points</th></tr>
-                ${Object.entries(allTotals).sort((a,b)=>b[1]-a[1])
-                    .map(([n,p])=>`<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('')}
-                </table>`;
+                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
+                <table>
+                    <tr><th>Player</th><th>Total Points</th></tr>
+                    ${Object.entries(allTotals)
+                        .sort((a,b) => b[1] - a[1])
+                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
+                </table>
+            `;
             container.appendChild(overall);
 
             document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
             document.getElementById('results').style.display = 'block';
-        }
-
-        function getMaxStreak(perHole, isPositive = true) {
-            let maxLength = 0, currentLength = 0, maxSum = 0, currentSum = 0, maxStart = 1, maxEnd = 1, start = 1;
-            for (let i = 0; i < 18; i++) {
-                const val = perHole[i];
-                if (isPositive ? val > 0 : val === 0) {
-                    currentLength++;
-                    if (isPositive) currentSum += val;
-                    const updateVal = isPositive ? currentSum : currentLength;
-                    if (updateVal > (isPositive ? maxSum : maxLength)) {
-                        if (isPositive) maxSum = updateVal;
-                        else maxLength = updateVal;
-                        maxStart = start;
-                        maxEnd = i + 1;
-                    }
-                } else {
-                    currentLength = 0;
-                    currentSum = 0;
-                    start = i + 2;
-                }
-            }
-            return isPositive ? {sum: maxSum, length: maxLength, start: maxStart, end: maxEnd} : {length: maxLength, start: maxStart, end: maxEnd};
         }
 
         function createMainChart(canvasId, runningTotals, playerNames) {
@@ -489,7 +407,7 @@
                 fill: false
             }));
 
-            new Chart(ctx, {
+            return new Chart(ctx, {
                 type: 'line',
                 data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
@@ -499,7 +417,8 @@
                         y: { beginAtZero: true, title: { display: true, text: 'Cumulative Points' } },
                         x: { title: { display: true, text: 'Hole' } }
                     },
-                    plugins: { legend: { position:'top' }, tooltip: { mode:'index', intersect:false } }
+                    plugins: { legend: { position:'top' } },
+                    interaction: { mode: 'index', intersect: false }
                 }
             });
         }
@@ -509,17 +428,17 @@
             const datasets = playerNames.map((name, i) => ({
                 label: name,
                 data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i) + '88',  // fainter
+                borderColor: getPlayerColor(i) + '88',
                 backgroundColor: getPlayerColor(i),
-                pointRadius: 3,  // 20% smaller
+                pointRadius: 3,
                 pointHoverRadius: 5,
                 tension: 0.1,
-                borderWidth: 1,  // half thickness
+                borderWidth: 1,
                 showLine: true,
                 fill: false
             }));
 
-            new Chart(ctx, {
+            return new Chart(ctx, {
                 type: 'line',
                 data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
@@ -529,17 +448,73 @@
                         y: { beginAtZero: true, suggestedMax: yMax, title: { display: true, text: title } },
                         x: { title: { display: true, text: 'Hole' } }
                     },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw} pts` } }
-                    }
+                    plugins: { legend: { display: false } },
+                    interaction: { mode: 'index', intersect: false }
                 }
             });
         }
 
-        function getPlayerColor(i) {
-            const c = ['#0d6efd','#198754','#dc3545','#ffc107','#6f42c1','#fd7e14','#20c997','#6610f2','#d63384','#0dcaf0'];
-            return c[i % c.length];
+        function syncCrosshair(e, sourceChart, allCharts, comp, playerNames) {
+            const rect = sourceChart.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const nearestIndex = Math.round(sourceChart.scales.x.getValueForPixel(x));
+            if (nearestIndex < 0 || nearestIndex >= 18) return hideCrosshair();
+
+            // Move crosshair on all charts
+            allCharts.forEach(chart => {
+                if (!chart.crosshairLine) {
+                    const line = document.createElement('div');
+                    line.className = 'crosshair';
+                    line.style.position = 'absolute';
+                    line.style.left = '0';
+                    line.style.top = '0';
+                    line.style.bottom = '0';
+                    line.style.width = '1px';
+                    line.style.background = 'rgba(0,0,0,0.4)';
+                    line.style.pointerEvents = 'none';
+                    chart.canvas.parentElement.appendChild(line);
+                    chart.crosshairLine = line;
+                }
+                chart.crosshairLine.style.left = chart.scales.x.getPixelForValue(nearestIndex) + 'px';
+                chart.crosshairLine.style.display = 'block';
+            });
+
+            // Update shared tooltip
+            const tooltip = document.getElementById('chart-tooltip');
+            tooltip.classList.add('active');
+
+            let content = `<div class="title">Hole ${nearestIndex + 1}</div><table>`;
+            playerNames.forEach(name => {
+                content += `<tr>
+                    <td><strong>${name}</strong></td>
+                    <td>Total: ${comp.runningTotals[name]?.[nearestIndex] || 0}</td>
+                    <td>FO: ${comp.cumFO[name]?.[nearestIndex] || 0}</td>
+                    <td>Greenie: ${comp.cumGreenie[name]?.[nearestIndex] || 0}</td>
+                    <td>Closest: ${comp.cumClosest[name]?.[nearestIndex] || 0}</td>
+                    <td>Putt: ${comp.cumPutt[name]?.[nearestIndex] || 0}</td>
+                </tr>`;
+            });
+            content += `</table>`;
+
+            tooltip.innerHTML = content;
+
+            // Position tooltip
+            const chartRect = sourceChart.canvas.getBoundingClientRect();
+            tooltip.style.left = (chartRect.left + chart.scales.x.getPixelForValue(nearestIndex) + 20) + 'px';
+            tooltip.style.top = (chartRect.top + 20) + 'px';
+        }
+
+        function hideCrosshair() {
+            document.querySelectorAll('.crosshair').forEach(el => el.style.display = 'none');
+            document.getElementById('chart-tooltip').classList.remove('active');
+        }
+
+        function getPlayerColor(index) {
+            const colors = [
+                '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
+                '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
+            ];
+            return colors[index % colors.length];
         }
 
         function clearAll() {
