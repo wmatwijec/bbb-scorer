@@ -128,7 +128,7 @@
         </div>
     </div>
 
-    <!-- Shared tooltip -->
+    <!-- Shared tooltip (used independently by each chart) -->
     <div id="chart-tooltip" class="chartjs-tooltip"></div>
 
     <script>
@@ -450,7 +450,7 @@
                 fill: false
             }));
 
-            return new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
@@ -464,6 +464,9 @@
                     interaction: { mode: 'index', intersect: false }
                 }
             });
+
+            addCrosshair(chart, playerNames, runningTotals, 'Total');
+            return chart;
         }
 
         function createDotChart(canvasId, dataByPlayer, playerNames, title, yMax) {
@@ -481,7 +484,7 @@
                 fill: false
             }));
 
-            return new Chart(ctx, {
+            const chart = new Chart(ctx, {
                 type: 'line',
                 data: { labels: Array.from({length:18},(_,i)=>i+1), datasets },
                 options: {
@@ -495,6 +498,9 @@
                     interaction: { mode: 'index', intersect: false }
                 }
             });
+
+            addCrosshair(chart, playerNames, dataByPlayer, title);
+            return chart;
         }
 
         function addCrosshair(chart, playerNames, dataByPlayer, title) {
