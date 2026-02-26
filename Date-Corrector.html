@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBB Date Corrector</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background:#f8f9fa; margin:0; padding:20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #0d6efd; }
+        .input-area, .round-card { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:25px; }
+        input[type="date"] { width:100%; max-width:300px; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:16px; }
+        button { background:#0d6efd; color:white; border:none; padding:12px 24px; font-size:16px; border-radius:10px; cursor:pointer; margin:5px; }
+        button.danger { background:#dc3545; }
+        button:hover { opacity:0.9; }
+        table { width:100%; border-collapse:collapse; margin:15px 0; }
+        th, td { padding:10px; text-align:left; border-bottom:1px solid #eee; }
+        th { background:#f1f3f5; }
+        .status { text-align:center; margin:20px; font-style:italic; color:#666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠 BBB Date Corrector</h1>
+        <p>Fix rounds that were saved on the wrong date.</p>
+
+        <div class="input-area">
+            <label><strong>Wrong Save Date (the day it was entered):</strong></label><br>
+            <input type="date" id="wrongDate">
+            <button onclick="loadRoundsForWrongDate()">Load Rounds on This Date</button>
+        </div>
+
+        <div id="results" class="results" style="display:none;">
+            <h2 id="title">Rounds found</h2>
+            <div id="roundList"></div>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        let currentRounds = [];
+
+        async function loadRoundsForWrongDate() {
+            const date = document.getElementById('wrongDate').value;
+            if (!date) return alert('Pick a date');
+
+            document.getElementById('status').textContent = 'Loading...';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const res = await fetch(`https://pwa-players-backend.onrender.com/rounds?date=${date}`);
+                const data = await res.json();
+
+                currentRounds = data.rounds || [];
+                renderRoundList(currentRounds, date);
+            } catch (e) {
+                document.getElementById('status').textContent = 'Error loading rounds';
+            }
+        }
+
+        function renderRoundList(rounds, wrongDate) {
+            const container = document.getElementById('roundList');
+            container.innerHTML = '';
+
+            if (rounds.length === 0) {
+                container.innerHTML = `<p style="text-align:center;color:#666;">No rounds found on ${wrongDate}</p>`;
+                document.getElementById('results').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('title').textContent = `${rounds.length} round(s) saved on ${wrongDate}`;
+
+            rounds.forEach(round => {
+                const card = document.createElement('div');
+                card.className = 'round-card';
+                card.innerHTML = `
+                    <h3>${round.courseName || 'Unknown'} • ${round.matchId}</h3>
+                    <p><strong>Players:</strong> ${round.players?.map(p=>p.name).join(', ') || '—'}</p>
+                    <p><strong>Start time:</strong> ${round.groupStartTime || '—'}</p>
+                    
+                    <label>New correct play date:</label><br>
+                    <input type="date" id="new-${round.matchId}" value="${wrongDate}">
+                    <button onclick="correctDate('${round.matchId}')">Correct Date →</button>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('status').textContent = '';
+        }
+
+        async function correctDate(matchId) {
+            const newDateInput = document.getElementById(`new-${matchId}`);
+            const newDate = newDateInput.value;
+
+            if (!newDate) return alert('Pick a new date');
+
+            if (!confirm(`Change this round's date from the wrong date to ${newDate}?`)) return;
+
+            try {
+                const res = await fetch('https://pwa-players-backend.onrender.com/update-round-date', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ matchId, newDate })
+                });
+
+                const result = await res.json();
+
+                if (result.success) {
+                    alert(`✅ Date corrected to ${newDate}`);
+                    // reload the list
+                    loadRoundsForWrongDate();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (e) {
+                alert('Network error');
+            }
+        }
+    </script>
+</body>
+</html>
