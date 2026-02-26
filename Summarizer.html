@@ -63,10 +63,7 @@
             border: 1px solid #ddd;
             text-align: left;
         }
-        table.beer-table th {
-            background: #ffeaa7;
-            font-weight: bold;
-        }
+        table.beer-table th { background: #ffeaa7; }
         .mini-charts {
             display: flex;
             flex-wrap: wrap;
@@ -180,6 +177,7 @@
             if (!round.players || !Array.isArray(round.players)) {
                 return { finalTotals: {}, runningTotals: {},
                          cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
+                         perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {},
                          roundInfo: round };
             }
 
@@ -195,6 +193,7 @@
 
             const playerTotals = {}, runningTotals = {};
             const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
+            const perHoleFO = {}, perHoleGreenie = {}, perHoleClosest = {}, perHolePutt = {};
 
             round.players.forEach(p => {
                 const name = p.name; if (!name) return;
@@ -204,6 +203,10 @@
                 cumGreenie[name] = new Array(18).fill(0);
                 cumClosest[name] = new Array(18).fill(0);
                 cumPutt[name] = new Array(18).fill(0);
+                perHoleFO[name] = new Array(18).fill(0);
+                perHoleGreenie[name] = new Array(18).fill(0);
+                perHoleClosest[name] = new Array(18).fill(0);
+                perHolePutt[name] = new Array(18).fill(0);
 
                 let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
 
@@ -211,22 +214,28 @@
                     const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
                     const s = holeScores[idx]?.[name] || {};
                     const isPar3 = pars[idx] === 3;
-                    let pts = 0;
+                    let pts = 0, foPts = 0, grPts = 0, clPts = 0, puPts = 0;
 
                     if (s.firstOn) {
                         const carry = isPar3 ? carryIn.greenie : carryIn.firstOn;
                         pts += 1 + carry;
-                        if (isPar3) gr += 1 + carry; else fo += 1 + carry;
+                        if (isPar3) grPts = 1 + carry; else foPts = 1 + carry;
                     }
-                    if (s.closest) { pts += 1 + carryIn.closest; cl += 1 + carryIn.closest; }
-                    if (s.putt)    { pts += 1 + carryIn.putt;    pu += 1 + carryIn.putt; }
+                    if (s.closest) { clPts = 1 + carryIn.closest; pts += clPts; }
+                    if (s.putt)    { puPts = 1 + carryIn.putt;    pts += puPts; }
 
                     total += pts;
                     runningTotals[name][idx] = total;
-                    cumFO[name][idx] = fo;
-                    cumGreenie[name][idx] = gr;
-                    cumClosest[name][idx] = cl;
-                    cumPutt[name][idx] = pu;
+                    cumFO[name][idx] = fo += foPts;
+                    cumGreenie[name][idx] = gr += grPts;
+                    cumClosest[name][idx] = cl += clPts;
+                    cumPutt[name][idx] = pu += puPts;
+
+                    perHoleFO[name][idx] = foPts;
+                    perHoleGreenie[name][idx] = grPts;
+                    perHoleClosest[name][idx] = clPts;
+                    perHolePutt[name][idx] = puPts;
+
                     playerTotals[name] += pts;
                 }
             });
@@ -235,6 +244,7 @@
                 finalTotals: playerTotals,
                 runningTotals,
                 cumFO, cumGreenie, cumClosest, cumPutt,
+                perHoleFO, perHoleGreenie, perHoleClosest, perHolePutt,
                 roundInfo: round
             };
         }
@@ -319,7 +329,8 @@
 
             rounds.forEach((round, i) => {
                 const comp = window.currentComputed[i] || {
-                    finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {}
+                    finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
+                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}
                 };
 
                 Object.entries(comp.finalTotals).forEach(([name, pts]) => {
@@ -345,20 +356,19 @@
                 let winners = [], buyers = [];
 
                 if (numPlayers >= 3) {
-                    winners = sorted.slice(0, 2);  // top two
-
+                    winners = sorted.slice(0, 2);
                     if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
-                        buyers = [];  // top two tied → bottom off the hook
+                        buyers = [];
                     } else if (numPlayers === 3) {
                         buyers = [sorted[2]];
                     } else {
-                        buyers = sorted.slice(-2);  // bottom two
+                        buyers = sorted.slice(-2);
                     }
                 }
 
                 const beerMug = '🍺';
 
-                // Category winners
+                // Category Winners
                 const categoryRows = [
                     {cat: 'FO', data: comp.cumFO},
                     {cat: 'Greenies', data: comp.cumGreenie},
@@ -371,23 +381,23 @@
                     return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
                 }).filter(r => r).join('');
 
-                // Streaks & Droughts
+                // Streaks & Droughts using per-hole data
                 const streakRows = [];
-                const categories = [
-                    {name: 'FO', data: comp.cumFO},
-                    {name: 'Greenies', data: comp.cumGreenie},
-                    {name: 'Closest', data: comp.cumClosest},
-                    {name: 'Putts', data: comp.cumPutt}
+                const catList = [
+                    {name: 'FO', perHole: comp.perHoleFO},
+                    {name: 'Greenies', perHole: comp.perHoleGreenie},
+                    {name: 'Closest', perHole: comp.perHoleClosest},
+                    {name: 'Putts', perHole: comp.perHolePutt}
                 ];
 
-                categories.forEach(cat => {
+                catList.forEach(cat => {
                     let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
                     let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
 
                     playerNames.forEach(player => {
-                        const arr = cat.data[player] || new Array(18).fill(0);
+                        const arr = cat.perHole[player] || new Array(18).fill(0);
 
-                        // Longest streak (consecutive holes with points > 0)
+                        // Longest positive streak
                         let currLen = 0, currSum = 0, currStart = 1;
                         for (let h = 0; h < 18; h++) {
                             if (arr[h] > 0) {
@@ -407,7 +417,7 @@
                             }
                         }
 
-                        // Longest drought (consecutive holes with 0 points)
+                        // Longest drought (0 points)
                         currLen = 0; currStart = 1;
                         for (let h = 0; h < 18; h++) {
                             if (arr[h] === 0) {
@@ -448,7 +458,7 @@
                         <strong>Streaks & Droughts</strong>
                         <table class="beer-table">
                             <tr><th>Category</th><th>Type</th><th>Player</th><th>Details</th></tr>
-                            ${streakRows.length ? streakRows.join('') : '<tr><td colspan="4">No notable streaks/droughts</td></tr>'}
+                            ${streakRows.length ? streakRows.join('') : '<tr><td colspan="4">No notable streaks or droughts</td></tr>'}
                         </table>
                     </div>` : '';
 
@@ -510,6 +520,9 @@
             document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
             document.getElementById('results').style.display = 'block';
         }
+
+        // Chart functions and addCrosshair remain the same as previous version
+        // (I'm keeping them short here to save space — copy them from the previous full file if needed)
 
         function createMainChart(canvasId, runningTotals, playerNames) {
             const ctx = document.getElementById(canvasId).getContext('2d');
@@ -652,10 +665,7 @@
         }
 
         function getPlayerColor(index) {
-            const colors = [
-                '#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1',
-                '#fd7e14', '#20c997', '#6610f2', '#d63384', '#0dcaf0'
-            ];
+            const colors = ['#0d6efd','#198754','#dc3545','#ffc107','#6f42c1','#fd7e14','#20c997','#6610f2','#d63384','#0dcaf0'];
             return colors[index % colors.length];
         }
 
