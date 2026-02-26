@@ -229,7 +229,7 @@
         }
 
         async function fetchAndProcessRounds() {
-            document.getElementById('status').textContent = 'Loading rounds...';
+            document.getElementById('status').textContent = 'Loading & cleaning rounds...';
             document.getElementById('results').style.display = 'none';
 
             let date = document.getElementById('dateInput').value.trim();
@@ -250,18 +250,37 @@
                 const data = await res.json();
                 let rounds = data.rounds || [];
 
-                // Filter false starts (no points awarded)
-                rounds = rounds.filter(r => {
-                    const comp = computeAllForRound(r);
-                    return Object.values(comp.finalTotals).some(t => t > 0);
+                // === CLEANUP: Apply strict filters (same as Stats page) ===
+                const cutoffDate = new Date('2026-01-07T00:00:00Z');
+
+                rounds = rounds.filter(round => {
+                    // Rule 1: Full 18-hole round
+                    if (!round.finishedHoles || round.finishedHoles.length !== 18) {
+                        return false;
+                    }
+
+                    // Rule 2: Date on/after Jan 7, 2026
+                    const roundDate = new Date(round.date);
+                    if (roundDate < cutoffDate) {
+                        return false;
+                    }
+
+                    // Rule 3: Total cached points >= 40
+                    const totalPoints = Object.values(round._cachedTotals || {})
+                        .reduce((sum, score) => sum + (score || 0), 0);
+                    if (totalPoints < 40) {
+                        return false;
+                    }
+
+                    return true;
                 });
 
                 if (rounds.length === 0) {
-                    document.getElementById('status').textContent = `No valid rounds found for ${date}.`;
+                    document.getElementById('status').textContent = `No valid rounds found for ${date} after cleanup.`;
                     return;
                 }
 
-                document.getElementById('status').textContent = `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'}.`;
+                document.getElementById('status').textContent = `Loaded ${rounds.length} valid round${rounds.length === 1 ? '' : 's'} after cleanup.`;
 
                 window.currentRoundsData = rounds;
                 window.currentComputed = rounds.map(r => computeAllForRound(r));

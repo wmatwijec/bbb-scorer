@@ -163,7 +163,7 @@
                     }
 
                     // Rule 3: Total points across all players >= 40
-                    const totalPoints = Object.values(round.cachedTotals || {})
+                    const totalPoints = Object.values(round._cachedTotals || {})
                         .reduce((sum, score) => sum + (score || 0), 0);
                     if (totalPoints < 40) {
                         return false;
