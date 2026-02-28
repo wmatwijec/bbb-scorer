@@ -322,206 +322,195 @@
         }
 
         function renderResults(rounds) {
-            const container = document.getElementById('roundsContainer');
-            container.innerHTML = '';
+    const container = document.getElementById('roundsContainer');
+    container.innerHTML = '';
 
-            let allTotals = {};
+    let globalMax = 5;  // We'll update this per round
 
-            rounds.forEach((round, i) => {
-                const comp = window.currentComputed[i] || {
-                    finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
-                    perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}
-                };
+    rounds.forEach((round, i) => {
+        const comp = window.currentComputed[i] || {
+            finalTotals: {}, runningTotals: {}, cumFO: {}, cumGreenie: {}, cumClosest: {}, cumPutt: {},
+            perHoleFO: {}, perHoleGreenie: {}, perHoleClosest: {}, perHolePutt: {}
+        };
 
-                Object.entries(comp.finalTotals).forEach(([name, pts]) => {
-                    allTotals[name] = (allTotals[name] || 0) + (pts || 0);
-                });
+        const chartId = `chart-${round.matchId || i}`;
+        const playerNames = Object.keys(comp.runningTotals || {});
 
-                const chartId = `chart-${round.matchId || i}`;
-                const playerNames = Object.keys(comp.runningTotals || {});
+        // Update globalMax across all categories for this round
+        ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
+            Object.values(comp[k]||{}).forEach(arr => {
+                if (arr) globalMax = Math.max(globalMax, ...arr);
+            });
+        });
 
-                let globalMax = 5;
-                ['cumFO','cumGreenie','cumClosest','cumPutt'].forEach(k => {
-                    Object.values(comp[k]||{}).forEach(arr => {
-                        if (arr) globalMax = Math.max(globalMax, ...arr);
-                    });
-                });
+        // Beer bet logic
+        const sorted = Object.entries(comp.finalTotals)
+            .sort((a,b) => b[1] - a[1])
+            .map(([name, pts]) => ({name, pts}));
 
-                    // Beer bet logic (unchanged)
-                    const sorted = Object.entries(comp.finalTotals)
-                        .sort((a,b) => b[1] - a[1])
-                        .map(([name, pts]) => ({name, pts}));
+        const numPlayers = sorted.length;
+        let winners = [], buyers = [];
 
-                    const numPlayers = sorted.length;
-                    let winners = [], buyers = [];
+        if (numPlayers >= 3) {
+            winners = sorted.slice(0, 2);
+            if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
+                buyers = [];
+            } else if (numPlayers === 3) {
+                buyers = [sorted[2]];
+            } else {
+                buyers = sorted.slice(-2);
+            }
+        }
 
-                    if (numPlayers >= 3) {
-                        winners = sorted.slice(0, 2);
-                        if (numPlayers === 3 && winners[0].pts === winners[1].pts) {
-                            buyers = [];
-                        } else if (numPlayers === 3) {
-                            buyers = [sorted[2]];
-                        } else {
-                            buyers = sorted.slice(-2);
+        const beerMug = '🍺';
+
+        // Category Winners
+        const categoryRows = [
+            {cat: 'FO', data: comp.cumFO},
+            {cat: 'Greenies', data: comp.cumGreenie},
+            {cat: 'Closest', data: comp.cumClosest},
+            {cat: 'Putts', data: comp.cumPutt}
+        ].map(c => {
+            const max = Math.max(...playerNames.map(n => c.data[n]?.[17] || 0));
+            if (max === 0) return null;
+            const leaders = playerNames.filter(n => (c.data[n]?.[17] || 0) === max);
+            return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
+        }).filter(r => r).join('');
+
+        // Streaks & Droughts
+        const streakItems = [];
+        const catList = [
+            {name: 'FO', perHole: comp.perHoleFO},
+            {name: 'Greenies', perHole: comp.perHoleGreenie},
+            {name: 'Closest', perHole: comp.perHoleClosest},
+            {name: 'Putts', perHole: comp.perHolePutt}
+        ];
+
+        catList.forEach(cat => {
+            let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
+            let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
+
+            playerNames.forEach(player => {
+                const arr = cat.perHole[player] || new Array(18).fill(0);
+
+                // Longest streak
+                let currLen = 0, currSum = 0, currStart = 1;
+                for (let h = 0; h < 18; h++) {
+                    if (arr[h] > 0) {
+                        currLen++;
+                        currSum += arr[h];
+                        if (currLen === 1) currStart = h + 1;
+                        if (currLen > maxStreakLen || (currLen === maxStreakLen && currSum > maxStreakSum)) {
+                            maxStreakLen = currLen;
+                            maxStreakSum = currSum;
+                            maxStreakPlayer = player;
+                            maxStreakStart = currStart;
+                            maxStreakEnd = h + 1;
                         }
+                    } else {
+                        currLen = 0;
+                        currSum = 0;
                     }
+                }
 
-                    const beerMug = '🍺';
-
-                    // Category Winners (unchanged)
-                    const categoryRows = [
-                        {cat: 'FO', data: comp.cumFO},
-                        {cat: 'Greenies', data: comp.cumGreenie},
-                        {cat: 'Closest', data: comp.cumClosest},
-                        {cat: 'Putts', data: comp.cumPutt}
-                    ].map(c => {
-                        const max = Math.max(...playerNames.map(n => c.data[n]?.[17] || 0));
-                        if (max === 0) return null;
-                        const leaders = playerNames.filter(n => (c.data[n]?.[17] || 0) === max);
-                        return `<tr><td>${c.cat}</td><td>${leaders.join(' & ')}</td><td>${max}</td></tr>`;
-                    }).filter(r => r).join('');
-
-                    // Streaks & Droughts - vertical, narrow format
-                    const streakItems = [];
-                    const catList = [
-                        {name: 'FO', perHole: comp.perHoleFO},
-                        {name: 'Greenies', perHole: comp.perHoleGreenie},
-                        {name: 'Closest', perHole: comp.perHoleClosest},
-                        {name: 'Putts', perHole: comp.perHolePutt}
-                    ];
-
-                    catList.forEach(cat => {
-                        let maxStreakPlayer = '', maxStreakLen = 0, maxStreakSum = 0, maxStreakStart = 1, maxStreakEnd = 1;
-                        let maxDroughtPlayer = '', maxDroughtLen = 0, maxDroughtStart = 1, maxDroughtEnd = 1;
-
-                        playerNames.forEach(player => {
-                            const arr = cat.perHole[player] || new Array(18).fill(0);
-
-                            // Longest streak
-                            let currLen = 0, currSum = 0, currStart = 1;
-                            for (let h = 0; h < 18; h++) {
-                                if (arr[h] > 0) {
-                                    currLen++;
-                                    currSum += arr[h];
-                                    if (currLen === 1) currStart = h + 1;
-                                    if (currLen > maxStreakLen || (currLen === maxStreakLen && currSum > maxStreakSum)) {
-                                        maxStreakLen = currLen;
-                                        maxStreakSum = currSum;
-                                        maxStreakPlayer = player;
-                                        maxStreakStart = currStart;
-                                        maxStreakEnd = h + 1;
-                                    }
-                                } else {
-                                    currLen = 0;
-                                    currSum = 0;
-                                }
-                            }
-
-                            // Longest drought
-                            currLen = 0; currStart = 1;
-                            for (let h = 0; h < 18; h++) {
-                                if (arr[h] === 0) {
-                                    currLen++;
-                                    if (currLen === 1) currStart = h + 1;
-                                    if (currLen > maxDroughtLen) {
-                                        maxDroughtLen = currLen;
-                                        maxDroughtPlayer = player;
-                                        maxDroughtStart = currStart;
-                                        maxDroughtEnd = h + 1;
-                                    }
-                                } else {
-                                    currLen = 0;
-                                }
-                            }
-                        });
-
-                        if (maxStreakLen > 1) {
-                            streakItems.push(`<div><strong>S:</strong> ${cat.name} - ${maxStreakPlayer} (${maxStreakSum} pts, ${maxStreakLen} holes: ${maxStreakStart}-${maxStreakEnd})</div>`);
+                // Longest drought
+                currLen = 0; currStart = 1;
+                for (let h = 0; h < 18; h++) {
+                    if (arr[h] === 0) {
+                        currLen++;
+                        if (currLen === 1) currStart = h + 1;
+                        if (currLen > maxDroughtLen) {
+                            maxDroughtLen = currLen;
+                            maxDroughtPlayer = player;
+                            maxDroughtStart = currStart;
+                            maxDroughtEnd = h + 1;
                         }
-                        if (maxDroughtLen > 2) {
-                            streakItems.push(`<div><strong>D:</strong> ${cat.name} - ${maxDroughtPlayer} (${maxDroughtLen} holes: ${maxDroughtStart}-${maxDroughtEnd})</div>`);
-                        }
-                    });
-
-                    const streakHTML = streakItems.length ? streakItems.join('') : '<div>No notable streaks or droughts</div>';
-
-                    const beerHTML = winners.length ? `
-                            <div class="beer-bet">
-                                <strong>🍺 Beer Bet Highlights 🍺</strong><br>
-                                <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
-                                <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
-
-                                <strong>Category Winners</strong>
-                                <table class="beer-table">
-                                    <tr><th>Category</th><th>Leader</th><th>Points</th></tr>
-                                    ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
-                                </table>
-
-                                <strong>Streaks & Droughts</strong><br>
-                                <small style="color:#555; font-size:0.95em;">S = Longest streak (consecutive holes with points) • D = Longest drought (consecutive holes with zero points)</small>
-                                <div style="margin-top:8px; line-height:1.4;">
-                                    ${streakHTML}
-                                </div>
-                            </div>` : '';
-
-                const card = document.createElement('div');
-                card.className = 'round-card';
-                card.innerHTML = `
-                    <h3>${round.courseName || 'Unknown Course'} • ${round.matchId || 'No ID'}</h3>
-                    <p><strong>Start:</strong> ${round.groupStartTime || '—'} • ${round.players?.length || 0} players</p>
-
-                    <div class="carry-in">
-                        <strong>Final Standings:</strong><br>
-                        ${Object.entries(comp.finalTotals)
-                            .sort((a,b) => b[1] - a[1])
-                            .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
-                    </div>
-
-                    ${beerHTML}
-
-                    <h4>Cumulative Points Progress (All Categories)</h4>
-                    <div style="height: 300px; margin-bottom: 25px; position: relative;">
-                        <canvas id="${chartId}"></canvas>
-                    </div>
-
-                    <div class="mini-charts">
-                        <div class="mini-chart-container"><canvas id="mini-fo-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-gr-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
-                        <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
-                    </div>
-                `;
-                container.appendChild(card);
-
-                const mainChart = createMainChart(chartId, comp.runningTotals, playerNames);
-                const miniFO = createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
-                const miniGR = createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
-                const miniCL = createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
-                const miniP  = createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt', globalMax);
-
-                const allCharts = [mainChart, miniFO, miniGR, miniCL, miniP];
-
-                allCharts.forEach(chart => {
-                    addCrosshair(chart, playerNames, chart === mainChart ? comp.runningTotals : comp[`cum${chart.canvas.id.split('-')[1].toUpperCase()}`], chart.canvas.id.includes('mini') ? chart.canvas.id.split('-')[1] : 'Total');
-                });
+                    } else {
+                        currLen = 0;
+                    }
+                }
             });
 
-            const overall = document.createElement('div');
-            overall.className = 'round-card';
-            overall.innerHTML = `
-                <h3>🏆 Combined Leaderboard (${rounds.length} round${rounds.length === 1 ? '' : 's'})</h3>
-                <table>
-                    <tr><th>Player</th><th>Total Points</th></tr>
-                    ${Object.entries(allTotals)
-                        .sort((a,b) => b[1] - a[1])
-                        .map(([n,p]) => `<tr><td>${n}</td><td class="player-total">${p}</td></tr>`).join('') || '<tr><td colspan="2">No totals</td></tr>'}
-                </table>
-            `;
-            container.appendChild(overall);
+            if (maxStreakLen > 1) {
+                streakItems.push(`<div><strong>S:</strong> ${cat.name} - ${maxStreakPlayer} (${maxStreakSum} pts, ${maxStreakLen} holes: ${maxStreakStart}-${maxStreakEnd})</div>`);
+            }
+            if (maxDroughtLen > 2) {
+                streakItems.push(`<div><strong>D:</strong> ${cat.name} - ${maxDroughtPlayer} (${maxDroughtLen} holes: ${maxDroughtStart}-${maxDroughtEnd})</div>`);
+            }
+        });
 
-            document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
-            document.getElementById('results').style.display = 'block';
-        }
+        const streakHTML = streakItems.length ? streakItems.join('') : '<div>No notable streaks or droughts</div>';
+
+        const beerHTML = winners.length ? `
+            <div class="beer-bet">
+                <strong>🍺 Beer Bet Highlights 🍺</strong><br>
+                <strong>Winners (free beer):</strong> ${winners.map(w => `${w.name} ${beerMug}`).join(' & ')}<br>
+                <strong>Buyers:</strong> ${buyers.length ? buyers.map(b => b.name).join(' & ') : 'None (top two tied!)'}<br><br>
+
+                <strong>Category Winners</strong>
+                <table class="beer-table">
+                    <tr><th>Category</th><th>Leader</th><th>Points</th></tr>
+                    ${categoryRows || '<tr><td colspan="3">No category points awarded</td></tr>'}
+                </table>
+
+                <strong>Streaks & Droughts</strong><br>
+                <small style="color:#555; font-size:0.95em;">S = Longest streak (consecutive holes with points) • D = Longest drought (consecutive holes with zero points)</small>
+                <div style="margin-top:8px; line-height:1.4;">
+                    ${streakHTML}
+                </div>
+            </div>` : '';
+
+        const card = document.createElement('div');
+        card.className = 'round-card';
+        card.innerHTML = `
+            <h3>${round.courseName || 'Unknown Course'}</h3>
+            
+            <p><strong>${round.players?.length || 0} players</strong></p>
+
+            <div class="carry-in">
+                <strong>Final Standings:</strong><br>
+                ${Object.entries(comp.finalTotals)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([n,p]) => `${n}: <span class="player-total">${p || 0}</span> pts`).join('<br>') || 'No scores calculated'}
+            </div>
+
+            ${beerHTML}
+
+            <h4>Cumulative Points Progress (All Categories)</h4>
+            <div style="height: 300px; margin-bottom: 25px; position: relative;">
+                <canvas id="${chartId}"></canvas>
+            </div>
+
+            <div class="mini-charts">
+                <div class="mini-chart-container"><canvas id="mini-fo-${chartId}"></canvas></div>
+                <div class="mini-chart-container"><canvas id="mini-gr-${chartId}"></canvas></div>
+                <div class="mini-chart-container"><canvas id="mini-cl-${chartId}"></canvas></div>
+                <div class="mini-chart-container"><canvas id="mini-p-${chartId}"></canvas></div>
+            </div>
+
+            <!-- Moved matchId to bottom, smaller & subdued -->
+            <div style="margin-top: 20px; text-align: right; color: #777; font-size: 0.85em;">
+                Match ID: ${round.matchId || '—'} 
+            </div>
+        `;
+        container.appendChild(card);
+
+        const mainChart = createMainChart(chartId, comp.runningTotals, playerNames);
+        const miniFO = createDotChart(`mini-fo-${chartId}`, comp.cumFO, playerNames, 'Cumulative FO', globalMax);
+        const miniGR = createDotChart(`mini-gr-${chartId}`, comp.cumGreenie, playerNames, 'Cumulative Greenie', globalMax);
+        const miniCL = createDotChart(`mini-cl-${chartId}`, comp.cumClosest, playerNames, 'Cumulative Closest', globalMax);
+        const miniP  = createDotChart(`mini-p-${chartId}`, comp.cumPutt, playerNames, 'Cumulative Putt', globalMax);
+
+        const allCharts = [mainChart, miniFO, miniGR, miniCL, miniP];
+
+        allCharts.forEach(chart => {
+            addCrosshair(chart, playerNames, chart === mainChart ? comp.runningTotals : comp[`cum${chart.canvas.id.split('-')[1].toUpperCase()}`], chart.canvas.id.includes('mini') ? chart.canvas.id.split('-')[1] : 'Total');
+        });
+    });
+
+    document.getElementById('summaryTitle').textContent = `Rounds for ${currentDate} (${rounds.length})`;
+    document.getElementById('results').style.display = 'block';
+}
 
         // Chart functions and addCrosshair remain the same as previous version
         // (I'm keeping them short here to save space — copy them from the previous full file if needed)
