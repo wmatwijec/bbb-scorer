@@ -554,12 +554,13 @@
             const datasets = playerNames.map((name, i) => ({
                 label: name,
                 data: dataByPlayer[name] || new Array(18).fill(0),
-                borderColor: getPlayerColor(i) + '88',
+                borderColor: getPlayerColor(i) + 'dd',
                 backgroundColor: getPlayerColor(i),
-                pointRadius: 3,
-                pointHoverRadius: 5,
+                pointRadius: 2.8,
+                pointHoverRadius: 5.5,
                 tension: 0.1,
-                borderWidth: 1,
+                borderWidth: 1.5,
+                borderColor: '#ffffff',
                 showLine: true,
                 fill: false
             }));
