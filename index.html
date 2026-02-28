@@ -794,6 +794,47 @@
     let pendingRoundData = null;     
 
 
+    // === ADD THESE TWO HELPERS RIGHT AFTER let pendingRoundData = null; ===
+
+function generateMatchId() {
+  const datePart = new Date().toISOString().slice(0,10).replace(/-/g, '-');
+  const randomPart = Math.random().toString(36).substr(2, 6); // 6 chars, short & readable
+  return `BBB-${datePart}-${randomPart}`;
+}
+
+function startFreshRound() {
+  // Generate brand new ID
+  currentMatchId = generateMatchId();
+  localStorage.setItem('bbb_currentMatchId', currentMatchId);
+  console.log('Fresh round started with new matchId:', currentMatchId);
+
+  // Clear any old round data for previous IDs to prevent resume confusion
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('bbb_round_')) {
+      localStorage.removeItem(key);
+      console.log('Cleared old round data:', key);
+    }
+  }
+
+  // Reset core round state
+  players = [];
+  currentCourse = null;
+  currentHole = 1;
+  finishedHoles.clear();
+  isHoleInProgress = false;
+  inRound = false;
+
+  // Clear related keys
+  localStorage.removeItem('bbb_currentCourse');
+  localStorage.removeItem('bbb_groupStartTime');
+
+  hideAll();
+  if (els.courseSetup) els.courseSetup.classList.remove('hidden');
+  logScreen('STARTED FRESH ROUND');
+}
+
+
 // === NEW SAFETY NET: Save round when tab is hidden/minimized/closed ===
 window.addEventListener('visibilitychange', () => {
   if (document.hidden && inRound) {
@@ -1653,15 +1694,19 @@ window.addEventListener('pagehide', () => {
       });
 
       // Resume block with logging
+      // === REPLACE THE ENTIRE RESUME BLOCK (from const savedRounds = []; to the end of that if/else) ===
+// This is inside DOMContentLoaded, after await loadDataFromBackend();
+
+      // Resume block with clear new/fresh choice
       const savedRounds = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key?.startsWith('bbb_round_BBB-')) {
           try {
             const raw = localStorage.getItem(key);
-            console.log('%cRaw saved data for key:', 'color: orange', key, raw);
+            console.log('Raw saved data for key:', key, raw);
             const data = JSON.parse(raw);
-            console.log('%cSuccessfully parsed saved round:', 'color: green', key, data);
+            console.log('Successfully parsed saved round:', key, data);
             savedRounds.push({ ...data, key });
           } catch (e) {
             console.error('Failed to parse saved round:', key, e);
@@ -1669,25 +1714,31 @@ window.addEventListener('pagehide', () => {
         }
       }
 
-      console.log('%cFinal savedRounds array length:', 'color: orange; font-weight: bold', savedRounds.length);
+      console.log('Final savedRounds array length:', savedRounds.length);
 
       if (savedRounds.length > 0) {
         savedRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        let message = `You have ${savedRounds.length} active BBB round(s):\n\n`;
+        let message = `Found ${savedRounds.length} saved BBB round(s):\n\n`;
         savedRounds.forEach((r, i) => {
-          message += `${i + 1}. ${r.courseName || 'Unknown Course'}\n`;
-          message += `    Hole ${r.currentHole} • ${r.players.map(p => p.name).join(', ')}\n`;
-          message += `    ${new Date(r.date).toLocaleDateString()}\n\n`;
+          message += `${i + 1}. ${r.courseName || 'Unknown'} — Hole ${r.currentHole}/${HOLES}\n`;
+          message += `   Players: ${r.players.map(p => p.name).join(', ')}\n`;
+          message += `   Last saved: ${new Date(r.date).toLocaleString()}\n\n`;
         });
-        message += `Enter the number of the round you want to resume\n(or Cancel to start a new one):`;
+        message += `Enter number (1–${savedRounds.length}) to **resume** that round,\nor press OK/Cancel or type N/new to **start fresh** with new match ID:`;
 
-        const choice = prompt(message);
-        console.log('%cUser entered choice:', 'color: blue', choice);
+        const choiceInput = prompt(message) || '';
+        const choice = choiceInput.trim().toLowerCase();
 
-        if (choice && !isNaN(choice) && Number(choice) >= 1 && Number(choice) <= savedRounds.length) {
-          const selected = savedRounds[choice - 1];
-          console.log('%cRestoring round:', 'color: lime', selected);
+        console.log('User entered choice:', choiceInput);
+
+        if (/^\d+$/.test(choiceInput) && Number(choiceInput) >= 1 && Number(choiceInput) <= savedRounds.length) {
+          // Resume selected round
+          const selected = savedRounds[Number(choiceInput) - 1];
+          console.log('Restoring round:', selected);
+
+          currentMatchId = selected.matchId; // keep existing ID for resume
+          localStorage.setItem('bbb_currentMatchId', currentMatchId);
 
           players = selected.players.map(p => ({
             ...p,
@@ -1702,7 +1753,6 @@ window.addEventListener('pagehide', () => {
           if (currentCourse === -1) currentCourse = 0;
           finishedHoles = new Set(selected.finishedHoles || []);
           inRound = true;
-          console.log('After restore — inRound:', inRound, 'currentHole:', currentHole, 'finishedHoles:', Array.from(finishedHoles), 'players length:', players.length);
 
           hideAll();
           if (els.game) els.game.classList.remove('hidden');
@@ -1722,10 +1772,14 @@ window.addEventListener('pagehide', () => {
           };
           checkCourses();
 
-          return;
+        } else {
+          // User chose fresh start (N, empty, cancel, anything else)
+          console.log('User chose to start fresh');
+          startFreshRound();
         }
       } else {
-        console.log('%cNo valid saved rounds found — starting fresh', 'color: red; font-weight: bold');
+        console.log('No saved rounds found — will start fresh when user proceeds');
+        // No auto-resume — fresh ID will be generated in startGame click
       }
 
       let wakeLock = null;
@@ -1814,12 +1868,21 @@ window.addEventListener('pagehide', () => {
 
         els.startGame.disabled = players.length < 2;
 
+      // === REPLACE the entire els.startGame.onclick handler with this ===
+
         els.startGame.onclick = () => {
           if (players.length < 2) return alert('Select at least 2 players');
 
           const selectedCourseIndex = els.courseSelect.value;
           if (selectedCourseIndex === '' || selectedCourseIndex === null) {
             return alert('Please select a course first');
+          }
+
+          // If we got here without resuming, ensure fresh matchId
+          if (!inRound) {
+            currentMatchId = generateMatchId();
+            localStorage.setItem('bbb_currentMatchId', currentMatchId);
+            console.log('Starting new round with fresh matchId:', currentMatchId);
           }
 
           currentCourse = Number(selectedCourseIndex);
@@ -1853,7 +1916,7 @@ window.addEventListener('pagehide', () => {
           save();
 
           logScreen('GAME STARTED');
-        };
+        };  
       }
 
       function simulateRound() {
@@ -1988,6 +2051,7 @@ window.addEventListener('pagehide', () => {
         }
 
         document.getElementById('forceFinish')?.classList.add('hidden');
+        localStorage.removeItem('bbb_currentMatchId'); 
       }
 
       function attachFinishHoleListener() {
