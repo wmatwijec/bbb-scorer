@@ -2050,8 +2050,15 @@ window.addEventListener('pagehide', () => {
           compBtn.textContent = 'BBB COMP';
         }
 
+        // ── NEW: Force new matchId for next round ──
+        currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).slice(2,7)}`;
+        localStorage.setItem('bbb_currentMatchId', currentMatchId);
+        console.log('Round reset → new matchId generated for next round:', currentMatchId);
+
+        // Optional but recommended: also clear the old round's local save to prevent confusion
+        localStorage.removeItem(`bbb_round_${currentMatchId}`);  // safe even if key doesn't exist
+
         document.getElementById('forceFinish')?.classList.add('hidden');
-        localStorage.removeItem('bbb_currentMatchId'); 
       }
 
       function attachFinishHoleListener() {
