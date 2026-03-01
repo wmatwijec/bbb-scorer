@@ -21,6 +21,14 @@
         select { width:100%; padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.95em; }
         .loading { text-align:center; font-style:italic; color:#666; margin:50px 0; font-size:1.2em; }
         .status { text-align:center; margin:30px 0; color:#555; font-style:italic; }
+        .hole input[type="checkbox"] {
+            margin-right: 6px;
+            transform: scale(1.1);
+        }
+        .hole label {
+        user-select: none;
+        margin: 2px 0;
+        }
     </style>
 </head>
 <body>
@@ -95,9 +103,8 @@
                 <div style="margin-top:20px;">
                     <strong>Edit Carry Markers per Hole:</strong>
                     ${round.players?.map(player => {
-                        // Get this player's scores array from round.scores[player.name]
+                        // Get this player's scores from round.scores[player.name]
                         const playerScores = (round.scores && round.scores[player.name]) || [];
-                        // Ensure it's an array of at least 18 items
                         const paddedScores = Array.isArray(playerScores) && playerScores.length >= HOLES 
                             ? playerScores 
                             : new Array(HOLES).fill({});
@@ -107,32 +114,34 @@
                             const holeNum = i + 1;
                             const holeCarries = paddedScores[i] || {};
 
-                            let current = "";
-                            const hasFirstOn = holeCarries.firstOn === true || holeCarries.firstOn === "true" || holeCarries.firstOn == 1;
-                            const hasPutt    = holeCarries.putt    === true || holeCarries.putt    === "true" || holeCarries.putt    == 1;
-                            const hasClosest = holeCarries.closest === true || holeCarries.closest === "true" || holeCarries.closest == 1;
-
-                            if (hasFirstOn) current = "firstOn";
-                            else if (hasPutt)    current = "putt";
-                            else if (hasClosest) current = "closest";
-
-                            // Debug: log first few holes for first player in round
-                            if (i < 5 && player === round.players[0]) {
-                                console.log(`Debug ${round.matchId} ${player.name} H${holeNum}: carries=`, holeCarries, 'detected=', current);
-                            }
-
-                            const optionsHtml = CARRIES.map(c => `
-                                <option value="${c.value}" ${c.value === current ? 'selected' : ''}>
-                                    ${c.label}
-                                </option>
-                            `).join('');
+                            // Current state for each type
+                            const hasFirstOn = !!holeCarries.firstOn;   // !! converts to boolean
+                            const hasClosest = !!holeCarries.closest;
+                            const hasPutt    = !!holeCarries.putt;
 
                             holesHtml += `
                                 <div class="hole">
                                     <label>H${holeNum}</label>
-                                    <select id="carry-${round.matchId}-${player.name}-${holeNum}">
-                                        ${optionsHtml}
-                                    </select>
+                                    <div style="display:flex; flex-direction:column; gap:4px; font-size:0.85em;">
+                                        <label style="cursor:pointer;">
+                                            <input type="checkbox" 
+                                                id="cfo-${round.matchId}-${player.name}-${holeNum}" 
+                                                ${hasFirstOn ? 'checked' : ''}>
+                                            First On
+                                        </label>
+                                        <label style="cursor:pointer;">
+                                            <input type="checkbox" 
+                                                id="ccl-${round.matchId}-${player.name}-${holeNum}" 
+                                                ${hasClosest ? 'checked' : ''}>
+                                            Closest
+                                        </label>
+                                        <label style="cursor:pointer;">
+                                            <input type="checkbox" 
+                                                id="cpu-${round.matchId}-${player.name}-${holeNum}" 
+                                                ${hasPutt ? 'checked' : ''}>
+                                            Putt
+                                        </label>
+                                    </div>
                                 </div>`;
                         }
 
@@ -142,7 +151,6 @@
                                 <div class="hole-grid">${holesHtml}</div>
                             </details>`;
                     }).join('') || '<p style="color:#777;">No players</p>'}
-
                     <button onclick="saveCarries('${round.matchId}')">Save Carries →</button>
                 </div>
 
@@ -165,26 +173,24 @@
     const updatedPlayers = round.players.map(player => {
         const newScores = [];
         for (let i = 1; i <= HOLES; i++) {
-            const select = document.getElementById(`carry-${matchId}-${player.name}-${i}`);
-            const val = select?.value?.trim();
             const obj = {};
-            if (val && val !== "") {
-                obj[val] = true;
-            }
+
+            const foChk = document.getElementById(`cfo-${matchId}-${player.name}-${i}`);
+            const clChk = document.getElementById(`ccl-${matchId}-${player.name}-${i}`);
+            const puChk = document.getElementById(`cpu-${matchId}-${player.name}-${i}`);
+
+            if (foChk?.checked) obj.firstOn = true;
+            if (clChk?.checked) obj.closest = true;
+            if (puChk?.checked) obj.putt    = true;
+
             newScores.push(obj);
         }
-        return {
-            name: player.name,
-            scores: newScores
-            // Note: backend will preserve phone and other fields
-        };
+        return { name: player.name, scores: newScores };
     });
 
     if (!confirm(`Update carry markers for ${matchId}? Points will be recalculated on server.`)) return;
 
     try {
-        console.log('Sending update for', matchId, updatedPlayers); // ← optional debug
-
         const res = await fetch('https://pwa-players-backend.onrender.com/update-round-carries', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -193,7 +199,7 @@
 
         if (!res.ok) {
             const errText = await res.text();
-            throw new Error(`Server responded ${res.status}: ${errText}`);
+            throw new Error(`Server: ${res.status} - ${errText}`);
         }
 
         const result = await res.json();
@@ -201,11 +207,11 @@
             alert('Carries updated — totals refreshed');
             loadAllRounds();
         } else {
-            alert('Failed: ' + (result.error || 'Unknown error'));
+            alert('Failed: ' + (result.error || 'Unknown'));
         }
     } catch (e) {
-        console.error('Save carries error:', e);
-        alert('Error saving carries: ' + e.message + '\nCheck console for details.');
+        console.error('Save error:', e);
+        alert('Error saving: ' + e.message);
     }
 }
     async function deleteRound(matchId) {
