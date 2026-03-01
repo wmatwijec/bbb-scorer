@@ -95,12 +95,17 @@
                 <div style="margin-top:20px;">
                     <strong>Edit Carry Markers per Hole:</strong>
                     ${round.players?.map(player => {
-                        const playerScores = Array.isArray(player.scores) ? player.scores : new Array(HOLES).fill({});
-                        
+                        // Get this player's scores array from round.scores[player.name]
+                        const playerScores = (round.scores && round.scores[player.name]) || [];
+                        // Ensure it's an array of at least 18 items
+                        const paddedScores = Array.isArray(playerScores) && playerScores.length >= HOLES 
+                            ? playerScores 
+                            : new Array(HOLES).fill({});
+
                         let holesHtml = '';
                         for (let i = 0; i < HOLES; i++) {
                             const holeNum = i + 1;
-                            const holeCarries = playerScores[i] || {};
+                            const holeCarries = paddedScores[i] || {};
 
                             let current = "";
                             const hasFirstOn = holeCarries.firstOn === true || holeCarries.firstOn === "true" || holeCarries.firstOn == 1;
@@ -111,7 +116,7 @@
                             else if (hasPutt)    current = "putt";
                             else if (hasClosest) current = "closest";
 
-                            // Debug: log first few holes of first player
+                            // Debug: log first few holes for first player in round
                             if (i < 5 && player === round.players[0]) {
                                 console.log(`Debug ${round.matchId} ${player.name} H${holeNum}: carries=`, holeCarries, 'detected=', current);
                             }
@@ -151,45 +156,58 @@
     }
 
     async function saveCarries(matchId) {
-        const round = currentRounds.find(r => r.matchId === matchId);
-        if (!round) return alert('Round not found');
-
-        const updatedPlayers = round.players.map(player => {
-            const newScores = [];
-            for (let i = 1; i <= HOLES; i++) {
-                const select = document.getElementById(`carry-${matchId}-${player.name}-${i}`);
-                const val = select?.value;
-                const obj = {};
-                if (val) obj[val] = true;
-                newScores.push(obj);
-            }
-            return { name: player.name, scores: newScores };
-        });
-
-        if (!confirm(`Update carry markers for ${matchId}? Points will be recalculated on server.`)) return;
-
-        try {
-            const res = await fetch('https://pwa-players-backend.onrender.com/update-round-carries', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ matchId, players: updatedPlayers })
-            });
-
-            if (!res.ok) throw new Error(`Server responded ${res.status}`);
-
-            const result = await res.json();
-            if (result.success) {
-                alert('Carries updated — totals refreshed');
-                loadAllRounds();
-            } else {
-                alert('Failed: ' + (result.error || 'Unknown'));
-            }
-        } catch (e) {
-            alert('Error: ' + e.message + ' (check endpoint / network)');
-            console.error(e);
-        }
+    const round = currentRounds.find(r => r.matchId === matchId);
+    if (!round) return alert('Round not found');
+    if (!round.players || !Array.isArray(round.players)) {
+        return alert('No players found for this round');
     }
 
+    const updatedPlayers = round.players.map(player => {
+        const newScores = [];
+        for (let i = 1; i <= HOLES; i++) {
+            const select = document.getElementById(`carry-${matchId}-${player.name}-${i}`);
+            const val = select?.value?.trim();
+            const obj = {};
+            if (val && val !== "") {
+                obj[val] = true;
+            }
+            newScores.push(obj);
+        }
+        return {
+            name: player.name,
+            scores: newScores
+            // Note: backend will preserve phone and other fields
+        };
+    });
+
+    if (!confirm(`Update carry markers for ${matchId}? Points will be recalculated on server.`)) return;
+
+    try {
+        console.log('Sending update for', matchId, updatedPlayers); // ← optional debug
+
+        const res = await fetch('https://pwa-players-backend.onrender.com/update-round-carries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matchId, players: updatedPlayers })
+        });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Server responded ${res.status}: ${errText}`);
+        }
+
+        const result = await res.json();
+        if (result.success) {
+            alert('Carries updated — totals refreshed');
+            loadAllRounds();
+        } else {
+            alert('Failed: ' + (result.error || 'Unknown error'));
+        }
+    } catch (e) {
+        console.error('Save carries error:', e);
+        alert('Error saving carries: ' + e.message + '\nCheck console for details.');
+    }
+}
     async function deleteRound(matchId) {
         if (!confirm(`Delete ${matchId} permanently? Round count decreases.`)) return;
 
