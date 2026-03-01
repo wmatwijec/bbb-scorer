@@ -102,11 +102,19 @@
                             const holeNum = i + 1;
                             const holeCarries = playerScores[i] || {};
 
-                            // Robust detection - handles missing object or non-boolean values
                             let current = "";
-                            if (holeCarries.firstOn === true || holeCarries.firstOn === "true") current = "firstOn";
-                            else if (holeCarries.putt    === true || holeCarries.putt    === "true") current = "putt";
-                            else if (holeCarries.closest === true || holeCarries.closest === "true") current = "closest";
+                            const hasFirstOn = holeCarries.firstOn === true || holeCarries.firstOn === "true" || holeCarries.firstOn == 1;
+                            const hasPutt    = holeCarries.putt    === true || holeCarries.putt    === "true" || holeCarries.putt    == 1;
+                            const hasClosest = holeCarries.closest === true || holeCarries.closest === "true" || holeCarries.closest == 1;
+
+                            if (hasFirstOn) current = "firstOn";
+                            else if (hasPutt)    current = "putt";
+                            else if (hasClosest) current = "closest";
+
+                            // Debug: log first few holes of first player
+                            if (i < 5 && player === round.players[0]) {
+                                console.log(`Debug ${round.matchId} ${player.name} H${holeNum}: carries=`, holeCarries, 'detected=', current);
+                            }
 
                             const optionsHtml = CARRIES.map(c => `
                                 <option value="${c.value}" ${c.value === current ? 'selected' : ''}>
