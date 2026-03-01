@@ -6,23 +6,27 @@
     <title>Match Modifier</title>
     <style>
         body { font-family: system-ui, sans-serif; background:#f8f9fa; margin:0; padding:20px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         h1 { color: #0d6efd; }
-        .round-card { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:25px; }
-        button { background:#0d6efd; color:white; border:none; padding:10px 20px; font-size:15px; border-radius:8px; cursor:pointer; margin:8px 4px 4px 0; }
+        .round-card { background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin-bottom:30px; }
+        button { background:#0d6efd; color:white; border:none; padding:10px 20px; font-size:15px; border-radius:8px; cursor:pointer; margin:10px 6px 4px 0; }
         button.danger { background:#dc3545; }
         button:hover { opacity:0.9; }
-        .points { font-weight:bold; color:#2c3e50; margin:10px 0; }
-        .modify-section { margin-top:15px; padding-top:15px; border-top:1px solid #eee; }
-        input[type="number"] { width:80px; padding:8px; border:1px solid #ddd; border-radius:6px; margin-right:10px; }
-        label { display:inline-block; min-width:120px; margin:6px 0; }
-        .loading { text-align:center; font-style:italic; color:#666; margin:40px 0; }
+        .points { font-weight:bold; color:#2c3e50; margin:12px 0; font-size:1.1em; }
+        .player-section { margin:16px 0; padding:14px; border:1px solid #ddd; border-radius:10px; background:#fcfcfc; }
+        .player-section summary { cursor:pointer; font-weight:bold; color:#0d6efd; font-size:1.1em; padding:6px 0; }
+        .hole-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:10px; margin-top:12px; }
+        .hole { text-align:center; }
+        .hole label { display:block; font-size:0.9em; color:#555; margin-bottom:4px; }
+        select { width:100%; padding:6px; border:1px solid #ccc; border-radius:6px; font-size:0.95em; }
+        .loading { text-align:center; font-style:italic; color:#666; margin:50px 0; font-size:1.2em; }
+        .status { text-align:center; margin:30px 0; color:#555; font-style:italic; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🛠 Match Modifier</h1>
-        <p>View and modify all rounds: change player totals or delete matches (round count auto-adjusts on delete).</p>
+        <p>All rounds — edit bonus markers per hole (First On / Putt / Closest) or delete match (adjusts total count once backend supports it).</p>
 
         <div id="loading" class="loading">Loading all rounds...</div>
         <div id="results" style="display:none;">
@@ -30,10 +34,18 @@
             <div id="roundList"></div>
         </div>
 
-        <div id="status" class="status" style="text-align:center; margin:20px; color:#666;"></div>
+        <div id="status" class="status"></div>
     </div>
 
     <script>
+        const HOLES = 18;
+        const BONUSES = [
+            { value: "", label: "None" },
+            { value: "firstOn", label: "First On" },
+            { value: "putt", label: "Putt" },
+            { value: "closest", label: "Closest" }
+        ];
+
         let currentRounds = [];
 
         async function loadAllRounds() {
@@ -43,12 +55,13 @@
 
             try {
                 const res = await fetch('https://pwa-players-backend.onrender.com/rounds');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
 
                 currentRounds = data.rounds || [];
                 renderRounds(currentRounds);
             } catch (e) {
-                document.getElementById('status').textContent = 'Error loading rounds. Please try again.';
+                document.getElementById('status').textContent = 'Error loading rounds: ' + e.message;
                 document.getElementById('loading').style.display = 'none';
             }
         }
@@ -58,36 +71,57 @@
             container.innerHTML = '';
 
             if (rounds.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:#666;">No rounds found in the database.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#666;">No rounds found in database.</p>';
             } else {
                 document.getElementById('title').textContent = `${rounds.length} Round${rounds.length !== 1 ? 's' : ''}`;
             }
 
             rounds.forEach(round => {
-                const playDate = round.date ? new Date(round.date).toLocaleDateString('en-US', {
-                    year: 'numeric', month: 'short', day: 'numeric'
-                }) : '—';
+                const playDate = round.date 
+                    ? new Date(round.date).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) 
+                    : '—';
 
-                const pointsDisplay = Object.entries(round._cachedTotals || {})
-                    .map(([name, pts]) => `${name}: ${pts}`)
-                    .join(' • ') || 'No points recorded';
+                const totals = round._cachedTotals || {};
+                const pointsStr = round.players?.map(p => `${p.name}: ${totals[p.name] ?? '—'}`).join('  •  ') || 'No totals';
 
                 const card = document.createElement('div');
                 card.className = 'round-card';
                 card.innerHTML = `
-                    <h3>${round.courseName || 'Unknown Course'} • ${round.matchId}</h3>
+                    <h3>${round.courseName || 'Unknown'} • ${round.matchId}</h3>
                     <p><strong>Date:</strong> ${playDate}</p>
                     <p><strong>Players:</strong> ${round.players?.map(p => p.name).join(', ') || '—'}</p>
-                    <p class="points"><strong>Total Points:</strong> ${pointsDisplay}</p>
+                    <p class="points"><strong>Current Points:</strong> ${pointsStr}</p>
 
-                    <div class="modify-section">
-                        <strong>Modify Totals:</strong><br>
-                        ${round.players?.map(p => `
-                            <label>${p.name}:</label>
-                            <input type="number" id="pts-${round.matchId}-${p.name}" value="${(round._cachedTotals || {})[p.name] || 0}">
-                        `).join('') || '<em>No players</em>'}
-                        <br>
-                        <button onclick="updatePoints('${round.matchId}')">Update Points →</button>
+                    <div style="margin-top:20px;">
+                        <strong>Edit Bonus Markers per Hole:</strong>
+                        ${round.players?.map(player => {
+                            const playerScores = player.scores || [];
+                            let holesHtml = '';
+                            for (let i = 0; i < HOLES; i++) {
+                                const holeNum = i + 1;
+                                const bonuses = playerScores[i] || {};
+                                const current = bonuses.firstOn ? 'firstOn' : bonuses.putt ? 'putt' : bonuses.closest ? 'closest' : '';
+
+                                let options = BONUSES.map(b => 
+                                    `<option value="${b.value}" ${b.value === current ? 'selected' : ''}>${b.label}</option>`
+                                ).join('');
+
+                                holesHtml += `
+                                    <div class="hole">
+                                        <label>H${holeNum}</label>
+                                        <select id="bonus-${round.matchId}-${player.name}-${holeNum}">
+                                            ${options}
+                                        </select>
+                                    </div>`;
+                            }
+                            return `
+                                <details class="player-section">
+                                    <summary>${player.name} (points: ${totals[player.name] ?? '—'})</summary>
+                                    <div class="hole-grid">${holesHtml}</div>
+                                </details>`;
+                        }).join('') || '<p style="color:#777;">No players</p>'}
+
+                        <button onclick="saveBonuses('${round.matchId}')">Save Changes →</button>
                     </div>
 
                     <button class="danger" onclick="deleteRound('${round.matchId}')">Delete Round</button>
@@ -99,41 +133,47 @@
             document.getElementById('results').style.display = 'block';
         }
 
-        async function updatePoints(matchId) {
+        async function saveBonuses(matchId) {
             const round = currentRounds.find(r => r.matchId === matchId);
             if (!round) return alert('Round not found');
 
-            const newTotals = {};
-            round.players.forEach(p => {
-                const input = document.getElementById(`pts-${matchId}-${p.name}`);
-                newTotals[p.name] = parseInt(input.value, 10) || 0;
+            const updatedPlayers = round.players.map(player => {
+                const newScores = [];
+                for (let i = 1; i <= HOLES; i++) {
+                    const select = document.getElementById(`bonus-${matchId}-${player.name}-${i}`);
+                    const val = select?.value;
+                    const obj = {};
+                    if (val) obj[val] = true;
+                    newScores.push(obj);
+                }
+                return { name: player.name, scores: newScores };
             });
 
-            if (!confirm(`Update total points for ${matchId}?`)) return;
+            if (!confirm(`Update bonus markers for ${matchId}? Points will be recalculated on server.`)) return;
 
             try {
-                const res = await fetch('https://pwa-players-backend.onrender.com/update-round-totals', {
+                const res = await fetch('https://pwa-players-backend.onrender.com/update-round-bonuses', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ matchId, totals: newTotals })
+                    body: JSON.stringify({ matchId, players: updatedPlayers })
                 });
 
-                const result = await res.json();
+                if (!res.ok) throw new Error(`Server: ${res.status}`);
 
+                const result = await res.json();
                 if (result.success) {
-                    alert('✅ Points updated');
+                    alert('Bonuses updated — totals refreshed');
                     loadAllRounds();
                 } else {
-                    alert('Error: ' + (result.error || 'Unknown'));
+                    alert('Failed: ' + (result.error || 'Unknown'));
                 }
             } catch (e) {
-                alert('Network error – check console');
-                console.error(e);
+                alert('Error: ' + e.message + ' (endpoint may not exist yet)');
             }
         }
 
         async function deleteRound(matchId) {
-            if (!confirm(`Delete match ${matchId} permanently? Round count will be adjusted.`)) return;
+            if (!confirm(`Delete ${matchId} permanently? Round count decreases.`)) return;
 
             try {
                 const res = await fetch('https://pwa-players-backend.onrender.com/delete-round', {
@@ -142,20 +182,20 @@
                     body: JSON.stringify({ matchId })
                 });
 
-                const result = await res.json();
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+                const result = await res.json();
                 if (result.success) {
-                    alert('✅ Round deleted');
+                    alert('Round deleted');
                     loadAllRounds();
                 } else {
-                    alert('Error: ' + (result.error || 'Unknown'));
+                    alert('Delete failed: ' + (result.error || JSON.stringify(result)));
                 }
             } catch (e) {
-                alert('Network error');
+                alert('Delete error — likely missing endpoint: ' + e.message);
             }
         }
 
-        // Load on page open
         window.onload = loadAllRounds;
     </script>
 </body>
