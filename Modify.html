@@ -95,18 +95,18 @@
                 <div style="margin-top:20px;">
                     <strong>Edit Carry Markers per Hole:</strong>
                     ${round.players?.map(player => {
-                        const playerScores = player.scores || [];
+                        const playerScores = Array.isArray(player.scores) ? player.scores : new Array(HOLES).fill({});
+                        
                         let holesHtml = '';
-
                         for (let i = 0; i < HOLES; i++) {
                             const holeNum = i + 1;
                             const holeCarries = playerScores[i] || {};
 
-                            // Determine current carry value
+                            // Robust detection - handles missing object or non-boolean values
                             let current = "";
-                            if (holeCarries.firstOn === true) current = "firstOn";
-                            else if (holeCarries.putt    === true) current = "putt";
-                            else if (holeCarries.closest === true) current = "closest";
+                            if (holeCarries.firstOn === true || holeCarries.firstOn === "true") current = "firstOn";
+                            else if (holeCarries.putt    === true || holeCarries.putt    === "true") current = "putt";
+                            else if (holeCarries.closest === true || holeCarries.closest === "true") current = "closest";
 
                             const optionsHtml = CARRIES.map(c => `
                                 <option value="${c.value}" ${c.value === current ? 'selected' : ''}>
