@@ -191,7 +191,7 @@
     if (!confirm(`Update carry markers for ${matchId}? Points will be recalculated on server.`)) return;
 
     try {
-        const res = await fetch('https://pwa-players-backend.onrender.com/update-round-bonuses', {
+        const res = await fetch('https://pwa-players-backend.onrender.com/update-round-carries', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ matchId, players: updatedPlayers })
