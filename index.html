@@ -842,6 +842,8 @@ body {
         startGameBtn.disabled = true; // will be enabled when players are selected
       }
 
+      attachStartGameListener(); 
+
       console.log('Player select rendered with', roster.length, 'players');
     }
     // === CORE GAME FUNCTIONS - PART 1 ===
@@ -857,6 +859,49 @@ body {
         if (screen) screen.classList.add('hidden');
       });
     }
+
+        // === START ROUND BUTTON ===
+    function attachStartGameListener() {
+      const startGameBtn = document.getElementById('startGame');
+      if (!startGameBtn) {
+        console.error('startGame button not found');
+        return;
+      }
+
+      startGameBtn.onclick = () => {
+        if (players.length < 2) {
+          alert('Please select at least 2 players');
+          return;
+        }
+
+        console.log('Starting new round with', players.length, 'players');
+
+        currentHole = 1;
+        finishedHoles.clear();
+        holeSequence = [];   // Reset sequence for new round
+
+        // Initialize scores for all selected players
+        players.forEach(p => {
+          p.scores = Array(HOLES).fill(null).map(() => ({}));
+          p._cachedTotal = 0;
+          p._cachedHoleTotals = {};
+        });
+
+        inRound = true;
+
+        hideAll();
+        const gameScreen = document.getElementById('game');
+        if (gameScreen) gameScreen.classList.remove('hidden');
+
+        updateHole();
+        console.log('Round started successfully - now on hole 1');
+      };
+    }
+
+    // Call this after player select is rendered
+    console.log('Start Round listener ready to be attached');
+
+
 
     function getCarryInForHole(holeNumber) {
       const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
