@@ -844,7 +844,136 @@ body {
 
       console.log('Player select rendered with', roster.length, 'players');
     }
+    // === CORE GAME FUNCTIONS - PART 1 ===
 
+    function hideAll() {
+      const screens = [
+        document.getElementById('courseSetup'),
+        document.getElementById('playerSetup'),
+        document.getElementById('game'),
+        document.getElementById('summary')
+      ];
+      screens.forEach(screen => {
+        if (screen) screen.classList.add('hidden');
+      });
+    }
+
+    function getCarryInForHole(holeNumber) {
+      const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+      if (!courses[currentCourse]) return carry;
+
+      const currentIdx = holeSequence.indexOf(holeNumber);
+      if (currentIdx === -1) {
+        // Fallback for simple holes
+        for (let h = 1; h < holeNumber; h++) {
+          if (!finishedHoles.has(h)) continue;
+          const idx = h - 1;
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+          const scores = players.map(p => p.scores[idx]).filter(Boolean);
+          if (!isPar3) {
+            if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+            else carry.firstOn++;
+          } else {
+            if (scores.some(s => s.firstOn)) carry.greenie = 0;
+            else carry.greenie++;
+          }
+          if (scores.some(s => s.closest)) carry.closest = 0;
+          else carry.closest++;
+          if (scores.some(s => s.putt)) carry.putt = 0;
+          else carry.putt++;
+        }
+      } else {
+        // Sequence-based carry
+        for (let i = 0; i < currentIdx; i++) {
+          const h = holeSequence[i];
+          if (!finishedHoles.has(h)) continue;
+          const idx = h - 1;
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+          const scores = players.map(p => p.scores[idx]).filter(Boolean);
+          if (!isPar3) {
+            if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+            else carry.firstOn++;
+          } else {
+            if (scores.some(s => s.firstOn)) carry.greenie = 0;
+            else carry.greenie++;
+          }
+          if (scores.some(s => s.closest)) carry.closest = 0;
+          else carry.closest++;
+          if (scores.some(s => s.putt)) carry.putt = 0;
+          else carry.putt++;
+        }
+      }
+      return carry;
+    }
+
+    function precomputeAllTotals() {
+      players.forEach(p => {
+        let total = 0;
+        p._cachedHoleTotals = {};
+        for (let idx = 0; idx < HOLES; idx++) {
+          const holeNumber = idx + 1;
+          if (!finishedHoles.has(holeNumber)) continue;
+
+          const s = p.scores[idx] || {};
+          const carryIn = getCarryInForHole(holeNumber);
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+
+          let holePoints = 0;
+          if (s.firstOn) holePoints += 1;
+          if (s.closest) holePoints += 1;
+          if (s.putt) holePoints += 1;
+
+          if (s.firstOn) holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
+          if (s.closest) holePoints += carryIn.closest;
+          if (s.putt) holePoints += carryIn.putt;
+
+          p._cachedHoleTotals[idx] = holePoints;
+          total += holePoints;
+        }
+        p._cachedTotal = total;
+      });
+    }
+
+    function getRunningTotal(player) {
+      let sum = 0;
+      for (let h = 1; h <= currentHole; h++) {
+        if (finishedHoles.has(h)) {
+          sum += player._cachedHoleTotals?.[h - 1] || 0;
+        }
+      }
+      return sum;
+    }
+
+    function updateHole() {
+      if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
+
+      precomputeAllTotals();
+
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse].pars[holeIdx];
+      const isPar3 = par === 3;
+
+      const courseName = courses[currentCourse].name;
+      const holeDisplay = document.getElementById('holeDisplay');
+      if (holeDisplay) {
+        holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
+      }
+
+      const firstOnHeader = document.getElementById('firstOnHeader');
+      if (firstOnHeader) firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
+
+      const carryIn = getCarryInForHole(currentHole);
+      renderTable(carryIn, finishedHoles.has(currentHole));
+
+      updateNavButtons();
+      console.log('updateHole completed for hole', currentHole);
+    }
+
+    console.log('Core game functions loaded');
+  </script>
 
 
 
