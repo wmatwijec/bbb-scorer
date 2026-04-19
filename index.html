@@ -748,13 +748,41 @@ body {
 
     console.log('renderCourseSelect function defined');
 
-    // Start the app
+    // === COURSE SELECT LISTENER ===
+    function attachCourseSelectListener() {
+      const courseSelect = document.getElementById('courseSelect');
+      const nextBtn = document.getElementById('nextToPlayers');
+
+      if (!courseSelect) return;
+
+      courseSelect.addEventListener('change', () => {
+        const val = courseSelect.value;
+        console.log('Course selected:', val);
+
+        if (val === '') {
+          currentCourse = null;
+          if (nextBtn) nextBtn.disabled = true;
+        } else {
+          currentCourse = parseInt(val);
+          localStorage.setItem('bbb_currentCourse', currentCourse);
+          if (nextBtn) nextBtn.disabled = false;
+        }
+      });
+    }
+
+    // Call it after DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOMContentLoaded fired - starting loadDataFromBackend');
       loadDataFromBackend();
+
+      // Attach listeners after data is loaded
+      setTimeout(() => {
+        attachCourseSelectListener();
+      }, 500);
     });
+    
   </script>
-  
+
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
  
  <!--
