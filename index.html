@@ -577,7 +577,7 @@ body {
     </p>
   </div>
 
-  <!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER + COURSE SELECT -->
+<!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER -->
 <script>
   // Hide launch screen
   if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
@@ -587,7 +587,7 @@ body {
     window.location.href = '/bbb-scorer/';
   }
 
-  // FINAL DIAGNOSTIC + INITIALIZATION
+  // Simple spinner killer - no early renderCourseSelect call
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const loader = document.getElementById('courseLoader');
@@ -599,20 +599,10 @@ body {
         picker.style.display = 'block';
       }
 
-      // Updated diagnostic lines
-      console.log('courses array length:', (window.courses || []).length);
-      console.log('courses array contents:', window.courses);
-      console.log('renderCourseSelect exists?', typeof renderCourseSelect);
-
-      if (typeof renderCourseSelect === 'function') {
-        renderCourseSelect();
-        console.log('✅ renderCourseSelect() called successfully');
-      } else {
-        console.error('❌ renderCourseSelect function is missing in inline code');
-      }
-    }, 800);   // Reduced delay — should be plenty now that everything is inlined
+      console.log('Spinner killer finished - waiting for backend data');
+    }, 800);
   });
-</script>
+</script>  
 
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
