@@ -606,7 +606,7 @@ body {
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
 <script>
-    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v10 ===');
+    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v11 ===');
     console.log('Inline script parsed successfully — 2026-04-19');
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
@@ -705,18 +705,19 @@ body {
 
     // === RENDER COURSE SELECT ===
     function renderCourseSelect() {
-      if (!els.courseSelect) {
-        console.log('Course select not ready yet, retrying...');
+      const select = document.getElementById('courseSelect');
+      if (!select) {
+        console.log('Course select element not found yet, retrying in 300ms...');
         setTimeout(renderCourseSelect, 300);
         return;
       }
 
       console.log('Rendering courses - count:', courses.length);
 
-      els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+      select.innerHTML = '<option value="">-- Select Course --</option>';
       
       if (courses.length === 0) {
-        els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+        select.innerHTML += '<option disabled>No courses available</option>';
         document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
         return;
       }
@@ -725,7 +726,7 @@ body {
         const opt = document.createElement('option');
         opt.value = i;
         opt.textContent = c.name;
-        els.courseSelect.appendChild(opt);
+        select.appendChild(opt);
       });
 
       const nextBtn = document.getElementById('nextToPlayers');
@@ -733,7 +734,7 @@ body {
         const saved = localStorage.getItem('bbb_currentCourse');
         const savedIdx = parseInt(saved);
         if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
-          els.courseSelect.value = savedIdx;
+          select.value = savedIdx;
           currentCourse = savedIdx;
           nextBtn.disabled = false;
         } else {
@@ -742,8 +743,10 @@ body {
         }
       }
 
-      console.log('Course dropdown populated with', courses.length, 'courses');
+      console.log('✅ Course dropdown populated with', courses.length, 'courses');
     }
+
+    console.log('renderCourseSelect function defined');
 
     // Start the app
     document.addEventListener('DOMContentLoaded', () => {
@@ -751,6 +754,7 @@ body {
       loadDataFromBackend();
     });
   </script>
+  
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
  
  <!--
