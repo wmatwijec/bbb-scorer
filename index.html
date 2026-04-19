@@ -984,59 +984,64 @@ function parseCSV(text) {
 
 
 // === MAIN DATA LOADER ===
-    async function loadDataFromBackend() {
-      const loader = document.getElementById('courseLoader');
-      const error = document.getElementById('courseError');
-      const picker = document.getElementById('coursePicker');
+async function loadDataFromBackend() {
+  const loader = document.getElementById('courseLoader');
+  const error = document.getElementById('courseError');
+  const picker = document.getElementById('coursePicker');
 
-      try {
-        console.log('Starting backend load...');
+  console.log('loadDataFromBackend started');
 
-        const [playersRes, coursesRes] = await Promise.all([
-          fetch(`${BACKEND}/players`),
-          fetch(`${BACKEND}/courses`)
-        ]);
+  try {
+    console.log('Fetching from backend...');
 
-        if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+    const [playersRes, coursesRes] = await Promise.all([
+      fetch(`${BACKEND}/players`),
+      fetch(`${BACKEND}/courses`)
+    ]);
 
-        const playersCSV = await playersRes.text();
-        const coursesCSV = await coursesRes.text();
+    console.log('Players response status:', playersRes.status);
+    console.log('Courses response status:', coursesRes.status);
 
-        roster = parseCSV(playersCSV).map(p => ({
-          name: p.Name?.trim(),
-          phone: p.Phone?.trim(),
-          email: p.Email?.trim()
-        })).filter(p => p.name);
+    if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
 
-        courses = parseCSV(coursesCSV).map(c => {
-          const name = c.Name?.trim();
-          const pars = [];
-          for (let i = 1; i <= 18; i++) {
-            const par = parseInt(c[`Par${i}`]);
-            if (!isNaN(par)) pars.push(par);
-          }
-          return { name, pars };
-        }).filter(c => c.name && c.pars.length === 18);
+    const playersCSV = await playersRes.text();
+    const coursesCSV = await coursesRes.text();
 
-        console.log('✅ Backend data loaded — courses:', courses.length);
+    console.log('Players CSV length:', playersCSV.length);
+    console.log('Courses CSV length:', coursesCSV.length);
 
-        if (loader) loader.classList.add('hidden');
-        if (picker) picker.classList.remove('hidden');
-        
-        renderCourseSelect();
+    roster = parseCSV(playersCSV).map(p => ({
+      name: p.Name?.trim(),
+      phone: p.Phone?.trim(),
+      email: p.Email?.trim()
+    })).filter(p => p.name);
 
-      } catch (err) {
-        console.error('Backend load failed:', err);
-        if (loader) loader.classList.add('hidden');
-        if (error) {
-          error.classList.remove('hidden');
-          error.textContent = `Load failed: ${err.message}`;
-        }
+    courses = parseCSV(coursesCSV).map(c => {
+      const name = c.Name?.trim();
+      const pars = [];
+      for (let i = 1; i <= 18; i++) {
+        const par = parseInt(c[`Par${i}`]);
+        if (!isNaN(par)) pars.push(par);
       }
+      return { name, pars };
+    }).filter(c => c.name && c.pars.length === 18);
+
+    console.log('✅ Backend data loaded — courses:', courses.length);
+
+    if (loader) loader.classList.add('hidden');
+    if (picker) picker.classList.remove('hidden');
+
+    renderCourseSelect();
+
+  } catch (err) {
+    console.error('Backend load failed:', err);
+    if (loader) loader.classList.add('hidden');
+    if (error) {
+      error.classList.remove('hidden');
+      error.textContent = `Load failed: ${err.message}`;
     }
-
-
-
+  }
+}
 
 
 
