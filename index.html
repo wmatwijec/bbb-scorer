@@ -633,6 +633,8 @@ body {
     let inRound = false;
     let els = {};
     let waltShadowPhone = null;
+    let holeSequence = [];
+    let cloudRounds = [];
 
     
 
@@ -679,6 +681,151 @@ async function clearRoundLocal() {
   tx.objectStore(STORE_NAME).delete('current');
   return tx.complete;
 }
+
+
+async function loadCloudRounds() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);  // "2025-04-18"
+    const res = await fetch(`${BACKEND}/rounds?date=${today}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.rounds || [];
+  } catch (e) {
+    console.error('Failed to load cloud rounds:', e);
+    return [];
+  }
+}
+
+function showRoundSelection(rounds) {
+  // Filter for incomplete rounds (less than 18 holes finished)
+  const incomplete = rounds.filter(r => {
+    const finished = r.finishedHoles?.length || 0;
+    return finished < 18;
+  });
+  if (incomplete.length === 0) {
+    // No incomplete rounds - start fresh
+    els.courseSetup.classList.remove('hidden');
+    return;
+  }
+  if (incomplete.length === 1) {
+    // One incomplete - confirm then confirm again
+    const round = incomplete[0];
+    const dateStr = new Date(round.date).toLocaleDateString();
+    const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+    const holes = round.finishedHoles?.length || 0;
+    
+    const firstConfirm = confirm(
+      `Resume round from ${dateStr}?\n\n` +
+      `Group: ${playerNames}\n` +
+      `Course: ${round.courseName || 'Unknown'}\n` +
+      `Holes: ${holes}/18`
+    );
+    
+    if (firstConfirm) {
+      const sureConfirm = confirm(
+        `Are you SURE you want to resume this round?\n\n` +
+        `This will load "${playerNames}" at ${holes} holes.`
+      );
+      
+      if (sureConfirm) {
+        resumeRound(round);
+      } else {
+        showRoundSelection(rounds);  // Go back to selection
+      }
+    } else {
+      els.courseSetup.classList.remove('hidden');
+    }
+    return;
+  }
+  // Multiple incomplete - build selection UI
+  const html = `
+    <div id="roundSelection" class="card center-block" style="display:block;">
+      <h2 style="text-align:center; color:var(--green); margin:1rem 0;">
+        Resume Round
+      </h2>
+      <p style="text-align:center; margin-bottom:1rem;">
+        Select a round to resume:
+      </p>
+      <div id="roundList" style="max-height:60vh; overflow-y:auto;">
+        ${incomplete.map((r, i) => {
+          const dateStr = new Date(r.date).toLocaleDateString();
+          const playerNames = r.players?.map(p => p.name).join(', ') || 'Unknown';
+          const holes = r.finishedHoles?.length || 0;
+          return `
+            <div class="round-option" style="padding:0.75rem; border:2px solid var(--border); border-radius:8px; margin-bottom:0.5rem; cursor:pointer;" 
+              onclick="selectRoundConfirm(${i})">
+              <strong>${r.courseName || 'Unknown Course'}</strong><br>
+              <small>${playerNames}</small><br>
+              <small>Holes: ${holes}/18 • ${dateStr}</small>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button onclick="startFreshRound()" style="width:100%; margin-top:1rem; background:#ccc;">
+        Start New Round
+      </button>
+    </div>
+  `;
+  
+  // Insert before courseSetup
+  els.courseSetup.insertAdjacentHTML('beforebegin', html);
+  
+  // Store rounds globally for selection
+  window.incompleteRounds = incomplete;
+}
+// Make functions globally accessible for onclick handlers
+window.selectRoundConfirm = function(index) {
+  const round = window.incompleteRounds[index];
+  const dateStr = new Date(round.date).toLocaleDateString();
+  const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+  const holes = round.finishedHoles?.length || 0;
+  
+  const sureConfirm = confirm(
+    `Are you SURE you want to resume this round?\n\n` +
+    `Group: ${playerNames}\n` +
+    `Course: ${round.courseName || 'Unknown'}\n` +
+    `Holes: ${holes}/18\n` +
+    `Date: ${dateStr}`
+  );
+  
+  if (sureConfirm) {
+    resumeRound(round);
+  }
+};
+window.startFreshRound = function() {
+  const div = document.getElementById('roundSelection');
+  if (div) div.remove();
+  els.courseSetup.classList.remove('hidden');
+};
+
+function resumeRound(round) {
+  // Remove selection UI if exists
+  const selDiv = document.getElementById('roundSelection');
+  if (selDiv) selDiv.remove();
+  
+  // Load round data
+  players = round.players.map(p => ({
+    ...p,
+    scores: Array(18).fill(null).map(() => ({})),
+    _cachedTotal: round._cachedTotals?.[p.name] || 0
+  }));
+  
+  Object.keys(round.scores || {}).forEach(name => {
+    const player = players.find(p => p.name === name);
+    if (player) player.scores = round.scores[name];
+  });
+  currentHole = round.currentHole || 1;
+  currentCourse = round.currentCourse;
+  finishedHoles = new Set(round.finishedHoles || []);
+  holeSequence = round.holeSequence || [];  // Restore sequence
+  inRound = true;
+  hideAll();
+  els.game.classList.remove('hidden');
+  updateHole();
+  logScreen('RESUMED SAVED ROUND');
+}
+
+
 
 function getWaltPhone() {
   if (!roster || !Array.isArray(roster)) return;
@@ -927,11 +1074,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     picker.classList.remove('hidden');
     renderCourseSelect();
   }
-  // TRY TO RESUME SAVED ROUND FIRST
-  const saved = await loadRoundLocal();
-  if (saved && confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
-    
-    
+
+  
+// Check for saved local round first
+const saved = await loadRoundLocal();
+// Try to get cloud rounds for selection
+cloudRounds = await loadCloudRounds();
+if (cloudRounds.length > 0) {
+  // Show selection UI (handles 0, 1, or multiple)
+  showRoundSelection(cloudRounds);
+  return;  // showRoundSelection will handle what to show
+} else if (saved) {
+  // Fallback to local-only if no cloud rounds
+  if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
     players = saved.players.map(p => ({
       ...p,
       scores: Array(18).fill(null).map(() => ({})),
@@ -941,18 +1096,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       const player = players.find(p => p.name === name);
       if (player) player.scores = saved.scores[name];
     });
-
     currentHole = saved.currentHole;
     currentCourse = saved.currentCourse;
     finishedHoles = new Set(saved.finishedHoles || []);
     inRound = true;
-
+    
+    // Restore holeSequence if saved
+    if (saved.holeSequence) {
+      holeSequence = saved.holeSequence;
+    }
     hideAll();
     els.game.classList.remove('hidden');
     updateHole();
     logScreen('RESUMED SAVED ROUND');
     return;
   }
+}
+
 // Fresh start — show course picker
   if (saved) await clearRoundLocal();
   
@@ -1093,6 +1253,7 @@ if (wakeLock) wakeLock.release().then(() => wakeLock = null);
     currentHole,
     currentCourse,
     finishedHoles: Array.from(finishedHoles),
+    holeSequence: holeSequence,
     scores: players.reduce((acc, p, i) => {
       acc[p.name] = p.scores;
       return acc;
@@ -1248,48 +1409,58 @@ players.sort((a, b) => a.name.localeCompare(b.name));
   // === CARRY LOGIC ===
  function getCarryInForHole(holeNumber) {
   const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+  // If no sequence tracked yet, fall back to original hole-number logic
+  if (holeSequence.length === 0) {
+    for (let h = 1; h < holeNumber; h++) {
+      if (!finishedHoles.has(h)) continue;
+      const idx = h - 1;
+      const par = courses[currentCourse].pars[idx];
+      const isPar3 = par === 3;
+      const scores = players.map(p => p.scores[idx]).filter(Boolean);
+      if (!isPar3) {
+        if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+        else carry.firstOn++;
+      }
+      if (isPar3) {
+        if (scores.some(s => s.firstOn)) carry.greenie = 0;
+        else carry.greenie++;
+      }
+      if (scores.some(s => s.closest)) carry.closest = 0;
+      else carry.closest++;
+      if (scores.some(s => s.putt)) carry.putt = 0;
+      else carry.putt++;
+    }
+    return carry;
+  }
 
-  for (let h = 1; h < holeNumber; h++) {
+
+  // Use sequence-based calculation for wrap-around support
+  const currentIdx = holeSequence.indexOf(holeNumber);
+  if (currentIdx === -1) return carry;  // Hole not played yet
+  // Look at all holes BEFORE this one in the sequence
+  for (let i = 0; i < currentIdx; i++) {
+    const h = holeSequence[i];
     if (!finishedHoles.has(h)) continue;
-
     const idx = h - 1;
     const par = courses[currentCourse].pars[idx];
     const isPar3 = par === 3;
     const scores = players.map(p => p.scores[idx]).filter(Boolean);
-
-    // === FIRST ON (only Par 4/5) ===
+    // First On / Greenie
     if (!isPar3) {
-      if (scores.some(s => s.firstOn)) {
-        carry.firstOn = 0;  // awarded → reset carry
-      } else {
-        carry.firstOn++;    // no winner → carry forward
-      }
+      if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+      else carry.firstOn++;
     }
-
-    // === GREENIE (only Par 3) ===
     if (isPar3) {
-      if (scores.some(s => s.firstOn)) {  // firstOn = Greenie on Par 3
-        carry.greenie = 0;
-      } else {
-        carry.greenie++;
-      }
+      if (scores.some(s => s.firstOn)) carry.greenie = 0;
+      else carry.greenie++;
     }
-
-    // === CLOSEST (all holes) ===
-    if (scores.some(s => s.closest)) {
-      carry.closest = 0;
-    } else {
-      carry.closest++;
-    }
-
-    // === PUTT (all holes) ===
-    if (scores.some(s => s.putt)) {
-      carry.putt = 0;
-    } else {
-      carry.putt++;
-    }
+    // Closest
+    if (scores.some(s => s.closest)) carry.closest = 0;
+    else carry.closest++;
+    // Putt
+    if (scores.some(s => s.putt)) carry.putt = 0;
+    else carry.putt++;
   }
-
   return carry;
 }
 
@@ -1317,14 +1488,12 @@ players.sort((a, b) => a.name.localeCompare(b.name));
       if (s.putt) holePoints += 1;
 
       // Carry-in
-      if (holeNumber < HOLES) {
         if (s.firstOn) {
           holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
         }
         if (s.closest) holePoints += carryIn.closest;
         if (s.putt) holePoints += carryIn.putt;
-      }
-
+      
       p._cachedHoleTotals[idx] = holePoints;
       total += holePoints;
     }
@@ -1590,6 +1759,11 @@ function renderHoleSummary() {
   function finishCurrentHole() {
   finishedHoles.add(currentHole);
   
+   // ADD THIS LINE - track play order for wrap-around carry
+  if (!holeSequence.includes(currentHole)) {
+    holeSequence.push(currentHole);
+  }
+
 
   precomputeAllTotals();
   
