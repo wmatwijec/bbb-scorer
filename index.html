@@ -1078,8 +1078,14 @@ function updateNavButtons() {
 */ 
 // === RENDER COURSE SELECT ===
 function renderCourseSelect() {
-  if (!els.courseSelect) return;
+  if (!els.courseSelect) {
+    console.log('els.courseSelect not ready yet, retrying in 300ms...');
+    setTimeout(renderCourseSelect, 300);
+    return;
+  }
   
+  console.log('Rendering courses - count:', courses.length);
+
   els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
   
   if (courses.length === 0) {
@@ -1109,14 +1115,9 @@ function renderCourseSelect() {
     currentCourse = null;
     nextBtn.disabled = true;
   }
+
+  console.log('Course dropdown populated with', courses.length, 'courses');
 }
-
- console.log('renderCourseSelect function defined');
-
- // Start loading data when page is ready
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDataFromBackend();
-    });
 
 
 
