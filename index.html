@@ -748,6 +748,36 @@ body {
 
     console.log('renderCourseSelect function defined');
 
+      // === NEXT TO PLAYERS BUTTON ===
+    function attachNextToPlayersListener() {
+      const nextBtn = document.getElementById('nextToPlayers');
+      if (!nextBtn) return;
+
+      nextBtn.addEventListener('click', () => {
+        if (currentCourse === null) {
+          alert('Please select a course first');
+          return;
+        }
+
+        console.log('Loading course', currentCourse, '— moving to player setup');
+
+        // Hide course setup and show player setup
+        const courseSetup = document.getElementById('courseSetup');
+        const playerSetup = document.getElementById('playerSetup');
+
+        if (courseSetup) courseSetup.classList.add('hidden');
+        if (playerSetup) {
+          playerSetup.classList.remove('hidden');
+          renderPlayerSelect();   // We'll add this function next if needed
+        }
+      });
+    }
+
+
+
+
+
+
     // === COURSE SELECT LISTENER ===
     function attachCourseSelectListener() {
       const courseSelect = document.getElementById('courseSelect');
@@ -770,17 +800,18 @@ body {
       });
     }
 
-    // Call it after DOM is ready
+    // Start the app
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOMContentLoaded fired - starting loadDataFromBackend');
       loadDataFromBackend();
 
-      // Attach listeners after data is loaded
+      // Attach listeners after a short delay to ensure DOM is ready
       setTimeout(() => {
-        attachCourseSelectListener();
-      }, 500);
+        attachCourseSelectListener();   // if you have this from earlier
+        attachNextToPlayersListener();
+      }, 800);
     });
-    
+
   </script>
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
