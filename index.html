@@ -891,7 +891,7 @@ body {
     // Call this after player select is rendered
     console.log('Start Round listener ready to be attached');
     
-    function hideAll() {
+    /*function hideAll() {
       const screens = [
         document.getElementById('courseSetup'),
         document.getElementById('playerSetup'),
@@ -902,6 +902,21 @@ body {
         if (screen) screen.classList.add('hidden');
       });
     }
+      */ 
+
+    function hideAll() {
+  console.log('hideAll called');
+  const screens = [
+    document.getElementById('courseSetup'),
+    document.getElementById('playerSetup'),
+    document.getElementById('game'),
+    document.getElementById('summary')
+  ];
+  screens.forEach(screen => {
+    if (screen) screen.classList.add('hidden');
+  });
+}
+
 
 
     function getCarryInForHole(holeNumber) {
