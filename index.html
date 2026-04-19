@@ -1000,7 +1000,7 @@ function updateNavButtons() {
   console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
   
   
-  const canPrev = currentHole > 1 
+  const canPrev = currentHole > 1; 
   const canNext = currentHole < HOLES; 
 
   console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
@@ -1009,7 +1009,7 @@ document.getElementById('prevHole')?.disabled = !canPrev;
 document.getElementById('nextHole')?.disabled = !canNext;
   
  
- const prevBtn = document.getElementById('prevHole');
+const prevBtn = document.getElementById('prevHole');
 const nextBtn = document.getElementById('nextHole');
 if (prevBtn) prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
 if (nextBtn) nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1'; 
