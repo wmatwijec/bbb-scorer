@@ -841,10 +841,9 @@ body {
       if (startGameBtn) {
         startGameBtn.disabled = true; // will be enabled when players are selected
       }
-
-      attachStartGameListener(); 
-
+      
       console.log('Player select rendered with', roster.length, 'players');
+      attachStartGameListener(); 
     }
     // === CORE GAME FUNCTIONS - PART 1 ===
 
