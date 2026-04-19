@@ -847,18 +847,7 @@ body {
     }
     // === CORE GAME FUNCTIONS - PART 1 ===
 
-    function hideAll() {
-      const screens = [
-        document.getElementById('courseSetup'),
-        document.getElementById('playerSetup'),
-        document.getElementById('game'),
-        document.getElementById('summary')
-      ];
-      screens.forEach(screen => {
-        if (screen) screen.classList.add('hidden');
-      });
-    }
-
+    
         // === START ROUND BUTTON ===
     function attachStartGameListener() {
       const startGameBtn = document.getElementById('startGame');
@@ -866,6 +855,8 @@ body {
         console.error('startGame button not found');
         return;
       }
+
+      console.log('Start Round button listener attached');
 
       startGameBtn.onclick = () => {
         if (players.length < 2) {
@@ -877,9 +868,8 @@ body {
 
         currentHole = 1;
         finishedHoles.clear();
-        holeSequence = [];   // Reset sequence for new round
+        holeSequence = [];
 
-        // Initialize scores for all selected players
         players.forEach(p => {
           p.scores = Array(HOLES).fill(null).map(() => ({}));
           p._cachedTotal = 0;
@@ -896,10 +886,22 @@ body {
         console.log('Round started successfully - now on hole 1');
       };
     }
+     
 
     // Call this after player select is rendered
     console.log('Start Round listener ready to be attached');
-
+    
+    function hideAll() {
+      const screens = [
+        document.getElementById('courseSetup'),
+        document.getElementById('playerSetup'),
+        document.getElementById('game'),
+        document.getElementById('summary')
+      ];
+      screens.forEach(screen => {
+        if (screen) screen.classList.add('hidden');
+      });
+    }
 
 
     function getCarryInForHole(holeNumber) {
