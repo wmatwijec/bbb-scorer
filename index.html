@@ -800,6 +800,55 @@ body {
       });
     }
 
+      // === HIDE ALL SCREENS ===
+    function hideAll() {
+      const screens = [
+        document.getElementById('courseSetup'),
+        document.getElementById('playerSetup'),
+        document.getElementById('game'),
+        document.getElementById('summary')
+      ];
+      screens.forEach(screen => {
+        if (screen) screen.classList.add('hidden');
+      });
+    }
+
+    // === RENDER PLAYER SELECT ===
+    function renderPlayerSelect() {
+      console.log('renderPlayerSelect called');
+
+      const playerSelect = document.getElementById('playerSelect');
+      if (!playerSelect) {
+        console.error('playerSelect element not found');
+        return;
+      }
+
+      playerSelect.innerHTML = '';
+
+      roster.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" data-index="${i}">
+            ${p.name}
+          </label>
+        `;
+        playerSelect.appendChild(div);
+      });
+
+      // Enable/disable Start Round button based on selections
+      const startGameBtn = document.getElementById('startGame');
+      if (startGameBtn) {
+        startGameBtn.disabled = true; // will be enabled when players are selected
+      }
+
+      console.log('Player select rendered with', roster.length, 'players');
+    }
+
+
+
+
+
     // Start the app
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOMContentLoaded fired - starting loadDataFromBackend');
