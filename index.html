@@ -617,7 +617,7 @@ body {
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
   <script>
-    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v5 ===');
+    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v6 ===');
     console.log('Inline script parsed successfully — 2026-04-19');
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
@@ -873,7 +873,7 @@ function getWaltPhone() {
 })();
 
 
-// === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone) ===
+// === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone)  Old version  ===
 async function loadDataFromBackend() {
   const loader = document.getElementById('courseLoader');
   const error = document.getElementById('courseError');
@@ -963,6 +963,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
+*/ 
+
 
 
 // === CSV PARSER ===
@@ -991,6 +993,66 @@ function parseCSV(text) {
 }
 
 
+// === MAIN DATA LOADER ===
+    async function loadDataFromBackend() {
+      const loader = document.getElementById('courseLoader');
+      const error = document.getElementById('courseError');
+      const picker = document.getElementById('coursePicker');
+
+      try {
+        console.log('Starting backend load...');
+
+        const [playersRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND}/players`),
+          fetch(`${BACKEND}/courses`)
+        ]);
+
+        if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+
+        const playersCSV = await playersRes.text();
+        const coursesCSV = await coursesRes.text();
+
+        roster = parseCSV(playersCSV).map(p => ({
+          name: p.Name?.trim(),
+          phone: p.Phone?.trim(),
+          email: p.Email?.trim()
+        })).filter(p => p.name);
+
+        courses = parseCSV(coursesCSV).map(c => {
+          const name = c.Name?.trim();
+          const pars = [];
+          for (let i = 1; i <= 18; i++) {
+            const par = parseInt(c[`Par${i}`]);
+            if (!isNaN(par)) pars.push(par);
+          }
+          return { name, pars };
+        }).filter(c => c.name && c.pars.length === 18);
+
+        console.log('✅ Backend data loaded — courses:', courses.length);
+
+        if (loader) loader.classList.add('hidden');
+        if (picker) picker.classList.remove('hidden');
+        renderCourseSelect();
+
+      } catch (err) {
+        console.error('Backend load failed:', err);
+        if (loader) loader.classList.add('hidden');
+        if (error) {
+          error.classList.remove('hidden');
+          error.textContent = `Load failed: ${err.message}`;
+        }
+      }
+    }
+
+
+
+
+
+
+
+
+
+/*
 
 function sortPlayersAlphabetically() {
   players.sort((a, b) => a.name.localeCompare(b.name));
@@ -1059,6 +1121,14 @@ function renderCourseSelect() {
 }
 
  console.log('renderCourseSelect function defined');
+ 
+ // Start loading data when page is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDataFromBackend();
+    });
+
+
+
 </script>
 
 
