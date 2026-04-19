@@ -1032,6 +1032,7 @@ function parseCSV(text) {
 
         if (loader) loader.classList.add('hidden');
         if (picker) picker.classList.remove('hidden');
+        
         renderCourseSelect();
 
       } catch (err) {
@@ -1121,7 +1122,7 @@ function renderCourseSelect() {
 }
 
  console.log('renderCourseSelect function defined');
- 
+
  // Start loading data when page is ready
     document.addEventListener('DOMContentLoaded', () => {
       loadDataFromBackend();
@@ -1154,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (error) error.classList.add('hidden');
   if (picker) {
     picker.classList.remove('hidden');
-    renderCourseSelect();
+    // renderCourseSelect();
   }
 
   
