@@ -640,7 +640,7 @@ body {
 
     console.log('Basic variables loaded successfully');
     
-    
+   /* 
     const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
 
     // === INDEXEDDB PERSISTENCE — SURVIVES CRASHES & CLOSES ===
@@ -831,7 +831,7 @@ function resumeRound(round) {
   logScreen('RESUMED SAVED ROUND');
 }
 
-*/
+
 
 function getWaltPhone() {
   if (!roster || !Array.isArray(roster)) return;
@@ -1018,7 +1018,7 @@ function updateNavButtons() {
   console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
 }
 
-
+*/ 
 // === RENDER COURSE SELECT ===
 function renderCourseSelect() {
   if (!els.courseSelect) return;
@@ -1053,6 +1053,12 @@ function renderCourseSelect() {
     nextBtn.disabled = true;
   }
 }
+
+ console.log('renderCourseSelect function defined');
+</script>
+
+
+ /*
 
 // === DOM READY ===
 document.addEventListener('DOMContentLoaded', async () => {
