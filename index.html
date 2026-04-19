@@ -604,7 +604,153 @@ body {
   });
 </script>  
 
+<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+<script>
+    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v10 ===');
+    console.log('Inline script parsed successfully — 2026-04-19');
 
+    const BACKEND = 'https://pwa-players-backend.onrender.com';
+
+    let roster = [];
+    let players = [];
+    let currentHole = 1;
+    const HOLES = 18;
+    const MAX_PLAYERS = 6;
+    let currentCourse = null;
+    let courses = [];
+    let roundHistory = [];
+    let finishedHoles = new Set();
+    let inRound = false;
+    let els = {};
+    let waltShadowPhone = null;
+    let holeSequence = [];
+    let cloudRounds = [];
+
+    // === CSV PARSER ===
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else current += char;
+        }
+        values.push(current.trim());
+        return values;
+      });
+      return rows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
+      });
+    }
+
+    // === MAIN DATA LOADER ===
+    async function loadDataFromBackend() {
+      console.log('loadDataFromBackend started');
+
+      const loader = document.getElementById('courseLoader');
+      const error = document.getElementById('courseError');
+      const picker = document.getElementById('coursePicker');
+
+      try {
+        const [playersRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND}/players`),
+          fetch(`${BACKEND}/courses`)
+        ]);
+
+        if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+
+        const playersCSV = await playersRes.text();
+        const coursesCSV = await coursesRes.text();
+
+        roster = parseCSV(playersCSV).map(p => ({
+          name: p.Name?.trim(),
+          phone: p.Phone?.trim(),
+          email: p.Email?.trim()
+        })).filter(p => p.name);
+
+        courses = parseCSV(coursesCSV).map(c => {
+          const name = c.Name?.trim();
+          const pars = [];
+          for (let i = 1; i <= 18; i++) {
+            const par = parseInt(c[`Par${i}`]);
+            if (!isNaN(par)) pars.push(par);
+          }
+          return { name, pars };
+        }).filter(c => c.name && c.pars.length === 18);
+
+        console.log('✅ Backend data loaded — courses:', courses.length);
+
+        if (loader) loader.classList.add('hidden');
+        if (picker) picker.classList.remove('hidden');
+
+        renderCourseSelect();
+
+      } catch (err) {
+        console.error('Backend load failed:', err);
+        if (loader) loader.classList.add('hidden');
+        if (error) {
+          error.classList.remove('hidden');
+          error.textContent = `Load failed: ${err.message}`;
+        }
+      }
+    }
+
+    // === RENDER COURSE SELECT ===
+    function renderCourseSelect() {
+      if (!els.courseSelect) {
+        console.log('Course select not ready yet, retrying...');
+        setTimeout(renderCourseSelect, 300);
+        return;
+      }
+
+      console.log('Rendering courses - count:', courses.length);
+
+      els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+      
+      if (courses.length === 0) {
+        els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+        document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
+        return;
+      }
+
+      courses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.name;
+        els.courseSelect.appendChild(opt);
+      });
+
+      const nextBtn = document.getElementById('nextToPlayers');
+      if (nextBtn) {
+        const saved = localStorage.getItem('bbb_currentCourse');
+        const savedIdx = parseInt(saved);
+        if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
+          els.courseSelect.value = savedIdx;
+          currentCourse = savedIdx;
+          nextBtn.disabled = false;
+        } else {
+          currentCourse = null;
+          nextBtn.disabled = true;
+        }
+      }
+
+      console.log('Course dropdown populated with', courses.length, 'courses');
+    }
+
+    // Start the app
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOMContentLoaded fired - starting loadDataFromBackend');
+      loadDataFromBackend();
+    });
+  </script>
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
  
  <!--
