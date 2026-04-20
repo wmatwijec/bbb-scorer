@@ -605,16 +605,12 @@ body {
 </script>  
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
-<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
 <script>
-    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v12 ===');
+    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v11 ===');
     console.log('Inline script parsed successfully — 2026-04-19');
 
     const BACKEND = 'https://pwa-players-backend.onrender.com';
 
-    // ========================
-    // 1. VARIABLES
-    // ========================
     let roster = [];
     let players = [];
     let currentHole = 1;
@@ -630,9 +626,7 @@ body {
     let holeSequence = [];
     let cloudRounds = [];
 
-    // ========================
-    // 2. DATA LOADING & PARSING
-    // ========================
+    // === CSV PARSER ===
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       const headers = lines[0].split(',').map(h => h.trim());
@@ -657,6 +651,7 @@ body {
       });
     }
 
+    // === MAIN DATA LOADER ===
     async function loadDataFromBackend() {
       console.log('loadDataFromBackend started');
 
@@ -681,7 +676,7 @@ body {
           email: p.Email?.trim()
         })).filter(p => p.name);
 
-        sortPlayersAlphabetically();
+        sortPlayersAlphabetically()
 
         courses = parseCSV(coursesCSV).map(c => {
           const name = c.Name?.trim();
@@ -710,13 +705,11 @@ body {
       }
     }
 
-    // ========================
-    // 3. UI RENDERING
-    // ========================
+    // === RENDER COURSE SELECT ===
     function renderCourseSelect() {
       const select = document.getElementById('courseSelect');
       if (!select) {
-        console.log('Course select element not ready yet, retrying in 300ms...');
+        console.log('Course select element not found yet, retrying in 300ms...');
         setTimeout(renderCourseSelect, 300);
         return;
       }
@@ -755,6 +748,90 @@ body {
       console.log('✅ Course dropdown populated with', courses.length, 'courses');
     }
 
+    console.log('renderCourseSelect function defined');
+
+      // === NEXT TO PLAYERS BUTTON ===
+    function attachNextToPlayersListener() {
+      const nextBtn = document.getElementById('nextToPlayers');
+      if (!nextBtn) return;
+
+      nextBtn.addEventListener('click', () => {
+        if (currentCourse === null) {
+          alert('Please select a course first');
+          return;
+        }
+
+        console.log('Loading course', currentCourse, '— moving to player setup');
+
+        // Hide course setup and show player setup
+        const courseSetup = document.getElementById('courseSetup');
+        const playerSetup = document.getElementById('playerSetup');
+
+        if (courseSetup) courseSetup.classList.add('hidden');
+        if (playerSetup) {
+          playerSetup.classList.remove('hidden');
+          renderPlayerSelect();   // We'll add this function next if needed
+        }
+      });
+    }
+
+
+
+
+
+
+    // === COURSE SELECT LISTENER ===
+    function attachCourseSelectListener() {
+      const courseSelect = document.getElementById('courseSelect');
+      const nextBtn = document.getElementById('nextToPlayers');
+
+      if (!courseSelect) return;
+
+      courseSelect.addEventListener('change', () => {
+        const val = courseSelect.value;
+        console.log('Course selected:', val);
+
+        if (val === '') {
+          currentCourse = null;
+          if (nextBtn) nextBtn.disabled = true;
+        } else {
+          currentCourse = parseInt(val);
+          localStorage.setItem('bbb_currentCourse', currentCourse);
+          if (nextBtn) nextBtn.disabled = false;
+        }
+      });
+    }
+
+      // === HIDE ALL SCREENS ===
+    function hideAll() {
+      const screens = [
+        document.getElementById('courseSetup'),
+        document.getElementById('playerSetup'),
+        document.getElementById('game'),
+        document.getElementById('summary')
+      ];
+      screens.forEach(screen => {
+        if (screen) screen.classList.add('hidden');
+      });
+    }
+
+
+        // === SORT PLAYERS ALPHABETICALLY ===
+    function sortPlayersAlphabetically() {
+      console.log('Sorting players and roster alphabetically');
+
+      // Sort selected players
+      players.sort((a, b) => a.name.localeCompare(b.name));
+
+      // Sort the full roster for consistency in player select screen
+      roster.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+
+
+
+
+        // === RENDER PLAYER SELECT ===
     function renderPlayerSelect() {
       console.log('renderPlayerSelect called');
 
@@ -777,6 +854,7 @@ body {
         playerSelect.appendChild(div);
       });
 
+      // === ATTACH CHECKBOX LISTENERS ===
       playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
         chk.addEventListener('change', () => {
           const idx = parseInt(chk.dataset.index);
@@ -788,6 +866,7 @@ body {
               alert(`Maximum ${MAX_PLAYERS} players allowed`);
               return;
             }
+            // Add player if not already present
             if (!players.some(p => p.name === player.name)) {
               players.push({ 
                 ...player, 
@@ -797,11 +876,13 @@ body {
               });
             }
           } else {
+            // Remove player
             players = players.filter(p => p.name !== player.name);
           }
 
           sortPlayersAlphabetically();
 
+          // Update Start Round button state
           const startGameBtn = document.getElementById('startGame');
           if (startGameBtn) {
             startGameBtn.disabled = players.length < 2;
@@ -811,6 +892,7 @@ body {
         });
       });
 
+      // Initial button state
       const startGameBtn = document.getElementById('startGame');
       if (startGameBtn) {
         startGameBtn.disabled = players.length < 2;
@@ -819,10 +901,8 @@ body {
       console.log('Player select rendered with', roster.length, 'players');
       attachStartGameListener(); 
     }
-
-    // ========================
-    // 4. STARTING HOLE SELECTOR
-    // ========================
+    
+        // === STARTING HOLE SELECTOR (1 or 10) ===
     function showStartingHoleSelector() {
       hideAll();
 
@@ -840,6 +920,7 @@ body {
         </div>
       `;
 
+      // Insert the selector screen
       const playerSetup = document.getElementById('playerSetup');
       if (playerSetup) {
         playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
@@ -847,6 +928,7 @@ body {
         document.body.insertAdjacentHTML('beforeend', startScreenHTML);
       }
 
+      // Attach button listeners
       setTimeout(() => {
         const btn1 = document.getElementById('startHole1');
         const btn10 = document.getElementById('startHole10');
@@ -857,13 +939,15 @@ body {
     }
 
     function startRoundWithHole(startHole) {
+      // Remove the selector screen
       const selector = document.getElementById('startingHoleScreen');
       if (selector) selector.remove();
 
       currentHole = startHole;
       finishedHoles.clear();
-      holeSequence = [];
+      holeSequence = [];   // Will be built as holes are finished
 
+      // Initialize scores
       players.forEach(p => {
         p.scores = Array(HOLES).fill(null).map(() => ({}));
         p._cachedTotal = 0;
@@ -878,22 +962,118 @@ body {
 
       updateHole();
       updateNavButtons();
-      attachNavListeners();
+      attachNavListeners()
       attachBottomBarListeners();
-
       console.log(`Round started on hole ${startHole}`);
     }
+    
+        // === RENDER SCORING TABLE ===
+    function renderTable(carryIn, isFinished) {
+      const tbody = document.querySelector('#scoreTable tbody');
+      if (!tbody) {
+        console.error('scoreTable tbody not found');
+        return;
+      }
 
-    // ========================
-    // 5. GAME LOGIC & SCORING
-    // ========================
-    function sortPlayersAlphabetically() {
-      players.sort((a, b) => a.name.localeCompare(b.name));
-      roster.sort((a, b) => a.name.localeCompare(b.name));
+      tbody.innerHTML = '';
+
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse] ? courses[currentCourse].pars[holeIdx] : 4;
+      const isPar3 = par === 3;
+
+      players.forEach(p => {
+        const s = p.scores[holeIdx] || {};
+        const row = tbody.insertRow();
+
+        row.insertCell().textContent = p.name;
+
+        const createCheckbox = (point) => {
+          const cell = row.insertCell();
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = !!s[point];
+          input.disabled = isFinished;
+          input.onclick = () => toggleScore(p, holeIdx, point);
+          cell.appendChild(input);
+        };
+
+        createCheckbox('firstOn');
+        createCheckbox('closest');
+        createCheckbox('putt');
+
+        const holeCell = row.insertCell();
+        if (isFinished) {
+          const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
+          holeCell.innerHTML = `<strong>${totalPts}</strong>`;
+        } else {
+          holeCell.textContent = '—';
+        }
+
+        const runCell = row.insertCell();
+        runCell.textContent = getRunningTotal(p) || 0;
+        runCell.style.fontWeight = '600';
+
+        const totalCell = row.insertCell();
+        totalCell.textContent = p._cachedTotal || 0;
+        totalCell.style.fontWeight = '600';
+      });
     }
 
-    function hideAll() {
-      console.log('hideAll called');
+    // === TOGGLE SCORE ===
+    function toggleScore(player, holeIdx, point) {
+      const s = player.scores[holeIdx] || (player.scores[holeIdx] = {});
+      s[point] = !s[point];
+
+      precomputeAllTotals();
+      updateHole();
+      saveRoundEverywhere();   // optional
+    }
+
+    // === FINISH CURRENT HOLE ===
+    function finishCurrentHole() {
+      finishedHoles.add(currentHole);
+      if (!holeSequence.includes(currentHole)) {
+        holeSequence.push(currentHole);
+      }
+
+      precomputeAllTotals();
+      updateHole();
+
+      console.log(`Finished hole ${currentHole}`);
+    }
+
+     
+    // === CORE GAME FUNCTIONS - PART 1 ===
+
+    
+       // === START ROUND BUTTON ===
+    function attachStartGameListener() {
+      const startGameBtn = document.getElementById('startGame');
+      if (!startGameBtn) {
+        console.error('startGame button not found');
+        return;
+      }
+
+      console.log('Start Round button listener attached');
+
+      startGameBtn.onclick = () => {
+        if (players.length < 2) {
+          alert('Please select at least 2 players');
+          return;
+        }
+
+        console.log('Starting new round with', players.length, 'players');
+
+        // Show the starting hole selector instead of hard-coding hole 1
+        showStartingHoleSelector();
+      };
+    } 
+     
+
+    // Call this after player select is rendered
+    console.log('Start Round listener ready to be attached');
+    
+    /*function hideAll() {
       const screens = [
         document.getElementById('courseSetup'),
         document.getElementById('playerSetup'),
@@ -904,32 +1084,69 @@ body {
         if (screen) screen.classList.add('hidden');
       });
     }
+      */ 
+
+    function hideAll() {
+  console.log('hideAll called');
+  const screens = [
+    document.getElementById('courseSetup'),
+    document.getElementById('playerSetup'),
+    document.getElementById('game'),
+    document.getElementById('summary')
+  ];
+  screens.forEach(screen => {
+    if (screen) screen.classList.add('hidden');
+  });
+}
+
+
 
     function getCarryInForHole(holeNumber) {
       const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
       if (!courses[currentCourse]) return carry;
 
-      const sequenceToCheck = holeSequence.length > 0 ? holeSequence : Array.from({ length: holeNumber - 1 }, (_, i) => i + 1);
-
-      for (const h of sequenceToCheck) {
-        if (h >= holeNumber || !finishedHoles.has(h)) continue;
-
-        const idx = h - 1;
-        const par = courses[currentCourse].pars[idx];
-        const isPar3 = par === 3;
-        const scores = players.map(p => p.scores[idx]).filter(Boolean);
-
-        if (!isPar3) {
-          if (scores.some(s => s.firstOn)) carry.firstOn = 0;
-          else carry.firstOn++;
-        } else {
-          if (scores.some(s => s.firstOn)) carry.greenie = 0;
-          else carry.greenie++;
+      const currentIdx = holeSequence.indexOf(holeNumber);
+      if (currentIdx === -1) {
+        // Fallback for simple holes
+        for (let h = 1; h < holeNumber; h++) {
+          if (!finishedHoles.has(h)) continue;
+          const idx = h - 1;
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+          const scores = players.map(p => p.scores[idx]).filter(Boolean);
+          if (!isPar3) {
+            if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+            else carry.firstOn++;
+          } else {
+            if (scores.some(s => s.firstOn)) carry.greenie = 0;
+            else carry.greenie++;
+          }
+          if (scores.some(s => s.closest)) carry.closest = 0;
+          else carry.closest++;
+          if (scores.some(s => s.putt)) carry.putt = 0;
+          else carry.putt++;
         }
-        if (scores.some(s => s.closest)) carry.closest = 0;
-        else carry.closest++;
-        if (scores.some(s => s.putt)) carry.putt = 0;
-        else carry.putt++;
+      } else {
+        // Sequence-based carry
+        for (let i = 0; i < currentIdx; i++) {
+          const h = holeSequence[i];
+          if (!finishedHoles.has(h)) continue;
+          const idx = h - 1;
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+          const scores = players.map(p => p.scores[idx]).filter(Boolean);
+          if (!isPar3) {
+            if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+            else carry.firstOn++;
+          } else {
+            if (scores.some(s => s.firstOn)) carry.greenie = 0;
+            else carry.greenie++;
+          }
+          if (scores.some(s => s.closest)) carry.closest = 0;
+          else carry.closest++;
+          if (scores.some(s => s.putt)) carry.putt = 0;
+          else carry.putt++;
+        }
       }
       return carry;
     }
@@ -938,7 +1155,6 @@ body {
       players.forEach(p => {
         let total = 0;
         p._cachedHoleTotals = {};
-
         for (let idx = 0; idx < HOLES; idx++) {
           const holeNumber = idx + 1;
           if (!finishedHoles.has(holeNumber)) continue;
@@ -995,69 +1211,136 @@ body {
       const carryIn = getCarryInForHole(currentHole);
       renderTable(carryIn, finishedHoles.has(currentHole));
 
-      renderHoleSummary();
-      renderRoundSummary();
+      renderHoleSummary();     
+      renderRoundSummary();     
 
       updateNavButtons();
       console.log('updateHole completed for hole', currentHole);
     }
 
-    function renderTable(carryIn, isFinished) {
-      const tbody = document.querySelector('#scoreTable tbody');
-      if (!tbody) return;
+    console.log('Core game functions loaded');
+  
 
-      tbody.innerHTML = '';
 
-      const holeIdx = currentHole - 1;
-      const par = courses[currentCourse] ? courses[currentCourse].pars[holeIdx] : 4;
-      const isPar3 = par === 3;
 
-      players.forEach(p => {
-        const s = p.scores[holeIdx] || {};
-        const row = tbody.insertRow();
 
-        row.insertCell().textContent = p.name;
+    // Start the app
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOMContentLoaded fired - starting loadDataFromBackend');
+      loadDataFromBackend();
 
-        const createCheckbox = (point) => {
-          const cell = row.insertCell();
-          const input = document.createElement('input');
-          input.type = 'checkbox';
-          input.checked = !!s[point];
-          input.disabled = isFinished;
-          input.onclick = () => toggleScore(p, holeIdx, point);
-          cell.appendChild(input);
+      // Attach listeners after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        attachCourseSelectListener();   // if you have this from earlier
+        attachNextToPlayersListener();
+      }, 800);
+    });
+
+
+
+      // === BOTTOM CONTROL BAR LISTENERS ===
+    function attachBottomBarListeners() {
+      const completeBtn = document.getElementById('completeRound');
+      const exitBtn = document.getElementById('exitRound');
+
+      if (completeBtn) {
+        completeBtn.onclick = () => {
+          if (finishedHoles.size !== HOLES) {
+            alert(`Please finish all ${HOLES} holes first.`);
+            return;
+          }
+          precomputeAllTotals();
+          showSummary();   // We'll add showSummary next if missing
+          console.log('Round completed with BBB COMP');
         };
+      }
 
-        createCheckbox('firstOn');
-        createCheckbox('closest');
-        createCheckbox('putt');
-
-        const holeCell = row.insertCell();
-        if (isFinished) {
-          const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
-          holeCell.innerHTML = `<strong>${totalPts}</strong>`;
-        } else {
-          holeCell.textContent = '—';
-        }
-
-        const runCell = row.insertCell();
-        runCell.textContent = getRunningTotal(p) || 0;
-        runCell.style.fontWeight = '600';
-
-        const totalCell = row.insertCell();
-        totalCell.textContent = p._cachedTotal || 0;
-        totalCell.style.fontWeight = '600';
-      });
+      if (exitBtn) {
+        exitBtn.onclick = () => {
+          if (confirm('Exit round without saving?')) {
+            resetRound();
+            hideAll();
+            const courseSetup = document.getElementById('courseSetup');
+            if (courseSetup) courseSetup.classList.remove('hidden');
+          }
+        };
+      }
     }
 
+      // === NAVIGATION BUTTONS ===
+    function updateNavButtons() {
+      const prevBtn = document.getElementById('prevHole');
+      const nextBtn = document.getElementById('nextHole');
+
+      const canPrev = currentHole > 1;
+      const canNext = currentHole < HOLES;
+
+      if (prevBtn) prevBtn.disabled = !canPrev;
+      if (nextBtn) nextBtn.disabled = !canNext;
+
+      console.log('Nav buttons updated - Prev:', canPrev, 'Next:', canNext);
+    }
+
+    // === TOGGLE SCORE (checkbox) ===
     function toggleScore(player, holeIdx, point) {
       const s = player.scores[holeIdx] || (player.scores[holeIdx] = {});
       s[point] = !s[point];
 
       precomputeAllTotals();
       updateHole();
+      console.log(`Toggled ${point} for ${player.name} on hole ${holeIdx + 1}`);
     }
 
+
+        // === ATTACH TOP NAV BUTTON LISTENERS ===
+    function attachNavListeners() {
+      console.log('Attaching top nav listeners');
+
+      const prevBtn = document.getElementById('prevHole');
+      const nextBtn = document.getElementById('nextHole');
+      const finishBtn = document.getElementById('finishHole');
+      const editBtn = document.getElementById('editHole');
+
+      if (prevBtn) {
+        prevBtn.onclick = () => {
+          if (currentHole > 1) {
+            currentHole--;
+            updateHole();
+            console.log('Prev → Hole', currentHole);
+          }
+        };
+      }
+
+      if (nextBtn) {
+        nextBtn.onclick = () => {
+          if (currentHole < HOLES) {
+            currentHole++;
+            updateHole();
+            console.log('Next → Hole', currentHole);
+          }
+        };
+      }
+
+      if (finishBtn) {
+        finishBtn.onclick = finishCurrentHole;
+      }
+
+      if (editBtn) {
+        editBtn.onclick = () => {
+          if (finishedHoles.has(currentHole)) {
+            finishedHoles.delete(currentHole);
+            precomputeAllTotals();
+            updateHole();
+            console.log('Edit mode activated for hole', currentHole);
+          }
+        };
+      }
+    }
+
+
+    
+
+    // === FINISH CURRENT HOLE ===
     function finishCurrentHole() {
       finishedHoles.add(currentHole);
       if (!holeSequence.includes(currentHole)) {
@@ -1070,6 +1353,37 @@ body {
       console.log(`Finished hole ${currentHole}`);
     }
 
+    // === ATTACH BOTTOM BAR LISTENERS ===
+    function attachBottomBarListeners() {
+      const completeBtn = document.getElementById('completeRound');
+      const exitBtn = document.getElementById('exitRound');
+
+      if (completeBtn) {
+        completeBtn.onclick = () => {
+          if (finishedHoles.size !== HOLES) {
+            alert(`Please finish all ${HOLES} holes first.`);
+            return;
+          }
+          precomputeAllTotals();
+          showSummary();           // We'll add this next if needed
+          console.log('Round completed with BBB COMP');
+        };
+      }
+
+      if (exitBtn) {
+        exitBtn.onclick = () => {
+          if (confirm('Exit round without saving?')) {
+            resetRound();
+            location.reload();
+          }
+        };
+      }
+    }
+
+    console.log('Navigation and toggle functions loaded');
+
+
+       // === HOLE SUMMARY (red text below checkboxes) ===
     function renderHoleSummary() {
       const holeSummary = document.querySelector('.holeSummary');
       if (!holeSummary) return;
@@ -1094,9 +1408,10 @@ body {
       }
 
       holeSummary.innerHTML = `<div class="summary-carry-in">${text}</div>`;
-      holeSummary.style.color = '#dc3545';
+      holeSummary.style.color = '#dc3545';   // red text
     }
 
+    // === ROUND SUMMARY (bottom) ===
     function renderRoundSummary() {
       const roundSummary = document.getElementById('roundSummary');
       if (!roundSummary) return;
@@ -1116,154 +1431,11 @@ body {
       roundSummary.classList.remove('hidden');
     }
 
-    // ========================
-    // 6. NAVIGATION & BUTTONS
-    // ========================
 
-    function updateNavButtons() {
-      const prevBtn = document.getElementById('prevHole');
-      const nextBtn = document.getElementById('nextHole');
-
-      const canPrev = currentHole > 1;
-      const canNext = currentHole < HOLES;
-
-      if (prevBtn) prevBtn.disabled = !canPrev;
-      if (nextBtn) nextBtn.disabled = !canNext;
-
-      console.log('Nav buttons updated - Prev:', canPrev, 'Next:', canNext);
-    }
-
-    function attachNavListeners() {
-      console.log('Attaching top nav listeners');
-
-      const prevBtn = document.getElementById('prevHole');
-      const nextBtn = document.getElementById('nextHole');
-      const finishBtn = document.getElementById('finishHole');
-      const editBtn = document.getElementById('editHole');
-
-      if (prevBtn) prevBtn.onclick = () => {
-        if (currentHole > 1) {
-          currentHole--;
-          updateHole();
-        }
-      };
-
-      if (nextBtn) nextBtn.onclick = () => {
-        if (currentHole < HOLES) {
-          currentHole++;
-          updateHole();
-        }
-      };
-
-      if (finishBtn) finishBtn.onclick = finishCurrentHole;
-
-      if (editBtn) editBtn.onclick = () => {
-        if (finishedHoles.has(currentHole)) {
-          finishedHoles.delete(currentHole);
-          precomputeAllTotals();
-          updateHole();
-        }
-      };
-    }
-
-    function attachBottomBarListeners() {
-      const completeBtn = document.getElementById('completeRound');
-      const exitBtn = document.getElementById('exitRound');
-
-      if (completeBtn) {
-        completeBtn.onclick = () => {
-          if (finishedHoles.size !== HOLES) {
-            alert(`Please finish all ${HOLES} holes first.`);
-            return;
-          }
-          precomputeAllTotals();
-          showSummary();
-        };
-      }
-
-      if (exitBtn) {
-        exitBtn.onclick = () => {
-          if (confirm('Exit round without saving?')) {
-            resetRound();
-            hideAll();
-            const courseSetup = document.getElementById('courseSetup');
-            if (courseSetup) courseSetup.classList.remove('hidden');
-          }
-        };
-      }
-    }
-
-    // ========================
-    // 7. STARTING HOLE SELECTOR
-    // ========================
-
-    function showStartingHoleSelector() {
-      hideAll();
-
-      const startScreenHTML = `
-        <div id="startingHoleScreen" class="card center-block" style="text-align:center; padding:2rem;">
-          <h2 style="color:var(--green); margin-bottom:1.5rem;">Where do you want to start?</h2>
-          <div style="display:flex; flex-direction:column; gap:1rem; max-width:400px; margin:0 auto;">
-            <button id="startHole1" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
-              Start on Hole 1
-            </button>
-            <button id="startHole10" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
-              Start on Hole 10 (Back Nine First)
-            </button>
-          </div>
-        </div>
-      `;
-
-      const playerSetup = document.getElementById('playerSetup');
-      if (playerSetup) {
-        playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
-      } else {
-        document.body.insertAdjacentHTML('beforeend', startScreenHTML);
-      }
-
-      setTimeout(() => {
-        const btn1 = document.getElementById('startHole1');
-        const btn10 = document.getElementById('startHole10');
-
-        if (btn1) btn1.onclick = () => startRoundWithHole(1);
-        if (btn10) btn10.onclick = () => startRoundWithHole(10);
-      }, 100);
-    }
-
-    function startRoundWithHole(startHole) {
-      const selector = document.getElementById('startingHoleScreen');
-      if (selector) selector.remove();
-
-      currentHole = startHole;
-      finishedHoles.clear();
-      holeSequence = [];
-
-      players.forEach(p => {
-        p.scores = Array(HOLES).fill(null).map(() => ({}));
-        p._cachedTotal = 0;
-        p._cachedHoleTotals = {};
-      });
-
-      inRound = true;
-
-      hideAll();
-      const gameScreen = document.getElementById('game');
-      if (gameScreen) gameScreen.classList.remove('hidden');
-
-      updateHole();
-      updateNavButtons();
-      attachNavListeners();
-      attachBottomBarListeners();
-
-      console.log(`Round started on hole ${startHole}`);
-    }
-
-    // ========================
-    // 8. UTILITY & RESET
-    // ========================
-
+    // === RESET ROUND (for EXIT button) ===
     function resetRound() {
       console.log('Resetting round');
+
       localStorage.removeItem('bbb');
       inRound = false;
       players = [];
@@ -1271,28 +1443,1769 @@ body {
       currentHole = 1;
       finishedHoles.clear();
       holeSequence = [];
+      
+      // Clear any saved local round data
+      if (typeof clearRoundLocal === 'function') {
+        clearRoundLocal().catch(() => {});
+      }
     }
 
-    function sortPlayersAlphabetically() {
-      players.sort((a, b) => a.name.localeCompare(b.name));
-      roster.sort((a, b) => a.name.localeCompare(b.name));
+  </script>
+
+<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+ 
+ <!--
+ <script>
+  console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v9 ===');
+    console.log('Inline script parsed successfully — 2026-04-19');
+
+    const BACKEND = 'https://pwa-players-backend.onrender.com';
+
+    let roster = [];
+    let players = [];
+    let currentHole = 1;
+    const HOLES = 18;
+    const MAX_PLAYERS = 6;
+    let currentCourse = null;
+    let courses = [];
+    let roundHistory = [];
+    let finishedHoles = new Set();
+    let inRound = false;
+    let els = {};
+    let waltShadowPhone = null;
+    let holeSequence = [];
+    let cloudRounds = [];
+
+    console.log('Basic variables loaded successfully');
+
+    // === CSV PARSER ===
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else current += char;
+        }
+        values.push(current.trim());
+        return values;
+      });
+      return rows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
+      });
     }
 
-    // ========================
-    // 9. INITIALIZATION
-    // ========================
+    // === MAIN DATA LOADER ===
+    async function loadDataFromBackend() {
+      console.log('loadDataFromBackend started');
 
+      const loader = document.getElementById('courseLoader');
+      const error = document.getElementById('courseError');
+      const picker = document.getElementById('coursePicker');
+
+      try {
+        console.log('Fetching from backend...');
+
+        const [playersRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND}/players`),
+          fetch(`${BACKEND}/courses`)
+        ]);
+
+        console.log('Players status:', playersRes.status, 'Courses status:', coursesRes.status);
+
+        if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+
+        const playersCSV = await playersRes.text();
+        const coursesCSV = await coursesRes.text();
+
+        roster = parseCSV(playersCSV).map(p => ({
+          name: p.Name?.trim(),
+          phone: p.Phone?.trim(),
+          email: p.Email?.trim()
+        })).filter(p => p.name);
+
+        courses = parseCSV(coursesCSV).map(c => {
+          const name = c.Name?.trim();
+          const pars = [];
+          for (let i = 1; i <= 18; i++) {
+            const par = parseInt(c[`Par${i}`]);
+            if (!isNaN(par)) pars.push(par);
+          }
+          return { name, pars };
+        }).filter(c => c.name && c.pars.length === 18);
+
+        console.log('✅ Backend data loaded — courses:', courses.length);
+
+        if (loader) loader.classList.add('hidden');
+        if (picker) picker.classList.remove('hidden');
+
+        renderCourseSelect();
+
+      } catch (err) {
+        console.error('Backend load failed:', err);
+        if (loader) loader.classList.add('hidden');
+        if (error) {
+          error.classList.remove('hidden');
+          error.textContent = `Load failed: ${err.message}`;
+        }
+      }
+    }
+
+    // === RENDER COURSE SELECT ===
+    function renderCourseSelect() {
+      if (!els.courseSelect) {
+        console.log('els.courseSelect not ready, retrying...');
+        setTimeout(renderCourseSelect, 300);
+        return;
+      }
+
+      console.log('Rendering courses - count:', courses.length);
+
+      els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+      
+      if (courses.length === 0) {
+        els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+        document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
+        return;
+      }
+
+      courses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.name;
+        els.courseSelect.appendChild(opt);
+      });
+
+      const nextBtn = document.getElementById('nextToPlayers');
+      if (nextBtn) {
+        const saved = localStorage.getItem('bbb_currentCourse');
+        const savedIdx = parseInt(saved);
+        if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
+          els.courseSelect.value = savedIdx;
+          currentCourse = savedIdx;
+          nextBtn.disabled = false;
+        } else {
+          currentCourse = null;
+          nextBtn.disabled = true;
+        }
+      }
+
+      console.log('Course dropdown populated with', courses.length, 'courses');
+    }
+
+    console.log('renderCourseSelect function defined');
+
+    // Start the app - only one listener
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOMContentLoaded fired - starting loadDataFromBackend');
       loadDataFromBackend();
-
-      setTimeout(() => {
-        attachCourseSelectListener();
-        attachNextToPlayersListener();
-      }, 800);
     });
 
-  </script>
+
+
+
+
+
+    /*console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v6 ===');
+    console.log('Inline script parsed successfully — 2026-04-19');
+
+    const BACKEND = 'https://pwa-players-backend.onrender.com';
+    
+
+    let roster = [];
+    let players = [];
+    let currentHole = 1;
+    const HOLES = 18;
+    const MAX_PLAYERS = 6;
+    let currentCourse = null;
+    let courses = [];
+    let roundHistory = [];
+    let finishedHoles = new Set();
+    let inRound = false;
+    let els = {};
+    let waltShadowPhone = null;
+    let holeSequence = [];
+    let cloudRounds = [];
+
+    console.log('Basic variables loaded successfully');
+    */
+    
+   /* 
+    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
+
+    // === INDEXEDDB PERSISTENCE — SURVIVES CRASHES & CLOSES ===
+    const DB_NAME = 'bbb-golf';
+    const STORE_NAME = 'round';
+    let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = e => reject(e);
+  });
+}
+
+async function saveRoundLocal(data) {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).put({ id: 'current', data, savedAt: Date.now() });
+  return tx.complete;
+}
+
+async function loadRoundLocal() {
+  if (!db) await openDB();
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get('current');
+    req.onsuccess = () => resolve(req.result?.data || null);
+  });
+}
+
+async function clearRoundLocal() {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).delete('current');
+  return tx.complete;
+}
+
+
+
+async function loadCloudRounds() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);  // "2025-04-18"
+    const res = await fetch(`${BACKEND}/rounds?date=${today}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.rounds || [];
+  } catch (e) {
+    console.error('Failed to load cloud rounds:', e);
+    return [];
+  }
+}
+/*
+function showRoundSelection(rounds) {
+  // Filter for incomplete rounds (less than 18 holes finished)
+  const incomplete = rounds.filter(r => {
+    const finished = r.finishedHoles?.length || 0;
+    return finished < 18;
+  });
+  if (incomplete.length === 0) {
+    // No incomplete rounds - start fresh
+    els.courseSetup.classList.remove('hidden');
+    return;
+  }
+  if (incomplete.length === 1) {
+    // One incomplete - confirm then confirm again
+    const round = incomplete[0];
+    const dateStr = new Date(round.date).toLocaleDateString();
+    const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+    const holes = round.finishedHoles?.length || 0;
+    
+    const firstConfirm = confirm(
+      `Resume round from ${dateStr}?\n\n` +
+      `Group: ${playerNames}\n` +
+      `Course: ${round.courseName || 'Unknown'}\n` +
+      `Holes: ${holes}/18`
+    );
+    
+    if (firstConfirm) {
+      const sureConfirm = confirm(
+        `Are you SURE you want to resume this round?\n\n` +
+        `This will load "${playerNames}" at ${holes} holes.`
+      );
+      
+      if (sureConfirm) {
+        resumeRound(round);
+      } else {
+        showRoundSelection(rounds);  // Go back to selection
+      }
+    } else {
+      els.courseSetup.classList.remove('hidden');
+    }
+    return;
+  }
+  // Multiple incomplete - build selection UI
+  const html = `
+    <div id="roundSelection" class="card center-block" style="display:block;">
+      <h2 style="text-align:center; color:var(--green); margin:1rem 0;">
+        Resume Round
+      </h2>
+      <p style="text-align:center; margin-bottom:1rem;">
+        Select a round to resume:
+      </p>
+      <div id="roundList" style="max-height:60vh; overflow-y:auto;">
+        ${incomplete.map((r, i) => {
+          const dateStr = new Date(r.date).toLocaleDateString();
+          const playerNames = r.players?.map(p => p.name).join(', ') || 'Unknown';
+          const holes = r.finishedHoles?.length || 0;
+          return `
+            <div class="round-option" style="padding:0.75rem; border:2px solid var(--border); border-radius:8px; margin-bottom:0.5rem; cursor:pointer;" 
+              onclick="selectRoundConfirm(${i})">
+              <strong>${r.courseName || 'Unknown Course'}</strong><br>
+              <small>${playerNames}</small><br>
+              <small>Holes: ${holes}/18 • ${dateStr}</small>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button onclick="startFreshRound()" style="width:100%; margin-top:1rem; background:#ccc;">
+        Start New Round
+      </button>
+    </div>
+  `;
+  
+  // Insert before courseSetup
+  els.courseSetup.insertAdjacentHTML('beforebegin', html);
+  
+  // Store rounds globally for selection
+  window.incompleteRounds = incomplete;
+}
+
+
+// Make functions globally accessible for onclick handlers
+window.selectRoundConfirm = function(index) {
+  const round = window.incompleteRounds[index];
+  const dateStr = new Date(round.date).toLocaleDateString();
+  const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+  const holes = round.finishedHoles?.length || 0;
+  
+  const sureConfirm = confirm(
+    `Are you SURE you want to resume this round?\n\n` +
+    `Group: ${playerNames}\n` +
+    `Course: ${round.courseName || 'Unknown'}\n` +
+    `Holes: ${holes}/18\n` +
+    `Date: ${dateStr}`
+  );
+  
+  if (sureConfirm) {
+    resumeRound(round);
+  }
+};
+window.startFreshRound = function() {
+  const div = document.getElementById('roundSelection');
+  if (div) div.remove();
+  els.courseSetup.classList.remove('hidden');
+};
+
+function resumeRound(round) {
+  // Remove selection UI if exists
+  const selDiv = document.getElementById('roundSelection');
+  if (selDiv) selDiv.remove();
+  
+  // Load round data
+  players = round.players.map(p => ({
+    ...p,
+    scores: Array(18).fill(null).map(() => ({})),
+    _cachedTotal: round._cachedTotals?.[p.name] || 0
+  }));
+  
+  Object.keys(round.scores || {}).forEach(name => {
+    const player = players.find(p => p.name === name);
+    if (player) player.scores = round.scores[name];
+  });
+  currentHole = round.currentHole || 1;
+  currentCourse = round.currentCourse;
+  finishedHoles = new Set(round.finishedHoles || []);
+  holeSequence = round.holeSequence || [];  // Restore sequence
+  inRound = true;
+  hideAll();
+  els.game.classList.remove('hidden');
+  updateHole();
+  logScreen('RESUMED SAVED ROUND');
+}
+
+
+
+function getWaltPhone() {
+  if (!roster || !Array.isArray(roster)) return;
+  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+  if (walt && walt.phone) {
+    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+  }
+}
+
+// ENHANCED EMERGENCY SPINNER KILLER — polls until picker shows (iOS 18-proof)
+(function() {
+  let attempts = 0;
+  const maxAttempts = 30;  // 3 seconds max
+  const interval = setInterval(() => {
+    attempts++;
+    const loader = document.getElementById('courseLoader');
+    const picker = document.getElementById('coursePicker');
+    const error = document.getElementById('courseError');
+    
+    if (loader && picker) {
+      // Force-kill loader and error, force-show picker
+      loader.style.display = 'none !important';
+      if (error) error.style.display = 'none !important';
+      picker.style.display = 'block !important';  // or 'flex !important' if your CSS uses flex
+      
+      // Extra iOS reflow trigger
+      picker.offsetHeight;
+      
+      console.log(`Emergency fallback: Picker forced after ${attempts * 100}ms`);
+      clearInterval(interval);
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error('Emergency fallback timed out — manual intervention needed');
+      clearInterval(interval);
+    }
+  }, 100);  // Check every 100ms
+})();
+
+
+// === MAIN DATA LOADER — FINAL BULLETPROOF VERSION (works on iOS standalone)  Old version  ===
+async function loadDataFromBackend() {
+  const loader = document.getElementById('courseLoader');
+  const error = document.getElementById('courseError');
+  const picker = document.getElementById('coursePicker');
+
+  const BACKEND_URL = 'https://pwa-players-backend.onrender.com';
+
+  try {
+    console.log('Starting backend load...');
+
+    const [playersRes, coursesRes] = await Promise.all([
+      fetch(`${BACKEND_URL}/players`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit'
+      }),
+      fetch(`${BACKEND_URL}/courses`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit'
+      })
+    ]);
+
+    if (!playersRes.ok) throw new Error(`Players ${playersRes.status}`);
+    if (!coursesRes.ok) throw new Error(`Courses ${coursesRes.status}`);
+
+    const playersCSV = await playersRes.text();
+    const coursesCSV = await coursesRes.text();
+
+    console.log('Raw players CSV length:', playersCSV.length);
+    console.log('Raw courses CSV length:', coursesCSV.length);
+
+    // Parse players
+  roster = parseCSV(playersCSV).map(p => ({
+  name: p.Name?.trim(),
+  phone: p.Phone?.trim(),
+  email: p.Email?.trim()
+})).filter(p => p.name);
+
+    getWaltPhone();
+
+    // Parse courses
+      courses = parseCSV(coursesCSV).map(c => {
+      const name = c.Name?.trim();
+      const pars = [];
+      for (let i = 1; i <= 18; i++) {
+        const par = parseInt(c[`Par${i}`]);
+        if (!isNaN(par)) pars.push(par);
+      }
+      return { name, pars };
+    }).filter(c => c.name && c.pars.length === 18);
+
+    sortPlayersAlphabetically();
+
+    if (courses.length === 0) throw new Error('No courses returned');
+
+    console.log('%cBackend data loaded successfully!', 'color: gold; font-weight: bold');
+
+    // CRITICAL — show picker and render courses AFTER data is loaded
+loader.classList.add('hidden');
+picker.classList.remove('hidden');
+renderCourseSelect();
+console.log('%cCourse picker now visible!', 'color: lime; font-weight: bold');
+
+  } catch (err) {
+    console.error('Backend load failed:', err);
+    loader.classList.add('hidden');
+  error.classList.remove('hidden');
+  error.textContent = `Load failed: ${err.message} (courses: ${courses.length})`;  // ← ADD THE LENGTH FOR DEBUG
+  error.style.display = 'block !important';  // ← FORCE VISIBLE
+  }
+}
+
+
+
+function logScreen(msg) {
+  console.log('%cSCREEN: ' + msg, 'color: cyan; font-weight: bold');
+}
+
+
+// Retry button
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'retryBtn') {
+    document.getElementById('courseError').classList.add('hidden');
+    document.getElementById('courseLoader').classList.remove('hidden');
+    loadDataFromBackend();
+  }
+});
+
+*/ 
+
+/*
+
+// === CSV PARSER ===
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = lines.slice(1).map(line => {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+      else if (char === '"') inQuotes = !inQuotes;
+      else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+      else current += char;
+    }
+    values.push(current.trim());
+    return values;
+  });
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = row[i] || '');
+    return obj;
+  });
+}
+
+
+// === MAIN DATA LOADER ===
+async function loadDataFromBackend() {
+  const loader = document.getElementById('courseLoader');
+  const error = document.getElementById('courseError');
+  const picker = document.getElementById('coursePicker');
+
+  console.log('loadDataFromBackend started');
+
+  try {
+    console.log('Fetching from backend...');
+
+    const [playersRes, coursesRes] = await Promise.all([
+      fetch(`${BACKEND}/players`),
+      fetch(`${BACKEND}/courses`)
+    ]);
+
+    console.log('Players response status:', playersRes.status);
+    console.log('Courses response status:', coursesRes.status);
+
+    if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+
+    const playersCSV = await playersRes.text();
+    const coursesCSV = await coursesRes.text();
+
+    console.log('Players CSV length:', playersCSV.length);
+    console.log('Courses CSV length:', coursesCSV.length);
+
+    roster = parseCSV(playersCSV).map(p => ({
+      name: p.Name?.trim(),
+      phone: p.Phone?.trim(),
+      email: p.Email?.trim()
+    })).filter(p => p.name);
+
+    courses = parseCSV(coursesCSV).map(c => {
+      const name = c.Name?.trim();
+      const pars = [];
+      for (let i = 1; i <= 18; i++) {
+        const par = parseInt(c[`Par${i}`]);
+        if (!isNaN(par)) pars.push(par);
+      }
+      return { name, pars };
+    }).filter(c => c.name && c.pars.length === 18);
+
+    console.log('✅ Backend data loaded — courses:', courses.length);
+
+    if (loader) loader.classList.add('hidden');
+    if (picker) picker.classList.remove('hidden');
+
+    renderCourseSelect();
+
+  } catch (err) {
+    console.error('Backend load failed:', err);
+    if (loader) loader.classList.add('hidden');
+    if (error) {
+      error.classList.remove('hidden');
+      error.textContent = `Load failed: ${err.message}`;
+    }
+  }
+}
+
+*/
+
+
+
+
+/*
+
+function sortPlayersAlphabetically() {
+  players.sort((a, b) => a.name.localeCompare(b.name));
+  // Also keep roster sorted for consistency in player select screen
+  roster.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+
+
+
+// === NAVIGATION 
+function updateNavButtons() {
+  console.log('%cNAV UPDATE CALLED', 'color: blue; font-weight: bold');
+  
+  const canPrev = currentHole > 1;
+  const canNext = currentHole < HOLES;
+
+  console.log('Calculated: canPrev=', canPrev, 'canNext=', canNext);
+  
+  document.getElementById('prevHole')?.disabled = !canPrev;
+  document.getElementById('nextHole')?.disabled = !canNext;
+ 
+  const prevBtn = document.getElementById('prevHole');
+  const nextBtn = document.getElementById('nextHole');
+  
+  if (prevBtn) prevBtn.style.opacity = prevBtn.disabled ? '0.5' : '1';
+  if (nextBtn) nextBtn.style.opacity = nextBtn.disabled ? '0.5' : '1'; 
+  
+  console.log('%cNAV UPDATE END', 'color: blue; font-weight: bold');
+}
+
+
+// === RENDER COURSE SELECT ===
+function renderCourseSelect() {
+  if (!els.courseSelect) {
+    console.log('els.courseSelect not ready yet, retrying in 300ms...');
+    setTimeout(renderCourseSelect, 300);
+    return;
+  }
+  
+  console.log('Rendering courses - count:', courses.length);
+
+  els.courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
+  
+  if (courses.length === 0) {
+    els.courseSelect.innerHTML += '<option disabled>No courses available</option>';
+    document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
+    return;
+  }
+
+  courses.forEach((c, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = c.name;
+    els.courseSelect.appendChild(opt);
+  });
+
+  const nextBtn = document.getElementById('nextToPlayers');
+  if (!nextBtn) return;
+
+  const saved = localStorage.getItem('bbb_currentCourse');
+  const savedIdx = parseInt(saved);
+
+  if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
+    els.courseSelect.value = savedIdx;
+    currentCourse = savedIdx;
+    nextBtn.disabled = false;
+  } else {
+    currentCourse = null;
+    nextBtn.disabled = true;
+  }
+
+  console.log('Course dropdown populated with', courses.length, 'courses');
+}
+*/
+
+
+</script>
+
+
+ /*
+
+// === DOM READY ===
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('BBB Golf starting...');
+
+// NUCLEAR: Force courses to load and show picker — NO ESCAPE
+  try {
+    await loadDataFromBackend();
+  } catch (e) {
+    console.error('loadDataFromBackend failed:', e);
+  }
+
+  // Force UI update — iOS cannot ignore this
+  const loader = document.getElementById('courseLoader');
+  const picker = document.getElementById('coursePicker');
+  const error = document.getElementById('courseError');
+
+  if (loader) loader.classList.add('hidden');
+  if (error) error.classList.add('hidden');
+  if (picker) {
+    picker.classList.remove('hidden');
+    // renderCourseSelect();
+  }
+
+  
+// Check for saved local round first
+const saved = await loadRoundLocal();
+// Try to get cloud rounds for selection
+cloudRounds = await loadCloudRounds();
+if (cloudRounds.length > 0) {
+  // Show selection UI (handles 0, 1, or multiple)
+  showRoundSelection(cloudRounds);
+  return;  // showRoundSelection will handle what to show
+} else if (saved) {
+  // Fallback to local-only if no cloud rounds
+  if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
+    players = saved.players.map(p => ({
+      ...p,
+      scores: Array(18).fill(null).map(() => ({})),
+      _cachedTotal: saved._cachedTotals?.[p.name] || 0
+    }));
+    Object.keys(saved.scores || {}).forEach(name => {
+      const player = players.find(p => p.name === name);
+      if (player) player.scores = saved.scores[name];
+    });
+    currentHole = saved.currentHole;
+    currentCourse = saved.currentCourse;
+    finishedHoles = new Set(saved.finishedHoles || []);
+    inRound = true;
+    
+    // Restore holeSequence if saved
+    if (saved.holeSequence) {
+      holeSequence = saved.holeSequence;
+    }
+    hideAll();
+    els.game.classList.remove('hidden');
+    updateHole();
+    logScreen('RESUMED SAVED ROUND');
+    return;
+  }
+}
+
+// Fresh start — show course picker
+  if (saved) await clearRoundLocal();
+  
+
+// Prevent iOS from sleeping / killing the tab during a round
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator && inRound) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock active — screen stays awake during round');
+    } catch (err) {
+      console.log('Wake Lock failed (iOS ignores it anyway)', err);
+    }
+  }
+}
+
+// Call it when round starts and release when finished
+// In startGame.onclick after inRound = true:
+requestWakeLock();
+
+// In completeRound, saveRound, exitRound, etc.:
+if (wakeLock) wakeLock.release().then(() => wakeLock = null);
+
+
+
+  // === BUILD ELS CACHE ===
+  els = {
+  courseSetup: document.getElementById('courseSetup'),
+  playerSetup: document.getElementById('playerSetup'),
+  game: document.getElementById('game'),
+  summary: document.getElementById('summary'),
+
+  darkModeToggle: document.getElementById('darkModeToggle'),
+  backToSetup: document.querySelectorAll('#backToSetup'),
+
+  courseSelect: document.getElementById('courseSelect'),
+  nextToPlayers: document.getElementById('nextToPlayers'),
+  playerSelect: document.getElementById('playerSelect'),
+  startGame: document.getElementById('startGame'),
+
+  holeDisplay: document.getElementById('holeDisplay'),
+  prevHole: document.getElementById('prevHole'),
+  nextHole: document.getElementById('nextHole'),
+  finishHole: document.getElementById('finishHole'),
+  editHole: document.getElementById('editHole'),
+  firstOnHeader: document.getElementById('firstOnHeader'),
+  scoreTable: document.getElementById('scoreTable'),
+  holeSummary: document.querySelector('.holeSummary'),
+  roundSummary: document.getElementById('roundSummary'),
+
+  sendSMS: document.getElementById('sendSMS'),
+  exportCSV: document.getElementById('exportCSV'),
+  completeRound: document.getElementById('completeRound'),
+  exitRound: document.getElementById('exitRound'),
+ 
+  leaderboard: document.getElementById('leaderboard'),
+  restart: document.getElementById('restart'),
+
+  courseInfoBar: document.getElementById('courseInfoBar'),
+  infoCourseName: document.getElementById('infoCourseName'),
+  infoCurrentHole: document.getElementById('infoCurrentHole'),
+  infoPar: document.getElementById('infoPar'),
+
+  // Debug (optional — you can keep these if you ever use F2 or Ctrl+Shift+D)
+  debugPanel: document.getElementById('debugPanel'),
+  debugOutput: document.getElementById('debugOutput'),
+  closeDebug: document.getElementById('closeDebug'),
+  simResult: document.getElementById('simResult')
+};
+
+
+  loadDataFromBackend();
+
+  // === DARK MODE ===
+  function initDarkMode() {
+    const saved = localStorage.getItem('bbb_dark');
+    const isDark = saved === 'true' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  }
+  initDarkMode();
+  els.darkModeToggle.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const newMode = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newMode);
+    localStorage.setItem('bbb_dark', newMode === 'dark');
+  });
+
+  // === COLORBLIND MODE ===
+ /*  let colorblindMode = localStorage.getItem('bbb_cb') === 'true';
+  document.body.classList.toggle('cb-mode', colorblindMode);
+  els.cbToggle.addEventListener('click', () => {
+    colorblindMode = !colorblindMode;
+    localStorage.setItem('bbb_cb', colorblindMode);
+    document.body.classList.toggle('cb-mode', colorblindMode);
+  }); */
+
+
+  let debugMode = false;
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      debugMode = !debugMode;
+      els.debugPanel.classList.toggle('hidden', !debugMode);
+      if (debugMode) updateDebugPanel();
+    }
+    if (e.keyCode === 113) {
+      e.preventDefault();
+      if (confirm('Run full 18-hole simulation?')) {
+        simulateRound();
+      }
+    }
+  });
+  els.closeDebug.addEventListener('click', () => {
+    debugMode = false;
+    els.debugPanel.classList.add('hidden');
+  });
+
+  function updateDebugPanel() {
+    els.debugOutput.innerHTML = '';
+    renderDebugCarryTable();
+    const hint = document.createElement('div');
+    hint.style.marginTop = '1rem'; hint.style.padding = '0.5rem'; hint.style.background = '#333';
+    hint.style.borderRadius = '6px'; hint.style.fontSize = '0.8rem'; hint.style.color = '#0f0';
+    hint.innerHTML = '<strong>F2</strong> = Run Simulation (PC only)';
+    els.debugOutput.appendChild(hint);
+  }
+
+  
+  async function saveRoundEverywhere() {
+  if (!inRound) return;
+
+  const roundData = {
+    matchId: `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`,
+    date: new Date().toISOString(),
+    courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+    players: players.map(p => ({ name: p.name, phone: p.phone })),
+    currentHole,
+    currentCourse,
+    finishedHoles: Array.from(finishedHoles),
+    holeSequence: holeSequence,
+    scores: players.reduce((acc, p, i) => {
+      acc[p.name] = p.scores;
+      return acc;
+    }, {}),
+    _cachedTotals: players.reduce((acc, p) => {
+      acc[p.name] = p._cachedTotal || 0;
+      return acc;
+    }, {})
+  };
+
+  // 1. Save locally (instant)
+  await saveRoundLocal(roundData).catch(() => {});
+
+  // 2. Save to cloud (fire-and-forget)
+  fetch('https://pwa-players-backend.onrender.com/save-round', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(roundData)
+  }).catch(() => {});
+}
+
+  // ==== FLOW ====
+ function hideAll() {
+  const screens = [
+    els.courseSetup,
+    els.playerSetup,
+    els.game,
+    els.summary
+    // roster, history, courseForm are gone — no longer referenced
+  ];
+
+  screens.forEach(screen => {
+    if (screen) screen.classList.add('hidden');
+  });
+}
+
+  els.courseSelect.addEventListener('change', () => {
+    const val = els.courseSelect.value;
+    if (val === '') {
+      currentCourse = null;
+      els.nextToPlayers.disabled = true;
+    } else {
+      currentCourse = parseInt(val);
+      localStorage.setItem('bbb_currentCourse', currentCourse);
+      els.nextToPlayers.disabled = false;
+    }
+    save();
+  });
+
+function renderPlayerSelect() {
+  console.log('%cDEBUG: renderPlayerSelect() called', 'color: orange; font-weight: bold');
+  console.log('Players:', players.length, 'Roster:', roster.length);
+
+  els.playerSelect.innerHTML = '';
+  roster.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.innerHTML = `<label><input type="checkbox" data-index="${i}" ${players.find(pl => pl.name === p.name) ? 'checked' : ''}> ${p.name}</label>`;
+    els.playerSelect.appendChild(div);
+  });
+
+  // === GET startGame BUTTON ===
+  els.startGame = document.getElementById('startGame');
+  if (!els.startGame) {
+    console.error('%cFATAL: #startGame NOT FOUND!', 'color: red');
+    return;
+  }
+
+ // === SHOW BUTTON CONTAINER (FORCE ENTIRE CHAIN) ===
+  const container = els.startGame.parentElement;
+  container.style.display = 'block';
+  els.playerSetup.style.display = 'block';  // Force show parent
+  els.playerSetup.classList.remove('hidden');  // Remove hidden class
+
+  // === ATTACH CHECKBOX LISTENERS ===
+  els.playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const idx = parseInt(chk.dataset.index);
+      const player = roster[idx];
+
+   if (chk.checked) {
+    if (players.length >= MAX_PLAYERS) {
+     chk.checked = false;
+     alert(`Max ${MAX_PLAYERS} players`);
+     return;
+    }
+    players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: Array(HOLES).fill(false), _cachedTotal: 0, _cachedHoleTotals: {} });
+  } else {
+  players = players.filter(p => p.name !== player.name);
+}
+
+// ADD THIS LINE — keeps table and standings alphabetical
+players.sort((a, b) => a.name.localeCompare(b.name));
+
+
+      els.startGame.disabled = players.length < 2;
+      save();
+    });
+  });
+
+  // === INITIAL STATE ===
+  els.startGame.disabled = players.length < 2;
+
+  // === ATTACH START GAME LISTENER ===
+ els.startGame.onclick = () => {
+  if (players.length < 2) return alert('Select at least 2 players');
+  
+  currentHole = 1;  // ← FORCE HOLE 1
+  finishedHoles.clear();
+  
+
+  players.forEach(p => {
+    p.scores = Array(HOLES).fill(null).map(() => ({}));
+    p.gir = Array(HOLES).fill(false);
+    p._cachedTotal = 0;
+    p._cachedHoleTotals = {};
+  });
+
+  players.sort((a, b) => a.name.localeCompare(b.name));
+
+  inRound = true;
+  hideAll();
+  els.game.classList.remove('hidden');
+  updateHole();
+  attachFinishHoleListener();   // ← ADD THIS LINE
+  attachNavListeners();   // ← ADD THIS LINE
+  setupGameButtons();
+  updateCourseInfoBar()
+  save();
+  logScreen('GAME STARTED');
+};
+}
+  els.nextToPlayers.addEventListener('click', () => {
+    if (currentCourse === null) return alert('Select a course');
+    hideAll();
+    els.playerSetup.classList.remove('hidden');
+    renderPlayerSelect();
+    logScreen('PLAYER SETUP');
+  });
+
+  
+
+  function generateParInputs() {
+    const container = document.getElementById('pars');
+    container.innerHTML = '';
+    for (let i = 0; i < HOLES; i++) {
+      const label = document.createElement('label');
+      label.innerHTML = `Hole ${i+1}: <input type="number" min="3" max="5" value="4" class="par-input" data-hole="${i}">`;
+      container.appendChild(label);
+    }
+  }
+
+  
+  // === CARRY LOGIC ===
+ function getCarryInForHole(holeNumber) {
+  const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+  // If no sequence tracked yet, fall back to original hole-number logic
+  if (holeSequence.length === 0) {
+    for (let h = 1; h < holeNumber; h++) {
+      if (!finishedHoles.has(h)) continue;
+      const idx = h - 1;
+      const par = courses[currentCourse].pars[idx];
+      const isPar3 = par === 3;
+      const scores = players.map(p => p.scores[idx]).filter(Boolean);
+      if (!isPar3) {
+        if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+        else carry.firstOn++;
+      }
+      if (isPar3) {
+        if (scores.some(s => s.firstOn)) carry.greenie = 0;
+        else carry.greenie++;
+      }
+      if (scores.some(s => s.closest)) carry.closest = 0;
+      else carry.closest++;
+      if (scores.some(s => s.putt)) carry.putt = 0;
+      else carry.putt++;
+    }
+    return carry;
+  }
+
+
+  // Use sequence-based calculation for wrap-around support
+  const currentIdx = holeSequence.indexOf(holeNumber);
+  if (currentIdx === -1) return carry;  // Hole not played yet
+  // Look at all holes BEFORE this one in the sequence
+  for (let i = 0; i < currentIdx; i++) {
+    const h = holeSequence[i];
+    if (!finishedHoles.has(h)) continue;
+    const idx = h - 1;
+    const par = courses[currentCourse].pars[idx];
+    const isPar3 = par === 3;
+    const scores = players.map(p => p.scores[idx]).filter(Boolean);
+    // First On / Greenie
+    if (!isPar3) {
+      if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+      else carry.firstOn++;
+    }
+    if (isPar3) {
+      if (scores.some(s => s.firstOn)) carry.greenie = 0;
+      else carry.greenie++;
+    }
+    // Closest
+    if (scores.some(s => s.closest)) carry.closest = 0;
+    else carry.closest++;
+    // Putt
+    if (scores.some(s => s.putt)) carry.putt = 0;
+    else carry.putt++;
+  }
+  return carry;
+}
+
+
+
+ function precomputeAllTotals() {
+  players.forEach(p => {
+    let total = 0;
+    p._cachedHoleTotals = {};
+
+    for (let idx = 0; idx < HOLES; idx++) {
+      const holeNumber = idx + 1;
+      if (!finishedHoles.has(holeNumber)) continue;
+
+      const s = p.scores[idx] || {};
+      const carryIn = getCarryInForHole(holeNumber);
+      const par = courses[currentCourse].pars[idx];
+      const isPar3 = par === 3;
+
+      let holePoints = 0;
+
+      // Base points
+      if (s.firstOn) holePoints += 1;
+      if (s.closest) holePoints += 1;
+      if (s.putt) holePoints += 1;
+
+      // Carry-in
+        if (s.firstOn) {
+          holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
+        }
+        if (s.closest) holePoints += carryIn.closest;
+        if (s.putt) holePoints += carryIn.putt;
+      
+      p._cachedHoleTotals[idx] = holePoints;
+      total += holePoints;
+    }
+
+    p._cachedTotal = total;
+  });
+}
+
+  function getRunningTotal(player) {
+    let sum = 0;
+    for (let h = 1; h <= currentHole; h++) {
+      if (finishedHoles.has(h)) {
+        sum += player._cachedHoleTotals?.[h - 1] || 0;
+      }
+    }
+    return sum;
+  }
+
+ function updateHole() {
+  if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
+
+  precomputeAllTotals();  // always fresh totals
+
+  const holeIdx = currentHole - 1;
+  const par = courses[currentCourse].pars[holeIdx];
+  const isPar3 = par === 3;
+
+  const courseName = courses[currentCourse].name;
+  els.holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
+
+  els.firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
+
+  const isFinished = finishedHoles.has(currentHole);
+
+  // ---- SHOW / HIDE BUTTONS (using direct DOM so they’re never stale) ----
+  const finishBtn = document.getElementById('finishHole');
+  const editBtn   = document.getElementById('editHole');
+
+  if (finishBtn) finishBtn.classList.toggle('hidden', isFinished);
+  if (editBtn)   editBtn.classList.toggle('hidden', !isFinished);
+
+    const carryIn = getCarryInForHole(currentHole);
+  renderTable(carryIn, isFinished);
+
+  // ---- HOLE & ROUND SUMMARIES — ALWAYS CORRECT AFTER EDITS ----
+  renderHoleSummary();      // ← current hole carry summary
+  renderRoundSummary();     // ← bottom round summary (Wins / C_Car / O_Car)
+
+  updateCourseInfoBar();
+  updateNavButtons();
+
+  if (finishedHoles.size === HOLES && inRound) {
+  // Hide Next button completely (already disabled, but make it invisible)
+  document.getElementById('nextHole')?.classList.add('hidden');
+
+  // Show a friendly banner above the table
+  let banner = document.getElementById('roundCompleteBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'roundCompleteBanner';
+    banner.style.cssText = `
+      background:#0f0;color:#000;padding:1rem;margin:1rem auto;
+      border-radius:12px;text-align:center;font-weight:bold;font-size:1.2rem;
+      max-width:800px;box-shadow:0 4px 12px rgba(0,255,0,0.3);
+    `;
+    banner.innerHTML = `
+      🎉 All 18 holes complete! 🎉<br>
+      Tap <strong>BBB COMP</strong> to finalize and email Walt!
+    `;
+    document.getElementById('game').insertBefore(banner, document.getElementById('scoreTable'));
+    document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1.1)');
+  }
+}
+
+   saveRoundEverywhere();
+  if (debugMode) renderDebugCarryTable();
+ 
+  
+}
+ 
+  function updateCourseInfoBar() {
+  if (!inRound || !currentCourse) {
+    els.courseInfoBar.style.display = 'none';
+    return;
+  }
+
+  // NEW: Safely get the course object (works whether currentCourse is object or old index)
+  const course = typeof currentCourse === 'object' ? currentCourse : courses[currentCourse];
+  
+  if (!course || !course.pars || !course.pars[currentHole - 1]) {
+    els.courseInfoBar.style.display = 'none';
+    return;
+  }
+
+  els.infoCourseName.textContent = course.name;
+  els.infoCurrentHole.textContent = currentHole;
+  els.infoPar.textContent = `Par ${course.pars[currentHole - 1]}`;
+
+  els.courseInfoBar.style.display = 'block';
+}
+  
+
+
+
+  function renderTable(carryIn, isFinished) {
+    if (!els.scoreTable || !els.scoreTable.tBodies || !els.scoreTable.tBodies[0]) return;
+    const tbody = els.scoreTable.tBodies[0];
+    tbody.innerHTML = '';
+
+    const holeIdx = currentHole - 1;
+    const par = courses[currentCourse].pars[holeIdx];
+    const isPar3 = par === 3;
+
+    players.forEach(p => {
+      const s = p.scores[holeIdx] || {};
+      const row = tbody.insertRow();
+
+      row.insertCell().textContent = p.name;
+      row.cells[0].className = 'player-name';
+
+      const createCheckbox = (point) => {
+        const cell = row.insertCell();
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = !!s[point];
+        input.disabled = isFinished;
+        input.onclick = (e) => {
+           // Remove preventDefault() - let iOS update the checkbox visually
+           toggleScore(p, holeIdx, point);
+    };
+        cell.appendChild(input);
+      };
+
+      createCheckbox('firstOn');
+      createCheckbox('closest');
+      createCheckbox('putt');
+
+      const holeCell = row.insertCell();
+if (isFinished) {
+  const s = p.scores[holeIdx] || {};
+  const counts = { FO: 0, GR: 0, CL: 0, P: 0 };
+
+  // Base win on this hole (always 1 if won)
+  if (s.firstOn) counts[isPar3 ? 'GR' : 'FO'] += 1;
+  if (s.closest) counts.CL += 1;
+  if (s.putt) counts.P += 1;
+
+  // Add carries
+  if (s.firstOn) counts[isPar3 ? 'GR' : 'FO'] += (isPar3 ? carryIn.greenie : carryIn.firstOn);
+  if (s.closest) counts.CL += carryIn.closest;
+  if (s.putt) counts.P += carryIn.putt;
+
+  const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
+
+  // Build label like "6GR" "3P" "2FO•CL"
+  const parts = [];
+  if (counts.GR > 0) parts.push(`${counts.GR}GR`);
+  if (counts.FO > 0) parts.push(`${counts.FO}FO`);
+  if (counts.CL > 0) parts.push(`${counts.CL}CL`);
+  if (counts.P  > 0) parts.push(`${counts.P}P`);
+
+  const labelText = parts.length > 0 ? parts.join(' • ') : '—';
+
+  holeCell.innerHTML = `
+    <div style="font-size:0.85rem;line-height:1.3;text-align:center;">
+      <strong style="font-size:1.1em;">${totalPts}</strong><br>
+      <small style="color:#888;">${labelText}</small>
+    </div>
+  `;
+} else {
+  holeCell.textContent = '—';
+  holeCell.style.color = '#666';
+}
+
+      const runCell = row.insertCell();
+      runCell.textContent = getRunningTotal(p);
+      runCell.style.fontWeight = '600';
+      runCell.style.color = '#0a0';
+
+      const totalCell = row.insertCell();
+      totalCell.textContent = p._cachedTotal || 0;
+      totalCell.style.fontWeight = '600';
+    });
+  }
+ 
+   
+function renderRoundSummary() {
+  if (!els.roundSummary) return;
+
+  let wins = 0;
+  players.forEach(p => wins += p._cachedTotal || 0);
+
+  const expected = finishedHoles.size * 3;
+  const openCarry = expected - wins;   // ← correct variable name
+
+  els.roundSummary.innerHTML = `
+    <div style="font-size:0.9rem;line-height:1.4;">
+      Wins: <strong>${wins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
+      <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
+    </div>
+  `;
+
+  els.roundSummary.classList.remove('hidden');
+}
+
+function renderHoleSummary() {
+  if (!els.holeSummary) return;
+
+  // Always calculate fresh carry-in for the hole we are currently looking at
+  const carryIn = getCarryInForHole(currentHole);
+
+  const parts = [];
+  if (carryIn.firstOn)  parts.push(`FO: +${carryIn.firstOn}`);
+  if (carryIn.closest) parts.push(`CL: +${carryIn.closest}`);
+  if (carryIn.putt)     parts.push(`P: +${carryIn.putt}`);
+  if (carryIn.greenie)  parts.push(`GR: +${carryIn.greenie}`);
+
+  let text = '';
+  if (parts.length > 0) {
+    text = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
+  } else if (finishedHoles.has(currentHole)) {
+    const nextCarry = getCarryInForHole(currentHole + 1);
+    const totalOpen = nextCarry.firstOn + nextCarry.closest + nextCarry.putt + nextCarry.greenie;
+    text = totalOpen > 0 ? `<strong>Open Carry:</strong> ${totalOpen}` : `<strong>Open Carry: 0</strong>`;
+  } else {
+    text = `<strong>Open Carry: 0</strong>`;
+  }
+
+  els.holeSummary.innerHTML = `<div class="summary-carry-in">${text}</div>`;
+}
+
+
+    function toggleScore(player, holeIdx, point) {
+    const currentHoleIdx = currentHole - 1;
+    if (holeIdx === currentHoleIdx) {
+      const hasAnyScore = players.some(p => {
+        const s = p.scores[holeIdx] || {};
+        return s.firstOn || s.closest || s.putt;
+      });
+      
+    }
+
+    const score = player.scores[holeIdx];
+    const wasChecked = !!score[point];
+    const willBeChecked = !wasChecked;
+
+    if (willBeChecked) {
+      const otherHasIt = players.some((p, j) => {
+        return j !== players.indexOf(player) && p.scores[holeIdx] && p.scores[holeIdx][point];
+      });
+      if (otherHasIt) {
+        alert('Only one winner per point!');
+        return;
+      }
+    }
+
+    score[point] = willBeChecked;
+    save();
+    precomputeAllTotals();
+    updateHole();
+  }
+
+  function finishCurrentHole() {
+  finishedHoles.add(currentHole);
+  
+   // ADD THIS LINE - track play order for wrap-around carry
+  if (!holeSequence.includes(currentHole)) {
+    holeSequence.push(currentHole);
+  }
+
+
+  precomputeAllTotals();
+  
+
+  // FULL iOS-PROOF REPAINT — this is the bulletproof version
+  setTimeout(() => {
+    updateHole();                    // Re-renders table + checkboxes
+    updateNavButtons();              // Enables Next/Prev buttons
+    renderTable(getCarryInForHole(currentHole), true);  // Final visual state
+    console.log('Hole finished — Next should be enabled');
+  }, 80);
+
+  logScreen('FINISHED HOLE ' + currentHole);
+  
+
+
+ // WALT SHADOW TEXT — 100% STEALTH VIA SERVER (NO POPUP EVER)
+if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone) {
+  const holeIdx = currentHole - 1;
+  const par = courses[currentCourse].pars[holeIdx];
+  const isPar3 = par === 3;
+  let message = `BBB - H${currentHole} (P${par})\n\n`;
+
+  players.forEach(p => {
+    const s = p.scores[holeIdx] || {};
+    const pts = p._cachedHoleTotals?.[holeIdx] || 0;
+    const notes = [];
+    if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
+    if (s.closest) notes.push('CL');
+    if (s.putt) notes.push('P');
+    message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+  });
+
+  const carryOut = getCarryInForHole(currentHole + 1);
+  const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
+  message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
+
+  const standings = players
+    .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+    .sort((a, b) => b.total - a.total);
+
+  standings.forEach((p, i) => {
+    message += `${i+1}. ${p.name}: ${p.total}\n`;
+  });
+
+  const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+
+  // THIS IS THE ONLY LINE THAT CHANGED — silent server fetch instead of sms:
+  fetch('https://pwa-players-backend.onrender.com/send-walt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: shadowMessage })
+  }).catch(err => console.error('Walt shadow send failed:', err));
+} 
+}
+
+
+  function simulateRound() {
+    if (inRound) {
+      if (!confirm('End current round and start simulation?')) return;
+      resetRound();
+    }
+
+    if (courses.length === 0) {
+      alert('No courses found!');
+      return;
+    }
+    currentCourse = 0;
+    localStorage.setItem('bbb_currentCourse', currentCourse);
+
+    if (roster.length < 2) {
+      alert('Need at least 2 players in roster!');
+      return;
+    }
+    players = roster.slice(0, 4).map(p => ({
+      ...p,
+      scores: Array(HOLES).fill(null).map(() => ({})),
+      gir: Array(HOLES).fill(false),
+      _cachedTotal: 0,
+      _cachedHoleTotals: {}
+    }));
+
+    currentHole = 1;
+    finishedHoles.clear();
+    inRound = true;
+
+    const names = players.map(p => p.name);
+    const binomialSuccess = (p) => Math.random() < p;
+
+    for (let h = 1; h <= HOLES; h++) {
+      currentHole = h;
+      const holeIdx = h - 1;
+      const par = courses[currentCourse].pars[holeIdx];
+
+      const firstOnWinner = binomialSuccess(0.90) ? names[Math.floor(Math.random() * names.length)] : null;
+      const closestWinner = binomialSuccess(0.99) ? names[Math.floor(Math.random() * names.length)] : null;
+      const puttWinner = binomialSuccess(0.80) ? names[Math.floor(Math.random() * names.length)] : null;
+
+      if (firstOnWinner) players.find(p => p.name === firstOnWinner).scores[holeIdx].firstOn = true;
+      if (closestWinner) players.find(p => p.name === closestWinner).scores[holeIdx].closest = true;
+      if (puttWinner) players.find(p => p.name === puttWinner).scores[holeIdx].putt = true;
+
+      finishedHoles.add(h);
+    }
+
+    precomputeAllTotals();
+    updateHole();
+    save();
+
+    const playerTotal = players.reduce((sum, p) => sum + p._cachedTotal, 0);
+    const carry = getCarryInForHole(HOLES + 1);
+    const totalCarry = carry.firstOn + carry.closest + carry.putt + carry.greenie;
+
+    els.simResult.innerHTML = `
+      <div style="margin:1rem 0;padding:1rem;background:#e6f7e6;border-radius:8px;font-weight:600;color:#155724;">
+        SIMULATION SUCCESSFUL!<br>
+        18 holes • 54 total points<br>
+        Players: ${playerTotal} • Carry: ${totalCarry}<br>
+        <small style="color:#0a0">
+          VALIDATED: ${playerTotal} + ${totalCarry} = 54<br>
+          ${playerTotal === 54 && totalCarry === 0 ? 'All points awarded!' : 'ERROR'}
+        </small>
+      </div>
+    `;
+
+    logScreen('SIMULATION COMPLETE');
+  }
+
+   function setupGameButtons() {
+    if (!inRound || currentCourse === null || !courses[currentCourse]) return;
+
+    els.sendSMS.onclick = () => {
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse].pars[holeIdx];
+      const isPar3 = par === 3;
+      let message = `BBB - H${currentHole} (P${par})\n\n`;
+
+      players.forEach(p => {
+        const s = p.scores[holeIdx] || {};
+        const pts = p._cachedHoleTotals?.[holeIdx] || 0;
+        const notes = [];
+        if (s.firstOn) notes.push(isPar3 ? 'GR' : 'FO');
+        if (s.closest) notes.push('CL');
+        if (s.putt) notes.push('P');
+        message += `${p.name}: ${pts}${notes.length ? ` (${notes.join('/')})` : ''} | Run: ${getRunningTotal(p)}\n`;
+      });
+
+      const carryOut = getCarryInForHole(currentHole + 1);
+      const carryTotal = carryOut.firstOn + carryOut.closest + carryOut.putt + carryOut.greenie;
+      message += `\nCarry: ${carryTotal}\n\nStandings:\n`;
+
+      // Build standings
+      const standings = players
+        .map(p => ({ name: p.name, total: p._cachedTotal || 0 }))
+        .sort((a, b) => b.total - a.total);
+
+      standings.forEach((p, i)  => {
+        message += `${i+1}. ${p.name}: ${p.total}\n`;
+      });
+
+      // WALT SHADOW TEXT — NOW WORKS EVEN IF WALT IS NOT PLAYING
+if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)) {
+  const shadowMessage = "LIVE BBB (Walt shadow)\n\n" + message;
+  setTimeout(() => {
+    // Opens SMS app silently with Walt's number + full message
+    window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowMessage)}`;
+  }, 1200);
+}
+
+
+      const phones = players.map(p => p.phone).filter(Boolean).join(',');
+      if (!phones) return alert('Add phone numbers');
+      window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
+    };
+
+    els.exportCSV.onclick = exportToCSV;
+    // ←←← ADD THIS BLOCK — FIXES NEXT/PREV FOREVER
+    const prevBtn = document.getElementById('prevHole');
+    const nextBtn = document.getElementById('nextHole');
+
+    if (prevBtn) {
+      prevBtn.replaceWith(prevBtn.cloneNode(true));
+      document.getElementById('prevHole').addEventListener('click', () => {
+        if (currentHole > 1) {
+          currentHole--;
+          updateHole();
+          updateCourseInfoBar();
+          logScreen(`PREV → HOLE ${currentHole}`);
+        }
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.replaceWith(nextBtn.cloneNode(true));
+      document.getElementById('nextHole').addEventListener('click', () => {
+        if (currentHole < HOLES) {
+          currentHole++;
+          updateHole();
+          updateCourseInfoBar();
+          logScreen(`NEXT → HOLE ${currentHole}`);
+        }
+      });
+    }
+  }
+  
+
+  function exportToCSV() {
+    const course = courses[currentCourse];
+    let csv = `Hole,Par,Player,FO,CL,P,GR,GIR,HolePts,Run,Tot\n`;
+    for (let h = 0; h < HOLES; h++) {
+      if (!finishedHoles.has(h+1)) continue;
+      const par = course.pars[h];
+      const isPar3 = par === 3;
+      players.forEach(p => {
+        const s = p.scores[h] || {};
+        const gir = p.gir[h] ? 1 : 0;
+        const holePts = p._cachedHoleTotals?.[h] || 0;
+        const run = getRunningTotal(p);
+        const tot = p._cachedTotal || 0;
+        csv += `${h+1},${par},${p.name},${s.firstOn||0},${s.closest||0},${s.putt||0},${isPar3 && s.firstOn ? 1 : 0},${gir},${holePts},${run},${tot}\n`;
+      });
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BBB_${course.name.replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function showSummary() {
+    hideAll();
+    els.summary.classList.remove('hidden');
+    const totals = players.map(p => ({ name: p.name, points: p._cachedTotal || 0 }));
+    totals.sort((a,b) => b.points - a.points);
+    els.leaderboard.innerHTML = '';
+    totals.forEach(t => {
+      const li = document.createElement('li');
+      li.textContent = `${t.name}: ${t.points} pts`;
+      els.leaderboard.appendChild(li);
+    });
+    
+  }
+
+ els.completeRound.addEventListener('click', () => {
+  if (finishedHoles.size !== HOLES) {
+    alert(`Finish all ${HOLES} holes first.`);
+    return;
+  }
+
+  precomputeAllTotals();
+
+  // 1. Show the nice leaderboard screen first
+  showSummary();
+
+  // 2. Auto-email the CSV to you (Walt)
+  emailRoundToWalt();
+
+  // 3. Optional: give them a second to read it, then offer New Round
+  setTimeout(() => {
+    if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
+      resetRound();
+      hideAll();
+      els.courseSetup.classList.remove('hidden');
+    }
+  }, 500);
+});
+
+  els.exitRound.addEventListener('click', () => {
+    if (confirm('Exit without saving?')) {
+      resetRound();
+      /* els.historyBtn.disabled = false; */
+      location.reload();
+    }
+  });
+
+ 
+
+  function resetRound() {
+    localStorage.removeItem('bbb');
+    inRound = false;
+    players = [];
+    currentCourse = null;
+    currentHole = 1;
+    finishedHoles.clear();
+  }
+
+  
+
+   
+
+ 
+function attachFinishHoleListener() {
+  const btn = document.getElementById('finishHole');
+  if (!btn) return;
+  btn.onclick = null; // clear any old listener
+  btn.onclick = finishCurrentHole; // direct assignment — never fails
+}
+
+function attachNavListeners() {
+  // Prev
+  const prev = document.getElementById('prevHole');
+  if (prev) {
+    prev.onclick = null;
+    prev.addEventListener('click', () => {
+      if (currentHole > 1) {
+        currentHole--;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`PREV → HOLE ${currentHole}`);
+      }
+    });
+  }
+
+  // Next
+  const next = document.getElementById('nextHole');
+  if (next) {
+    next.onclick = null;
+    next.addEventListener('click', () => {
+      if (currentHole < HOLES) {
+        currentHole++;
+        updateHole();
+        updateCourseInfoBar();
+        logScreen(`NEXT → HOLE ${currentHole}`);
+      }
+    });
+  }
+
+  // Edit
+  const edit = document.getElementById('editHole');
+  if (edit) {
+    edit.onclick = null;
+    edit.addEventListener('click', () => {
+      if (finishedHoles.has(currentHole)) {
+        finishedHoles.delete(currentHole);
+        precomputeAllTotals();
+        updateHole();
+        logScreen('EDIT MODE');
+      }
+    });
+  }
+}
+
+  els.backToSetup.forEach(btn => {
+    btn.addEventListener('click', () => {
+      hideAll();
+      logScreen('BACK TO SETUP');
+    });
+  });
+});
+
+ 
+
+</script>
 
  <!-- COURSE SETUP – BACKEND-DRIVEN (FINAL) -->
 <section id="courseSetup" class="card center-block">
@@ -1479,8 +3392,36 @@ body {
   <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
 
 
+ <!-- SERVICE WORKER — DISABLED FOR RELIABLE iOS HOME SCREEN SHORTCUT
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/bbb-scorer/sw.js')  // ← absolute path (works on Cloudflare too)
+        .then(reg => {
+          console.log('Service worker registered!', reg);
 
+          // ←←← THIS IS THE FIX — forces update check on every page load
+          reg.update();
 
+          // Optional but very nice: auto-reload the page the moment a new version is ready
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version ready → refresh once so user gets it immediately
+                  window.location.reload();
+                }
+              });
+            }
+          });
+        })
+        .catch(err => console.error('SW registration failed:', err));
+    });
+  }
+</script>  -->
+
+*/  
 
   
 
