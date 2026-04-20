@@ -881,12 +881,73 @@ body {
       console.log('Player select rendered with', roster.length, 'players');
       attachStartGameListener(); 
     }
-
     
+        // === STARTING HOLE SELECTOR (1 or 10) ===
+    function showStartingHoleSelector() {
+      hideAll();
+
+      const startScreenHTML = `
+        <div id="startingHoleScreen" class="card center-block" style="text-align:center; padding:2rem;">
+          <h2 style="color:var(--green); margin-bottom:1.5rem;">Where do you want to start?</h2>
+          <div style="display:flex; flex-direction:column; gap:1rem; max-width:400px; margin:0 auto;">
+            <button id="startHole1" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 1
+            </button>
+            <button id="startHole10" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 10 (Back Nine First)
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Insert the selector screen
+      const playerSetup = document.getElementById('playerSetup');
+      if (playerSetup) {
+        playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
+      } else {
+        document.body.insertAdjacentHTML('beforeend', startScreenHTML);
+      }
+
+      // Attach button listeners
+      setTimeout(() => {
+        const btn1 = document.getElementById('startHole1');
+        const btn10 = document.getElementById('startHole10');
+
+        if (btn1) btn1.onclick = () => startRoundWithHole(1);
+        if (btn10) btn10.onclick = () => startRoundWithHole(10);
+      }, 100);
+    }
+
+    function startRoundWithHole(startHole) {
+      // Remove the selector screen
+      const selector = document.getElementById('startingHoleScreen');
+      if (selector) selector.remove();
+
+      currentHole = startHole;
+      finishedHoles.clear();
+      holeSequence = [];   // Will be built as holes are finished
+
+      // Initialize scores
+      players.forEach(p => {
+        p.scores = Array(HOLES).fill(null).map(() => ({}));
+        p._cachedTotal = 0;
+        p._cachedHoleTotals = {};
+      });
+
+      inRound = true;
+
+      hideAll();
+      const gameScreen = document.getElementById('game');
+      if (gameScreen) gameScreen.classList.remove('hidden');
+
+      updateHole();
+      console.log(`Round started on hole ${startHole}`);
+    }
+
     // === CORE GAME FUNCTIONS - PART 1 ===
 
     
-        // === START ROUND BUTTON ===
+       // === START ROUND BUTTON ===
     function attachStartGameListener() {
       const startGameBtn = document.getElementById('startGame');
       if (!startGameBtn) {
@@ -904,26 +965,10 @@ body {
 
         console.log('Starting new round with', players.length, 'players');
 
-        currentHole = 1;
-        finishedHoles.clear();
-        holeSequence = [];
-
-        players.forEach(p => {
-          p.scores = Array(HOLES).fill(null).map(() => ({}));
-          p._cachedTotal = 0;
-          p._cachedHoleTotals = {};
-        });
-
-        inRound = true;
-
-        hideAll();
-        const gameScreen = document.getElementById('game');
-        if (gameScreen) gameScreen.classList.remove('hidden');
-
-        updateHole();
-        console.log('Round started successfully - now on hole 1');
+        // Show the starting hole selector instead of hard-coding hole 1
+        showStartingHoleSelector();
       };
-    }
+    } 
      
 
     // Call this after player select is rendered
