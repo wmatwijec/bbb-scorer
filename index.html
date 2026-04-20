@@ -943,7 +943,83 @@ body {
       updateHole();
       console.log(`Round started on hole ${startHole}`);
     }
+    
+        // === RENDER SCORING TABLE ===
+    function renderTable(carryIn, isFinished) {
+      const tbody = document.querySelector('#scoreTable tbody');
+      if (!tbody) {
+        console.error('scoreTable tbody not found');
+        return;
+      }
 
+      tbody.innerHTML = '';
+
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse] ? courses[currentCourse].pars[holeIdx] : 4;
+      const isPar3 = par === 3;
+
+      players.forEach(p => {
+        const s = p.scores[holeIdx] || {};
+        const row = tbody.insertRow();
+
+        row.insertCell().textContent = p.name;
+
+        const createCheckbox = (point) => {
+          const cell = row.insertCell();
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = !!s[point];
+          input.disabled = isFinished;
+          input.onclick = () => toggleScore(p, holeIdx, point);
+          cell.appendChild(input);
+        };
+
+        createCheckbox('firstOn');
+        createCheckbox('closest');
+        createCheckbox('putt');
+
+        const holeCell = row.insertCell();
+        if (isFinished) {
+          const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
+          holeCell.innerHTML = `<strong>${totalPts}</strong>`;
+        } else {
+          holeCell.textContent = '—';
+        }
+
+        const runCell = row.insertCell();
+        runCell.textContent = getRunningTotal(p) || 0;
+        runCell.style.fontWeight = '600';
+
+        const totalCell = row.insertCell();
+        totalCell.textContent = p._cachedTotal || 0;
+        totalCell.style.fontWeight = '600';
+      });
+    }
+
+    // === TOGGLE SCORE ===
+    function toggleScore(player, holeIdx, point) {
+      const s = player.scores[holeIdx] || (player.scores[holeIdx] = {});
+      s[point] = !s[point];
+
+      precomputeAllTotals();
+      updateHole();
+      saveRoundEverywhere();   // optional
+    }
+
+    // === FINISH CURRENT HOLE ===
+    function finishCurrentHole() {
+      finishedHoles.add(currentHole);
+      if (!holeSequence.includes(currentHole)) {
+        holeSequence.push(currentHole);
+      }
+
+      precomputeAllTotals();
+      updateHole();
+
+      console.log(`Finished hole ${currentHole}`);
+    }
+
+     
     // === CORE GAME FUNCTIONS - PART 1 ===
 
     
