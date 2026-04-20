@@ -941,6 +941,7 @@ body {
       if (gameScreen) gameScreen.classList.remove('hidden');
 
       updateHole();
+      attachBottomBarListeners();
       console.log(`Round started on hole ${startHole}`);
     }
     
@@ -1209,6 +1210,37 @@ body {
         attachNextToPlayersListener();
       }, 800);
     });
+
+
+
+      // === BOTTOM CONTROL BAR LISTENERS ===
+    function attachBottomBarListeners() {
+      const completeBtn = document.getElementById('completeRound');
+      const exitBtn = document.getElementById('exitRound');
+
+      if (completeBtn) {
+        completeBtn.onclick = () => {
+          if (finishedHoles.size !== HOLES) {
+            alert(`Please finish all ${HOLES} holes first.`);
+            return;
+          }
+          precomputeAllTotals();
+          showSummary();   // We'll add showSummary next if missing
+          console.log('Round completed with BBB COMP');
+        };
+      }
+
+      if (exitBtn) {
+        exitBtn.onclick = () => {
+          if (confirm('Exit round without saving?')) {
+            resetRound();
+            location.reload();
+          }
+        };
+      }
+    }
+
+
 
   </script>
 
@@ -3032,8 +3064,9 @@ function attachNavListeners() {
   </section>
 
   <!-- GAME SCREEN -->
-  <section id="game" class="card hidden center-block" role="region" aria-labelledby="gameTitle">
-    <h2 id="gameTitle" class="hidden">Game</h2>
+  <section id="game" class="card hidden center-block">
+
+    <!-- Top Navigation Bar -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;">
       <h3 id="holeDisplay"></h3>
       <div>
@@ -3062,17 +3095,13 @@ function attachNavListeners() {
     <div class="holeSummary"></div>
     <div id="roundSummary" class="hidden"></div>
 
-   <div class="control-bar">
-  <button id="sendSMS" title="Send live update to group">SMS</button>
-  <button id="exportCSV" title="Download CSV">CSV</button>
-  <button id="completeRound" title="Finish round & email Walt">BBB COMP</button>
-  <button id="exitRound" title="Quit without saving">EXIT</button>
-  <button id="darkModeToggle" title="Toggle dark mode">DARK</button>
-  <button id="bbbHelpBtn" title="Open BBB Golf Help" style="margin-left:auto;">
-    HELP
-  </button>
-</div>
-  
+    <!-- Bottom Control Bar -->
+    <div class="control-bar" style="margin-top:1.5rem; padding:0.8rem 0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+      <button id="completeRound" style="background:#0f0; color:#000; font-weight:bold; padding:0.8rem 1.2rem;">BBB COMP</button>
+      <button id="exitRound">EXIT</button>
+      <button id="darkModeToggle">DARK</button>
+      <button id="bbbHelpBtn" style="margin-left:auto;">HELP</button>
+    </div>
   </section>
 
   <!-- SUMMARY -->
