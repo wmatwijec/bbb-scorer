@@ -688,7 +688,7 @@ body {
       });
     }
 
-    // Main Data Loader
+        // === MAIN DATA LOADER ===
     async function loadDataFromBackend() {
       console.log('loadDataFromBackend started');
 
@@ -730,7 +730,7 @@ body {
         if (loader) loader.classList.add('hidden');
         if (picker) picker.classList.remove('hidden');
 
-        renderCourseSelect();
+        renderCourseSelect();   // This line was missing in the consolidated version
 
       } catch (err) {
         console.error('Backend load failed:', err);
