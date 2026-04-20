@@ -942,6 +942,7 @@ body {
 
       updateHole();
       updateNavButtons();
+      attachNavListeners()
       attachBottomBarListeners();
       console.log(`Round started on hole ${startHole}`);
     }
@@ -1264,6 +1265,55 @@ body {
       updateHole();
       console.log(`Toggled ${point} for ${player.name} on hole ${holeIdx + 1}`);
     }
+
+
+        // === ATTACH TOP NAV BUTTON LISTENERS ===
+    function attachNavListeners() {
+      console.log('Attaching top nav listeners');
+
+      const prevBtn = document.getElementById('prevHole');
+      const nextBtn = document.getElementById('nextHole');
+      const finishBtn = document.getElementById('finishHole');
+      const editBtn = document.getElementById('editHole');
+
+      if (prevBtn) {
+        prevBtn.onclick = () => {
+          if (currentHole > 1) {
+            currentHole--;
+            updateHole();
+            console.log('Prev → Hole', currentHole);
+          }
+        };
+      }
+
+      if (nextBtn) {
+        nextBtn.onclick = () => {
+          if (currentHole < HOLES) {
+            currentHole++;
+            updateHole();
+            console.log('Next → Hole', currentHole);
+          }
+        };
+      }
+
+      if (finishBtn) {
+        finishBtn.onclick = finishCurrentHole;
+      }
+
+      if (editBtn) {
+        editBtn.onclick = () => {
+          if (finishedHoles.has(currentHole)) {
+            finishedHoles.delete(currentHole);
+            precomputeAllTotals();
+            updateHole();
+            console.log('Edit mode activated for hole', currentHole);
+          }
+        };
+      }
+    }
+
+    
+    
 
     // === FINISH CURRENT HOLE ===
     function finishCurrentHole() {
