@@ -813,7 +813,7 @@ body {
       });
     }
 
-    // === RENDER PLAYER SELECT ===
+        // === RENDER PLAYER SELECT ===
     function renderPlayerSelect() {
       console.log('renderPlayerSelect called');
 
@@ -836,15 +836,53 @@ body {
         playerSelect.appendChild(div);
       });
 
-      // Enable/disable Start Round button based on selections
+      // === ATTACH CHECKBOX LISTENERS ===
+      playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const idx = parseInt(chk.dataset.index);
+          const player = roster[idx];
+
+          if (chk.checked) {
+            if (players.length >= MAX_PLAYERS) {
+              chk.checked = false;
+              alert(`Maximum ${MAX_PLAYERS} players allowed`);
+              return;
+            }
+            // Add player if not already present
+            if (!players.some(p => p.name === player.name)) {
+              players.push({ 
+                ...player, 
+                scores: Array(HOLES).fill(null).map(() => ({})), 
+                _cachedTotal: 0,
+                _cachedHoleTotals: {} 
+              });
+            }
+          } else {
+            // Remove player
+            players = players.filter(p => p.name !== player.name);
+          }
+
+          // Update Start Round button state
+          const startGameBtn = document.getElementById('startGame');
+          if (startGameBtn) {
+            startGameBtn.disabled = players.length < 2;
+          }
+
+          console.log('Players selected:', players.length);
+        });
+      });
+
+      // Initial button state
       const startGameBtn = document.getElementById('startGame');
       if (startGameBtn) {
         startGameBtn.disabled = players.length < 2;
       }
-      
+
       console.log('Player select rendered with', roster.length, 'players');
       attachStartGameListener(); 
     }
+
+    
     // === CORE GAME FUNCTIONS - PART 1 ===
 
     
