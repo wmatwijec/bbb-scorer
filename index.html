@@ -1239,7 +1239,9 @@ body {
         exitBtn.onclick = () => {
           if (confirm('Exit round without saving?')) {
             resetRound();
-            location.reload();
+            hideAll();
+            const courseSetup = document.getElementById('courseSetup');
+            if (courseSetup) courseSetup.classList.remove('hidden');
           }
         };
       }
@@ -1409,6 +1411,24 @@ body {
       roundSummary.classList.remove('hidden');
     }
 
+
+    // === RESET ROUND (for EXIT button) ===
+    function resetRound() {
+      console.log('Resetting round');
+
+      localStorage.removeItem('bbb');
+      inRound = false;
+      players = [];
+      currentCourse = null;
+      currentHole = 1;
+      finishedHoles.clear();
+      holeSequence = [];
+      
+      // Clear any saved local round data
+      if (typeof clearRoundLocal === 'function') {
+        clearRoundLocal().catch(() => {});
+      }
+    }
 
   </script>
 
