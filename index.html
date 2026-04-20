@@ -605,6 +605,7 @@ body {
 </script>  
 
 <!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
 <script>
     console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v12 ===');
     console.log('Inline script parsed successfully — 2026-04-19');
@@ -612,7 +613,7 @@ body {
     const BACKEND = 'https://pwa-players-backend.onrender.com';
 
     // ========================
-    // 1. VARIABLES & CONSTANTS
+    // 1. VARIABLES
     // ========================
     let roster = [];
     let players = [];
@@ -629,13 +630,9 @@ body {
     let holeSequence = [];
     let cloudRounds = [];
 
-    const ENABLE_WALT_SHADOW_TEXT = (!location.hostname.includes('localhost') && location.hostname !== '127.0.0.1');
-
     // ========================
     // 2. DATA LOADING & PARSING
     // ========================
-
-    // CSV Parser
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       const headers = lines[0].split(',').map(h => h.trim());
@@ -660,35 +657,6 @@ body {
       });
     }
 
-    // IndexedDB Persistence (basic)
-    const DB_NAME = 'bbb-golf';
-    const STORE_NAME = 'round';
-    let db = null;
-
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = e => {
-          db = e.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-          }
-        };
-        req.onsuccess = e => { db = e.target.result; resolve(db); };
-        req.onerror = e => reject(e);
-      });
-    }
-
-    async function loadRoundLocal() {
-      if (!db) await openDB();
-      return new Promise(resolve => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const req = tx.objectStore(STORE_NAME).get('current');
-        req.onsuccess = () => resolve(req.result?.data || null);
-      });
-    }
-
-        // === MAIN DATA LOADER ===
     async function loadDataFromBackend() {
       console.log('loadDataFromBackend started');
 
@@ -730,7 +698,7 @@ body {
         if (loader) loader.classList.add('hidden');
         if (picker) picker.classList.remove('hidden');
 
-        renderCourseSelect();   // This line was missing in the consolidated version
+        renderCourseSelect();
 
       } catch (err) {
         console.error('Backend load failed:', err);
@@ -743,10 +711,8 @@ body {
     }
 
     // ========================
-    // 3. UI RENDERING FUNCTIONS
+    // 3. UI RENDERING
     // ========================
-
-       // === RENDER COURSE SELECT ===
     function renderCourseSelect() {
       const select = document.getElementById('courseSelect');
       if (!select) {
@@ -776,7 +742,6 @@ body {
       if (nextBtn) {
         const saved = localStorage.getItem('bbb_currentCourse');
         const savedIdx = parseInt(saved);
-
         if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
           select.value = savedIdx;
           currentCourse = savedIdx;
@@ -790,9 +755,6 @@ body {
       console.log('✅ Course dropdown populated with', courses.length, 'courses');
     }
 
-    
-
-    // Render Player Select
     function renderPlayerSelect() {
       console.log('renderPlayerSelect called');
 
@@ -815,7 +777,6 @@ body {
         playerSelect.appendChild(div);
       });
 
-      // Checkbox listeners
       playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
         chk.addEventListener('change', () => {
           const idx = parseInt(chk.dataset.index);
@@ -850,20 +811,82 @@ body {
         });
       });
 
-      // Initial button state
       const startGameBtn = document.getElementById('startGame');
       if (startGameBtn) {
         startGameBtn.disabled = players.length < 2;
       }
 
       console.log('Player select rendered with', roster.length, 'players');
-      attachStartGameListener();
+      attachStartGameListener(); 
     }
 
     // ========================
-    // 4. GAME LOGIC & SCORING
+    // 4. STARTING HOLE SELECTOR
     // ========================
+    function showStartingHoleSelector() {
+      hideAll();
 
+      const startScreenHTML = `
+        <div id="startingHoleScreen" class="card center-block" style="text-align:center; padding:2rem;">
+          <h2 style="color:var(--green); margin-bottom:1.5rem;">Where do you want to start?</h2>
+          <div style="display:flex; flex-direction:column; gap:1rem; max-width:400px; margin:0 auto;">
+            <button id="startHole1" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 1
+            </button>
+            <button id="startHole10" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 10 (Back Nine First)
+            </button>
+          </div>
+        </div>
+      `;
+
+      const playerSetup = document.getElementById('playerSetup');
+      if (playerSetup) {
+        playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
+      } else {
+        document.body.insertAdjacentHTML('beforeend', startScreenHTML);
+      }
+
+      setTimeout(() => {
+        const btn1 = document.getElementById('startHole1');
+        const btn10 = document.getElementById('startHole10');
+
+        if (btn1) btn1.onclick = () => startRoundWithHole(1);
+        if (btn10) btn10.onclick = () => startRoundWithHole(10);
+      }, 100);
+    }
+
+    function startRoundWithHole(startHole) {
+      const selector = document.getElementById('startingHoleScreen');
+      if (selector) selector.remove();
+
+      currentHole = startHole;
+      finishedHoles.clear();
+      holeSequence = [];
+
+      players.forEach(p => {
+        p.scores = Array(HOLES).fill(null).map(() => ({}));
+        p._cachedTotal = 0;
+        p._cachedHoleTotals = {};
+      });
+
+      inRound = true;
+
+      hideAll();
+      const gameScreen = document.getElementById('game');
+      if (gameScreen) gameScreen.classList.remove('hidden');
+
+      updateHole();
+      updateNavButtons();
+      attachNavListeners();
+      attachBottomBarListeners();
+
+      console.log(`Round started on hole ${startHole}`);
+    }
+
+    // ========================
+    // 5. GAME LOGIC & SCORING
+    // ========================
     function sortPlayersAlphabetically() {
       players.sort((a, b) => a.name.localeCompare(b.name));
       roster.sort((a, b) => a.name.localeCompare(b.name));
@@ -979,7 +1002,6 @@ body {
       console.log('updateHole completed for hole', currentHole);
     }
 
-    // Render Table (checkboxes)
     function renderTable(carryIn, isFinished) {
       const tbody = document.querySelector('#scoreTable tbody');
       if (!tbody) return;
@@ -1048,7 +1070,6 @@ body {
       console.log(`Finished hole ${currentHole}`);
     }
 
-    // Hole & Round Summaries (red carry text)
     function renderHoleSummary() {
       const holeSummary = document.querySelector('.holeSummary');
       if (!holeSummary) return;
@@ -1096,7 +1117,7 @@ body {
     }
 
     // ========================
-    // 5. NAVIGATION & BUTTONS
+    // 6. NAVIGATION & BUTTONS
     // ========================
 
     function updateNavButtons() {
@@ -1164,14 +1185,16 @@ body {
         exitBtn.onclick = () => {
           if (confirm('Exit round without saving?')) {
             resetRound();
-            location.reload();
+            hideAll();
+            const courseSetup = document.getElementById('courseSetup');
+            if (courseSetup) courseSetup.classList.remove('hidden');
           }
         };
       }
     }
 
     // ========================
-    // 6. STARTING HOLE SELECTOR
+    // 7. STARTING HOLE SELECTOR
     // ========================
 
     function showStartingHoleSelector() {
@@ -1236,7 +1259,7 @@ body {
     }
 
     // ========================
-    // 7. UTILITY FUNCTIONS
+    // 8. UTILITY & RESET
     // ========================
 
     function resetRound() {
@@ -1248,7 +1271,6 @@ body {
       currentHole = 1;
       finishedHoles.clear();
       holeSequence = [];
-      if (typeof clearRoundLocal === 'function') clearRoundLocal().catch(() => {});
     }
 
     function sortPlayersAlphabetically() {
@@ -1257,16 +1279,20 @@ body {
     }
 
     // ========================
-    // 8. INITIALIZATION
+    // 9. INITIALIZATION
     // ========================
 
     document.addEventListener('DOMContentLoaded', () => {
       console.log('DOMContentLoaded fired - starting loadDataFromBackend');
       loadDataFromBackend();
+
+      setTimeout(() => {
+        attachCourseSelectListener();
+        attachNextToPlayersListener();
+      }, 800);
     });
 
   </script>
-
 
  <!-- COURSE SETUP – BACKEND-DRIVEN (FINAL) -->
 <section id="courseSetup" class="card center-block">
