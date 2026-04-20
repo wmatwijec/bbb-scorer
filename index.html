@@ -676,6 +676,8 @@ body {
           email: p.Email?.trim()
         })).filter(p => p.name);
 
+        sortPlayersAlphabetically()
+
         courses = parseCSV(coursesCSV).map(c => {
           const name = c.Name?.trim();
           const pars = [];
@@ -813,6 +815,22 @@ body {
       });
     }
 
+
+        // === SORT PLAYERS ALPHABETICALLY ===
+    function sortPlayersAlphabetically() {
+      console.log('Sorting players and roster alphabetically');
+
+      // Sort selected players
+      players.sort((a, b) => a.name.localeCompare(b.name));
+
+      // Sort the full roster for consistency in player select screen
+      roster.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+
+
+
+
         // === RENDER PLAYER SELECT ===
     function renderPlayerSelect() {
       console.log('renderPlayerSelect called');
@@ -861,6 +879,8 @@ body {
             // Remove player
             players = players.filter(p => p.name !== player.name);
           }
+
+          sortPlayersAlphabetically();
 
           // Update Start Round button state
           const startGameBtn = document.getElementById('startGame');
