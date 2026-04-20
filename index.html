@@ -1191,6 +1191,9 @@ body {
       const carryIn = getCarryInForHole(currentHole);
       renderTable(carryIn, finishedHoles.has(currentHole));
 
+      renderHoleSummary();     
+      renderRoundSummary();     
+
       updateNavButtons();
       console.log('updateHole completed for hole', currentHole);
     }
@@ -1312,7 +1315,7 @@ body {
       }
     }
 
-    
+
     
 
     // === FINISH CURRENT HOLE ===
@@ -1356,6 +1359,56 @@ body {
     }
 
     console.log('Navigation and toggle functions loaded');
+
+
+       // === HOLE SUMMARY (red text below checkboxes) ===
+    function renderHoleSummary() {
+      const holeSummary = document.querySelector('.holeSummary');
+      if (!holeSummary) return;
+
+      const carryIn = getCarryInForHole(currentHole);
+
+      const parts = [];
+      if (carryIn.firstOn)  parts.push(`FO: +${carryIn.firstOn}`);
+      if (carryIn.closest) parts.push(`CL: +${carryIn.closest}`);
+      if (carryIn.putt)     parts.push(`P: +${carryIn.putt}`);
+      if (carryIn.greenie)  parts.push(`GR: +${carryIn.greenie}`);
+
+      let text = '';
+      if (parts.length > 0) {
+        text = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
+      } else if (finishedHoles.has(currentHole)) {
+        const nextCarry = getCarryInForHole(currentHole + 1);
+        const totalOpen = nextCarry.firstOn + nextCarry.closest + nextCarry.putt + nextCarry.greenie;
+        text = totalOpen > 0 ? `<strong>Open Carry:</strong> ${totalOpen}` : `<strong>Open Carry: 0</strong>`;
+      } else {
+        text = `<strong>Open Carry: 0</strong>`;
+      }
+
+      holeSummary.innerHTML = `<div class="summary-carry-in">${text}</div>`;
+      holeSummary.style.color = '#dc3545';   // red text
+    }
+
+    // === ROUND SUMMARY (bottom) ===
+    function renderRoundSummary() {
+      const roundSummary = document.getElementById('roundSummary');
+      if (!roundSummary) return;
+
+      let wins = 0;
+      players.forEach(p => wins += p._cachedTotal || 0);
+
+      const expected = finishedHoles.size * 3;
+      const openCarry = expected - wins;
+
+      roundSummary.innerHTML = `
+        <div style="font-size:0.9rem;line-height:1.4;">
+          Wins: <strong>${wins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
+          <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
+        </div>
+      `;
+      roundSummary.classList.remove('hidden');
+    }
+
 
   </script>
 
