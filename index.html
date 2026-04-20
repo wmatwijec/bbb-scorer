@@ -839,7 +839,7 @@ body {
       // Enable/disable Start Round button based on selections
       const startGameBtn = document.getElementById('startGame');
       if (startGameBtn) {
-        startGameBtn.disabled = true; // will be enabled when players are selected
+        startGameBtn.disabled = players.length < 2;
       }
       
       console.log('Player select rendered with', roster.length, 'players');
