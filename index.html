@@ -959,62 +959,52 @@ players.sort((a, b) => a.name.localeCompare(b.name));
 
   
   // === CARRY LOGIC ===
- function getCarryInForHole(holeNumber) {
-  const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-  // If no sequence tracked yet, fall back to original hole-number logic
-  if (holeSequence.length === 0) {
-    for (let h = 1; h < holeNumber; h++) {
-      if (!finishedHoles.has(h)) continue;
-      const idx = h - 1;
-      const par = courses[currentCourse].pars[idx];
-      const isPar3 = par === 3;
-      const scores = players.map(p => p.scores[idx]).filter(Boolean);
-      if (!isPar3) {
-        if (scores.some(s => s.firstOn)) carry.firstOn = 0;
-        else carry.firstOn++;
-      }
-      if (isPar3) {
-        if (scores.some(s => s.firstOn)) carry.greenie = 0;
-        else carry.greenie++;
-      }
-      if (scores.some(s => s.closest)) carry.closest = 0;
-      else carry.closest++;
-      if (scores.some(s => s.putt)) carry.putt = 0;
-      else carry.putt++;
-    }
-    return carry;
-  }
-
-
-  // Use sequence-based calculation for wrap-around support
-  const currentIdx = holeSequence.indexOf(holeNumber);
-  if (currentIdx === -1) return carry;  // Hole not played yet
-  // Look at all holes BEFORE this one in the sequence
-  for (let i = 0; i < currentIdx; i++) {
-    const h = holeSequence[i];
-    if (!finishedHoles.has(h)) continue;
+// === HELPER: accumulate carry for a single finished hole ===
+  function accumulateCarryForHole(h, carry) {
     const idx = h - 1;
     const par = courses[currentCourse].pars[idx];
     const isPar3 = par === 3;
     const scores = players.map(p => p.scores[idx]).filter(Boolean);
-    // First On / Greenie
-    if (!isPar3) {
-      if (scores.some(s => s.firstOn)) carry.firstOn = 0;
-      else carry.firstOn++;
-    }
     if (isPar3) {
       if (scores.some(s => s.firstOn)) carry.greenie = 0;
       else carry.greenie++;
+    } else {
+      if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+      else carry.firstOn++;
     }
-    // Closest
     if (scores.some(s => s.closest)) carry.closest = 0;
     else carry.closest++;
-    // Putt
     if (scores.some(s => s.putt)) carry.putt = 0;
     else carry.putt++;
   }
-  return carry;
-}
+
+  function getCarryInForHole(holeNumber) {
+    const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+    // If no sequence tracked yet, fall back to original hole-number logic
+    if (holeSequence.length === 0) {
+      for (let h = 1; h < holeNumber; h++) {
+        if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
+      }
+      return carry;
+    }
+    // Use sequence-based calculation for wrap-around support
+    const currentIdx = holeSequence.indexOf(holeNumber);
+    if (currentIdx === -1) {
+      // Hole number not in sequence — means this is a "virtual" hole (e.g., 19 = next after last)
+      // Calculate carry-in from ALL finished holes in the sequence
+      for (let i = 0; i < holeSequence.length; i++) {
+        const h = holeSequence[i];
+        if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
+      }
+      return carry;
+    }
+    // Look at all holes BEFORE this one in the sequence
+    for (let i = 0; i < currentIdx; i++) {
+      const h = holeSequence[i];
+      if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
+    }
+    return carry;
+  }
 
 
 
