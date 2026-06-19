@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBB Season Stats</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f111a; color: #e2e8f0;
+            min-height: 100vh; padding: 20px 28px;
+        }
+        h1 { font-size: 22px; font-weight: 600; margin-bottom: 16px; color: #e2e8f0; }
+        h2 { font-size: 16px; font-weight: 600; margin-bottom: 10px; color: #94a3b8; }
+        h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #94a3b8; }
+
+        /* ── Top bar ── */
+        .top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+        }
+        .top-bar h1 { margin-bottom: 0; }
+        .top-bar .actions { display: flex; align-items: center; gap: 10px; }
+        .btn {
+            display: inline-block; padding: 8px 16px; border-radius: 6px;
+            font-size: 13px; font-weight: 500; text-decoration: none;
+            transition: .15s; cursor: pointer; border: none;
+        }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+        .btn-nav {
+            background: #1a1d2e; border: 1px solid #2d3154; color: #94a3b8;
+            border-radius: 6px; padding: 6px 14px; font-size: 13px;
+        }
+        .btn-nav:hover { background: #252840; color: #e2e8f0; }
+        .btn-nav.active { background: #252840; color: #60a5fa; border-color: #60a5fa; font-weight: 600; }
+
+        /* ── Cards ── */
+        .card {
+            background: #1a1d2e; border: 1px solid #2d3154;
+            border-radius: 8px; padding: 16px; margin-bottom: 16px;
+        }
+
+        /* ── Stat cards row ── */
+        .stat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .stat-card {
+            background: #1a1d2e; border: 1px solid #2d3154;
+            border-radius: 8px; padding: 14px 16px; text-align: center;
+        }
+        .stat-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+        .stat-card .value { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+        .stat-card .value.pos { color: #34d399; }
+        .stat-card .value.neg { color: #f87171; }
+        .stat-card .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+        /* ── Tables ── */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #2d3154; }
+        th {
+            background: #1a1d2e; color: #94a3b8; font-weight: 600; cursor: pointer;
+            user-select: none; white-space: nowrap;
+        }
+        th:hover { color: #e2e8f0; }
+        th.sortable::after { content: ' ↕'; color: #475569; font-size: 10px; }
+        th.sort-asc::after { content: ' ↑'; color: #60a5fa; }
+        th.sort-desc::after { content: ' ↓'; color: #60a5fa; }
+        th:not(.sortable) { cursor: default; }
+        th:not(.sortable)::after { content: ''; }
+        tr:hover { background: #1e2136; }
+        td:first-child { text-align: left; font-weight: 600; }
+        .rank { color: #60a5fa; font-weight: 600; }
+
+        /* ── Player selector ── */
+        .player-selector {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .player-selector label { font-size: 13px; color: #94a3b8; }
+        select {
+            padding: 6px 10px; border-radius: 6px; background: #0f111a;
+            border: 1px solid #2d3154; color: #e2e8f0; font-size: 13px; min-width: 160px;
+        }
+        select:focus { outline: none; border-color: #60a5fa; }
+
+        /* ── Charts ── */
+        .chart-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 16px; margin-bottom: 16px;
+        }
+        .chart-container {
+            background: #1a1d2e; border: 1px solid #2d3154;
+            border-radius: 8px; padding: 16px; position: relative;
+        }
+        .chart-container canvas { max-height: 260px; }
+
+        /* ── Status ── */
+        .status { color: #64748b; font-size: 13px; margin: 20px 0; text-align: center; font-style: italic; }
+        .error { color: #f87171; font-style: normal; }
+
+        /* ── Category breakdown table ── */
+        .cat-table th, .cat-table td { font-size: 12px; padding: 6px 10px; }
+        .cat-table th { background: #151726; }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .stat-row { grid-template-columns: repeat(3, 1fr); }
+            table { font-size: 11px; }
+            th, td { padding: 6px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <h1>⛳ BBB Season Stats</h1>
+        <div class="actions">
+            <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
+            <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
+            <a href="/" class="btn btn-primary btn-sm" style="margin-left:8px;">⛳ Scorer</a>
+        </div>
+    </div>
+
+    <div id="status" class="status">Loading season data...</div>
+
+    <!-- ── Leaderboard View ── -->
+    <div id="leaderboard-view" class="view">
+        <div id="leaderboard-container"></div>
+    </div>
+
+    <!-- ── Player Detail View ── -->
+    <div id="player-view" class="view" style="display:none;">
+        <div class="player-selector">
+            <label for="playerSelect"><strong>Select Player:</strong></label>
+            <select id="playerSelect" onchange="onPlayerChange(this.value)">
+                <option value="">-- Select Player --</option>
+            </select>
+        </div>
+        <div id="player-detail"></div>
+    </div>
+
+    <script>
+    const BACKEND = 'https://pwa-players-backend.onrender.com';
+    const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
+    const PLAYER_COLORS = ['#0d6efd','#198754','#dc3545','#ffc107','#6f42c1','#fd7e14','#20c997','#6610f2','#d63384','#0dcaf0'];
+
+    let allRounds = [];
+    let allPlayers = [];
+    let seasonStats = {};
+    let playerRoundData = {};
+    let currentSort = 'median_desc';
+    let sortState = {};
+
+    // ── Median helper ──
+    function median(arr) {
+        if (!arr.length) return 0;
+        const s = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(s.length / 2);
+        return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+    }
+
+    // ── Scoring: sequence-aware carry-in (from Summarizer.html) ──
+    function buildHoleSequence(round) {
+        const finished = round.finishedHoles || [];
+        if (finished.length === 18) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
+        return finished.slice().sort((a, b) => a - b);
+    }
+
+    function getCarryInForHole(holeScores, pars, holeNumber, holeSequence) {
+        const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+        const idx = holeSequence.indexOf(holeNumber);
+        if (idx === -1) return carry;
+        for (let i = 0; i < idx; i++) {
+            const h = holeSequence[i];
+            const hidx = h - 1;
+            if (!holeScores[hidx]) continue;
+            const par = pars[hidx] || 4;
+            const isPar3 = par === 3;
+            const scores = holeScores[hidx];
+            if (isPar3) {
+                if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                else carry.greenie++;
+            } else {
+                if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                else carry.firstOn++;
+            }
+            if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+            else carry.closest++;
+            if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+            else carry.putt++;
+        }
+        return carry;
+    }
+
+    function computeRoundStats(round) {
+        const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18
+            ? round.pars : DEFAULT_PARS;
+        const holeScores = {};
+        for (let idx = 0; idx < 18; idx++) holeScores[idx] = {};
+
+        Object.entries(round.scores || {}).forEach(([name, playerHoles]) => {
+            if (!Array.isArray(playerHoles) || playerHoles.length !== 18) return;
+            playerHoles.forEach((s, idx) => { holeScores[idx][name] = s || {}; });
+        });
+
+        const holeSequence = buildHoleSequence(round);
+        const result = { playerData: {} };
+
+        (round.players || []).forEach(p => {
+            if (!p?.name || p.name.toLowerCase().includes('guest')) return;
+            let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0, carryPts = 0;
+
+            for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
+                const holeNumber = holeSequence[seqIdx];
+                const idx = holeNumber - 1;
+                const carryIn = getCarryInForHole(holeScores, pars, holeNumber, holeSequence);
+                const s = holeScores[idx]?.[p.name] || {};
+                const par = pars[idx] || 4;
+                const isPar3 = par === 3;
+
+                let roundTotal = 0, roundFO = 0, roundGR = 0, roundCL = 0, roundP = 0, roundCarry = 0;
+
+                if (s.firstOn) {
+                    const c = isPar3 ? carryIn.greenie : carryIn.firstOn;
+                    roundTotal += 1 + c; roundFO = 1 + c; roundGR = 1 + c;
+                    roundCarry = c;
+                }
+                if (s.closest) {
+                    roundTotal += 1 + carryIn.closest; roundCL = 1 + carryIn.closest;
+                    roundCarry += carryIn.closest;
+                }
+                if (s.putt) {
+                    roundTotal += 1 + carryIn.putt; roundP = 1 + carryIn.putt;
+                    roundCarry += carryIn.putt;
+                }
+
+                totalPts += roundTotal;
+                foPts += roundFO;
+                grPts += roundGR;
+                clPts += roundCL;
+                pPts += roundP;
+                carryPts += roundCarry;
+            }
+
+            result.playerData[p.name] = {
+                totalPts, foPts, grPts, clPts, pPts, carryPts,
+                numHoles: holeSequence.length
+            };
+        });
+
+        return result;
+    }
+
+    // ── Data loading ──
+    async function loadData() {
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = 'Fetching season data...';
+        statusEl.className = 'status';
+
+        try {
+            const res = await fetch(`${BACKEND}/rounds`);
+            if (!res.ok) throw new Error(`Backend error: ${res.status}`);
+            const data = await res.json();
+            let rounds = data.rounds || [];
+
+            // Filter: completed valid rounds only
+            const cutoffDate = new Date('2026-01-07T00:00:00Z');
+            const validRounds = [];
+
+            for (const round of rounds) {
+                const hasFullScores = round.scores &&
+                    Object.values(round.scores).every(playerArray =>
+                        Array.isArray(playerArray) && playerArray.length === 18 &&
+                        playerArray.every(s => s !== null && typeof s === 'object')
+                    );
+                const finishedOk = round.finishedHoles && round.finishedHoles.length === 18;
+                if (!finishedOk && !hasFullScores) continue;
+
+                const roundDate = new Date(round.date);
+                if (roundDate < cutoffDate) continue;
+
+                const totalPoints = Object.values(round._cachedTotals || {})
+                    .reduce((sum, score) => sum + (score || 0), 0);
+                if (totalPoints < 40) continue;
+
+                validRounds.push(round);
+            }
+
+            allRounds = validRounds.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Collect unique players (non-guest)
+            const playerSet = new Set();
+            allRounds.forEach(r => {
+                (r.players || []).forEach(p => {
+                    if (p?.name && !p.name.toLowerCase().includes('guest')) {
+                        playerSet.add(p.name);
+                    }
+                });
+            });
+            allPlayers = Array.from(playerSet).sort();
+
+            if (allPlayers.length === 0) {
+                statusEl.textContent = 'No valid completed rounds found.';
+                statusEl.className = 'status error';
+                return;
+            }
+
+            // Compute per-player per-round stats
+            seasonStats = {};
+            playerRoundData = {};
+            allPlayers.forEach(name => {
+                seasonStats[name] = {
+                    rounds: 0, totalPoints: 0,
+                    foWins: 0, grWins: 0, clWins: 0, pWins: 0,
+                    carryPts: 0, bestRound: 0,
+                    pointsPerRound: [], foPerRound: [], grPerRound: [],
+                    clPerRound: [], pPerRound: [], carryPerRound: []
+                };
+                playerRoundData[name] = [];
+            });
+
+            let roundIndex = 0;
+            for (const round of allRounds) {
+                roundIndex++;
+                const result = computeRoundStats(round);
+
+                for (const [name, data] of Object.entries(result.playerData)) {
+                    if (!seasonStats[name]) continue;
+                    const st = seasonStats[name];
+                    st.rounds++;
+                    st.totalPoints += data.totalPts;
+                    st.foWins += data.foPts > 0 ? 1 : 0;
+                    st.grWins += data.grPts > 0 ? 1 : 0;
+                    st.clWins += data.clPts > 0 ? 1 : 0;
+                    st.pWins += data.pPts > 0 ? 1 : 0;
+                    st.carryPts += data.carryPts;
+                    st.bestRound = Math.max(st.bestRound, data.totalPts);
+                    st.pointsPerRound.push(data.totalPts);
+                    st.foPerRound.push(data.foPts);
+                    st.grPerRound.push(data.grPts);
+                    st.clPerRound.push(data.clPts);
+                    st.pPerRound.push(data.pPts);
+                    st.carryPerRound.push(data.carryPts);
+
+                    playerRoundData[name].push({
+                        round: roundIndex,
+                        date: round.date,
+                        course: round.courseName || 'Unknown',
+                        total: data.totalPts,
+                        fo: data.foPts,
+                        gr: data.grPts,
+                        cl: data.clPts,
+                        p: data.pPts,
+                        carry: data.carryPts
+                    });
+                }
+            }
+
+            statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
+            renderLeaderboard();
+            populatePlayerSelector();
+
+        } catch (err) {
+            console.error(err);
+            statusEl.textContent = `Error loading data: ${err.message}`;
+            statusEl.className = 'status error';
+        }
+    }
+
+    // ── View switching ──
+    function showView(view) {
+        document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
+        document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
+        document.getElementById('btn-leaderboard').className = `btn btn-nav${view === 'leaderboard' ? ' active' : ''}`;
+        document.getElementById('btn-player').className = `btn btn-nav${view === 'player' ? ' active' : ''}`;
+        if (view === 'leaderboard') renderLeaderboard();
+    }
+
+    // ── Leaderboard rendering ──
+    function getLeaderboardData() {
+        return allPlayers.map(name => {
+            const st = seasonStats[name];
+            const mean = st.pointsPerRound.length
+                ? st.pointsPerRound.reduce((a, b) => a + b, 0) / st.pointsPerRound.length : 0;
+            const med = median(st.pointsPerRound);
+            return { name, ...st, mean, median: med };
+        }).sort((a, b) => b.median - a.median);
+    }
+
+    function renderLeaderboard() {
+        const lb = getLeaderboardData();
+        const container = document.getElementById('leaderboard-container');
+
+        // Apply current sort
+        let sorted = [...lb];
+        switch (currentSort) {
+            case 'median': sorted.sort((a, b) => a.median - b.median); break;
+            case 'median_desc': sorted.sort((a, b) => b.median - a.median); break;
+            case 'mean': sorted.sort((a, b) => a.mean - b.mean); break;
+            case 'mean_desc': sorted.sort((a, b) => b.mean - a.mean); break;
+            case 'total': sorted.sort((a, b) => a.totalPoints - b.totalPoints); break;
+            case 'total_desc': sorted.sort((a, b) => b.totalPoints - a.totalPoints); break;
+            case 'rounds': sorted.sort((a, b) => a.rounds - b.rounds); break;
+            case 'rounds_desc': sorted.sort((a, b) => b.rounds - a.rounds); break;
+            case 'best': sorted.sort((a, b) => b.bestRound - a.bestRound); break;
+            case 'best_desc': sorted.sort((a, b) => a.bestRound - b.bestRound); break;
+            case 'fo': sorted.sort((a, b) => b.foWins - a.foWins); break;
+            case 'fo_desc': sorted.sort((a, b) => a.foWins - b.foWins); break;
+            case 'cl': sorted.sort((a, b) => b.clWins - a.clWins); break;
+            case 'cl_desc': sorted.sort((a, b) => a.clWins - b.clWins); break;
+        }
+
+        const sortIcon = (col) => {
+            if (currentSort.startsWith(col) && !currentSort.startsWith(col + '_desc')) return ' sort-asc';
+            if (currentSort === col + '_desc') return ' sort-desc';
+            return '';
+        };
+
+        const sortedIdx = (name) => sorted.findIndex(s => s.name === name) + 1;
+
+        let html = `<div class="card" style="overflow-x:auto;">
+            <table>
+            <thead>
+                <tr>
+                    <th class="sortable${sortIcon('name')}" onclick="sortBy('name')">Player</th>
+                    <th class="sortable${sortIcon('rounds')}" onclick="sortBy('rounds')">Rds</th>
+                    <th class="sortable${sortIcon('total')}" onclick="sortBy('total')">Total</th>
+                    <th class="sortable${sortIcon('median_desc')}" onclick="sortBy('median')">Median/Rnd</th>
+                    <th class="sortable${sortIcon('mean')}" onclick="sortBy('mean')">Mean/Rnd</th>
+                    <th class="sortable${sortIcon('best')}" onclick="sortBy('best')">Best</th>
+                    <th class="sortable${sortIcon('fo')}" onclick="sortBy('fo')">FO</th>
+                    <th class="sortable${sortIcon('gr')}" onclick="sortBy('gr')">GR</th>
+                    <th class="sortable${sortIcon('cl')}" onclick="sortBy('cl')">CL</th>
+                    <th class="sortable" onclick="sortBy('p')">P</th>
+                    <th>Carry</th>
+                    <th>Med Rk</th>
+                    <th>Mean Rk</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for (const entry of sorted) {
+            const st = seasonStats[entry.name];
+            const medRank = sortedIdx(entry.name);
+            const meanRank = [...lb].sort((a, b) => b.mean - a.mean).findIndex(s => s.name === entry.name) + 1;
+
+            html += `<tr onclick="showView('player'); document.getElementById('playerSelect').value='${entry.name}'; onPlayerChange('${entry.name}');" style="cursor:pointer;" title="Click for player details">
+                <td>${entry.name}</td>
+                <td>${entry.rounds}</td>
+                <td>${entry.totalPoints}</td>
+                <td>${entry.median.toFixed(1)}</td>
+                <td>${entry.mean.toFixed(1)}</td>
+                <td class="pos">${entry.bestRound}</td>
+                <td>${entry.foWins}</td>
+                <td>${entry.grWins}</td>
+                <td>${entry.clWins}</td>
+                <td>${entry.pWins}</td>
+                <td>${entry.carryPts}</td>
+                <td class="rank">#${medRank}</td>
+                <td class="rank">#${meanRank}</td>
+            </tr>`;
+        }
+
+        html += `</tbody></table></div>`;
+        container.innerHTML = html;
+    }
+
+    function sortBy(col) {
+        if (currentSort === col) {
+            currentSort = col + '_desc';
+        } else if (currentSort === col + '_desc') {
+            currentSort = col;
+        } else {
+            currentSort = col + '_desc';
+        }
+        renderLeaderboard();
+    }
+
+    // ── Player selector ──
+    function populatePlayerSelector() {
+        const select = document.getElementById('playerSelect');
+        select.innerHTML = '<option value="">-- Select Player --</option>';
+        allPlayers.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+        });
+    }
+
+    function onPlayerChange(player) {
+        if (!player || !seasonStats[player]) return;
+        renderPlayerDetail(player);
+    }
+
+    // ── Player detail view ──
+    function renderPlayerDetail(name) {
+        const st = seasonStats[name];
+        const mean = st.pointsPerRound.length
+            ? st.pointsPerRound.reduce((a, b) => a + b, 0) / st.pointsPerRound.length : 0;
+        const med = median(st.pointsPerRound);
+
+        // Group medians and means
+        const allMeans = allPlayers.map(p => {
+            const ps = seasonStats[p];
+            return ps.pointsPerRound.length
+                ? ps.pointsPerRound.reduce((a, b) => a + b, 0) / ps.pointsPerRound.length : 0;
+        });
+        const allMedians = allPlayers.map(p => median(seasonStats[p].pointsPerRound));
+
+        const medRank = allMedians.slice().sort((a, b) => b - a).indexOf(med) + 1;
+        const meanRank = allMeans.slice().sort((a, b) => b - a).indexOf(mean) + 1;
+
+        // Group category stats
+        const groupAvgFo = allPlayers.reduce((sum, p) => {
+            const ps = seasonStats[p];
+            return sum + (ps.foPerRound.length ? ps.foPerRound.reduce((a, b) => a + b, 0) / ps.foPerRound.length : 0);
+        }, 0) / allPlayers.length;
+
+        const groupAvgGr = allPlayers.reduce((sum, p) => {
+            const ps = seasonStats[p];
+            return sum + (ps.grPerRound.length ? ps.grPerRound.reduce((a, b) => a + b, 0) / ps.grPerRound.length : 0);
+        }, 0) / allPlayers.length;
+
+        const groupAvgCl = allPlayers.reduce((sum, p) => {
+            const ps = seasonStats[p];
+            return sum + (ps.clPerRound.length ? ps.clPerRound.reduce((a, b) => a + b, 0) / ps.clPerRound.length : 0);
+        }, 0) / allPlayers.length;
+
+        const groupAvgP = allPlayers.reduce((sum, p) => {
+            const ps = seasonStats[p];
+            return sum + (ps.pPerRound.length ? ps.pPerRound.reduce((a, b) => a + b, 0) / ps.pPerRound.length : 0);
+        }, 0) / allPlayers.length;
+
+        const groupAvgCarry = allPlayers.reduce((sum, p) => {
+            const ps = seasonStats[p];
+            return sum + (ps.carryPerRound.length ? ps.carryPerRound.reduce((a, b) => a + b, 0) / ps.carryPerRound.length : 0);
+        }, 0) / allPlayers.length;
+
+        const diff = (val, avg) => (val - avg).toFixed(1);
+        const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
+
+        let html = `
+            <h2>${name}'s Stats</h2>
+
+            <div class="stat-row">
+                <div class="stat-card">
+                    <div class="label">Rounds</div>
+                    <div class="value">${st.rounds}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Total Points</div>
+                    <div class="value">${st.totalPoints}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Median/Rnd</div>
+                    <div class="value">${med.toFixed(1)}</div>
+                    <div class="sub">#${medRank} of ${allPlayers.length}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Mean/Rnd</div>
+                    <div class="value">${mean.toFixed(1)}</div>
+                    <div class="sub">#${meanRank} of ${allPlayers.length}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Best Round</div>
+                    <div class="value pos">${st.bestRound}</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Category Breakdown</h3>
+                <table class="cat-table">
+                    <thead>
+                        <tr><th>Category</th><th>Your Total</th><th>Your Mean/Rnd</th><th>Group Mean/Rnd</th><th>vs Group</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>FO/Greenie Wins</td>
+                            <td>${st.foWins} / ${st.grWins}</td>
+                            <td>${st.foPerRound.length ? (st.foPerRound.reduce((a,b) => a+b,0)/st.foPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${groupAvgFo.toFixed(1)}</td>
+                            <td class="${diffClass(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}">${diff(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}</td>
+                        </tr>
+                        <tr>
+                            <td>Closest Wins</td>
+                            <td>${st.clWins}</td>
+                            <td>${st.clPerRound.length ? (st.clPerRound.reduce((a,b) => a+b,0)/st.clPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${groupAvgCl.toFixed(1)}</td>
+                            <td class="${diffClass(st.clPerRound.length ? st.clPerRound.reduce((a,b)=>a+b,0)/st.clPerRound.length : 0, groupAvgCl)}">${diff(st.clPerRound.length ? st.clPerRound.reduce((a,b)=>a+b,0)/st.clPerRound.length : 0, groupAvgCl)}</td>
+                        </tr>
+                        <tr>
+                            <td>Putt Wins</td>
+                            <td>${st.pWins}</td>
+                            <td>${st.pPerRound.length ? (st.pPerRound.reduce((a,b) => a+b,0)/st.pPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${groupAvgP.toFixed(1)}</td>
+                            <td class="${diffClass(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}">${diff(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}</td>
+                        </tr>
+                        <tr>
+                            <td>Carry-In Pts</td>
+                            <td>${st.carryPts}</td>
+                            <td>${st.carryPerRound.length ? (st.carryPerRound.reduce((a,b) => a+b,0)/st.carryPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${groupAvgCarry.toFixed(1)}</td>
+                            <td class="${diffClass(st.carryPerRound.length ? st.carryPerRound.reduce((a,b)=>a+b,0)/st.carryPerRound.length : 0, groupAvgCarry)}">${diff(st.carryPerRound.length ? st.carryPerRound.reduce((a,b)=>a+b,0)/st.carryPerRound.length : 0, groupAvgCarry)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Round-by-Round</h3>
+            <div class="card" style="overflow-x:auto; margin-bottom:16px;">
+                <table>
+                    <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th><th>Carry</th></tr></thead>
+                    <tbody>`;
+
+        playerRoundData[name]?.forEach((r, i) => {
+            const best = r.total === st.bestRound ? ' class="pos"' : '';
+            html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td><td style="font-size:11px;">${r.course}</td><td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td><td>${r.carry}</td></tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        html += `<h3>Distribution Charts</h3>`;
+        html += `<div class="chart-grid">`;
+
+        // Chart IDs
+        const charts = [
+            { id: 'chart-total', label: 'Total Points', data: playerRoundData[name] || [], key: 'total', title: 'Points' },
+            { id: 'chart-fo', label: 'FO/Greenie Points', data: playerRoundData[name] || [], key: 'fo', title: 'FO/GR Pts' },
+            { id: 'chart-cl', label: 'Closest Points', data: playerRoundData[name] || [], key: 'cl', title: 'Closest Pts' },
+            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts' },
+            { id: 'chart-carry', label: 'Carry-In Points', data: playerRoundData[name] || [], key: 'carry', title: 'Carry Pts' }
+        ];
+
+        charts.forEach((c, idx) => {
+            html += `<div class="chart-container"><h3>${c.label}</h3><div style="height:240px;"><canvas id="${c.id}"></canvas></div></div>`;
+        });
+
+        html += `</div>`;
+
+        document.getElementById('player-detail').innerHTML = html;
+
+        // Render charts after DOM update
+        requestAnimationFrame(() => {
+            charts.forEach(c => {
+                const ctx = document.getElementById(c.id);
+                if (!ctx) return;
+
+                const colorIdx = allPlayers.indexOf(name) % PLAYER_COLORS.length;
+                const color = PLAYER_COLORS[colorIdx];
+
+                new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: name,
+                            data: c.data.map(d => ({ x: d.round, y: d[c.key] })),
+                            backgroundColor: color + 'cc',
+                            borderColor: color,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBorderWidth: 1,
+                            pointBorderColor: '#0f111a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Round', color: '#94a3b8' },
+                                ticks: { color: '#64748b', stepSize: 1 },
+                                grid: { color: 'rgba(45,49,84,0.5)' }
+                            },
+                            y: {
+                                title: { display: true, text: c.title, color: '#94a3b8' },
+                                ticks: { color: '#64748b' },
+                                grid: { color: 'rgba(45,49,84,0.5)' },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1a1d2e',
+                                borderColor: '#2d3154',
+                                borderWidth: 1,
+                                titleColor: '#e2e8f0',
+                                bodyColor: '#94a3b8',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    // ── Init ──
+    loadData();
+    </script>
+</body>
+</html>
