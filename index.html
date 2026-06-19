@@ -1210,6 +1210,12 @@ picker.classList.remove('hidden');
 const saved = await loadRoundLocal();
 // Try to get cloud rounds for selection
 cloudRounds = await loadCloudRounds();
+
+// Attach listeners BEFORE showing round selection so startFreshRound can use them
+attachStartGameListener();
+attachCourseSelectListener();
+attachNextToPlayersListener();
+
 if (cloudRounds.length > 0) {
   // Show selection UI (handles 0, 1, or multiple)
   showRoundSelection(cloudRounds);
