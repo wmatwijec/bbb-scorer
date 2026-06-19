@@ -1909,6 +1909,13 @@ edit.addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
 
+  // === LOAD COURSES FROM BACKEND FIRST ===
+  try {
+    await loadDataFromBackend();
+  } catch (e) {
+    console.error('loadDataFromBackend failed:', e);
+  }
+
   // === BUILD ELS CACHE ===
   els = {
   courseSetup: document.getElementById('courseSetup'),
@@ -2015,15 +2022,8 @@ return;
   }
 }
 
-// Fresh start — load backend data then show course picker
+// Fresh start — show course picker
   if (saved) await clearRoundLocal();
-
-  // === LOAD COURSES FROM BACKEND ===
-  try {
-    await loadDataFromBackend();
-  } catch (e) {
-    console.error('loadDataFromBackend failed:', e);
-  }
 
   // === EXPOSE GAME FUNCTIONS GLOBALLY ===
   window.updateHole = updateHole;
