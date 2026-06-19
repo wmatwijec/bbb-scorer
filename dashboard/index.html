@@ -654,6 +654,7 @@
         html += `</tbody></table></div>`;
 
         // Top 5 Streak Leaders
+        const leaders = getStreakLeaders();
         const streakStats = [
             { key: 'scoreStreak', label: 'Score Streak' },
             { key: 'drought', label: 'Drought' },
