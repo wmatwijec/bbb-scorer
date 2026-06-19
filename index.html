@@ -821,8 +821,15 @@ function startRoundWithHole(startHole) {
 
   updateHole();
   updateNavButtons();
-  attachNavListeners()
+  attachNavListeners();
   attachBottomBarListeners();
+
+  // Game-specific setup (from original app)
+  players.sort((a, b) => a.name.localeCompare(b.name));
+  updateCourseInfoBar();
+  setupGameButtons();
+  attachFinishHoleListener();
+
   console.log(`Round started on hole ${startHole}`);
 }
 // === END FUNCTION ===
@@ -1426,54 +1433,18 @@ players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: 
 players.sort((a, b) => a.name.localeCompare(b.name));
 
 
-  els.startGame.disabled = players.length < 2;
-  save();
-});
-  });
+players.sort((a, b) => a.name.localeCompare(b.name));
+   els.startGame.disabled = players.length < 2;
+   save();
+ });
+ });
 
-  // === INITIAL STATE ===
-  els.startGame.disabled = players.length < 2;
+ // === ATTACH EVENT LISTENERS ===
+ attachStartGameListener();
+ attachCourseSelectListener();
+ attachNextToPlayersListener();
 
-  // === ATTACH START GAME LISTENER ===
- els.startGame.onclick = () => {
-  if (players.length < 2) return alert('Select at least 2 players');
-  
-  currentHole = 1;  // ← FORCE HOLE 1
-  finishedHoles.clear();
-  
-
-  players.forEach(p => {
-p.scores = Array(HOLES).fill(null).map(() => ({}));
-p.gir = Array(HOLES).fill(false);
-p._cachedTotal = 0;
-p._cachedHoleTotals = {};
-  });
-
-  players.sort((a, b) => a.name.localeCompare(b.name));
-
-  inRound = true;
-  hideAll();
-  els.game.classList.remove('hidden');
-  updateHole();
-  attachFinishHoleListener();   // ← ADD THIS LINE
-  attachNavListeners();   // ← ADD THIS LINE
-  setupGameButtons();
-  updateCourseInfoBar()
-  save();
-  logScreen('GAME STARTED');
-};
-}
-  els.nextToPlayers.addEventListener('click', () => {
-if (currentCourse === null) return alert('Select a course');
-hideAll();
-els.playerSetup.classList.remove('hidden');
-renderPlayerSelect();
-logScreen('PLAYER SETUP');
-  });
-
-  
-
-  function generateParInputs() {
+ function generateParInputs() {
 const container = document.getElementById('pars');
 container.innerHTML = '';
 for (let i = 0; i < HOLES; i++) {
