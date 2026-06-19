@@ -1252,27 +1252,38 @@ if (holeSequence.length === 0) {
 // Use sequence-based calculation for wrap-around support
 const currentIdx = holeSequence.indexOf(holeNumber);
 if (currentIdx === -1) {
-  // Hole number not in sequence — means this is a "virtual" hole (e.g., 19 = next after last)
-  // Calculate carry-in from ALL finished holes in the sequence
+  // Hole number not in sequence — means this is a "virtual" hole (e.g., wrap-around to hole 1)
+  // Calculate carry-in from ALL finished holes
   for (let i = 0; i < holeSequence.length; i++) {
     const h = holeSequence[i];
     if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
   }
   return carry;
 }
-// Look at all holes BEFORE this one in the sequence
-for (let i = 0; i < currentIdx; i++) {
-  const h = holeSequence[i];
-  if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
+if (currentIdx >= 0) {
+  // Look at all holes BEFORE this one in the sequence
+  for (let i = 0; i < currentIdx; i++) {
+    const h = holeSequence[i];
+    if (finishedHoles.has(h)) accumulateCarryForHole(h, carry);
+  }
 }
 return carry;
   }
 
 function getRunningTotal(player) {
 let sum = 0;
-for (let h = 1; h <= currentHole; h++) {
-  if (finishedHoles.has(h)) {
-    sum += player._cachedHoleTotals?.[h - 1] || 0;
+if (finishedHoles.size === HOLES && currentHole <= HOLES) {
+  // Wrapped around: sum ALL finished holes
+  for (let h = 1; h <= HOLES; h++) {
+    if (finishedHoles.has(h)) {
+      sum += player._cachedHoleTotals?.[h - 1] || 0;
+    }
+  }
+} else {
+  for (let h = 1; h <= currentHole; h++) {
+    if (finishedHoles.has(h)) {
+      sum += player._cachedHoleTotals?.[h - 1] || 0;
+    }
   }
 }
 return sum;
@@ -1348,10 +1359,7 @@ const carryIn = getCarryInForHole(currentHole);
   updateNavButtons();
 
   if (finishedHoles.size === HOLES && inRound) {
-  // Hide Next button completely (already disabled, but make it invisible)
-  document.getElementById('nextHole')?.classList.add('hidden');
-
-  // Show a friendly banner above the table
+  // All 18 holes done — show banner, but keep Next button visible for wrap-around
   let banner = document.getElementById('roundCompleteBanner');
   if (!banner) {
 banner = document.createElement('div');
@@ -1363,11 +1371,19 @@ banner.style.cssText = `
 `;
 banner.innerHTML = `
   🎉 All 18 holes complete! 🎉<br>
-  Tap <strong>BBB COMP</strong> to finalize and email Walt!
+  Next: wrap to Hole 1 with carry-in intact<br>
+  <strong>BBB COMP</strong> to finalize and email Walt!
 `;
 document.getElementById('game').insertBefore(banner, document.getElementById('scoreTable'));
 document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1.1)');
   }
+  // Keep Next button visible so user can wrap to hole 1
+  document.getElementById('nextHole')?.classList.remove('hidden');
+} else {
+  // Remove banner when not at round complete
+  const oldBanner = document.getElementById('roundCompleteBanner');
+  oldBanner?.remove();
+  document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
 }
 
    saveRoundEverywhere();
@@ -1897,6 +1913,11 @@ next.addEventListener('click', () => {
     updateHole();
     updateCourseInfoBar();
     console.log(`NEXT → HOLE ${currentHole}`);
+  } else if (finishedHoles.size === HOLES) {
+    currentHole = 1;
+    updateHole();
+    updateCourseInfoBar();
+    console.log(`NEXT → WRAP TO HOLE ${currentHole}`);
   }
 });
   }
