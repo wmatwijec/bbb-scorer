@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BBB Season Stats</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
+  
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -94,7 +94,6 @@
             border-radius: 8px; padding: 16px; position: relative;
         }
         .chart-container canvas { max-height: 260px; }
-        .chart-desc { font-size: 11px; color: #64748b; margin-top: 2px; font-style: italic; }
 
         /* ── Status ── */
         .status { color: #64748b; font-size: 13px; margin: 20px 0; text-align: center; font-style: italic; }
@@ -382,9 +381,7 @@
                     // Streak season totals
                     longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
                     longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
-                    // Streak distributions
-                    scoringStreaks: [], zeroStreaks: [], foStreaks: [], closestStreaks: [],
-                    puttStreaks: [], cleanStreaks: [], greenieStreaks: [], threePtStreaks: []
+   
                 };
                 playerRoundData[name] = [];
             });
@@ -411,16 +408,7 @@
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
 
-                    if (data.streaks) {
-                        st.scoringStreaks.push(data.streaks.longestScoring);
-                        st.zeroStreaks.push(data.streaks.longestZero);
-                        st.foStreaks.push(data.streaks.longestFO);
-                        st.closestStreaks.push(data.streaks.longestClosest);
-                        st.puttStreaks.push(data.streaks.longestPutt);
-                        st.cleanStreaks.push(data.streaks.longestClean);
-                        st.greenieStreaks.push(data.streaks.maxGreenies);
-                        st.threePtStreaks.push(data.streaks.max3PointHoles);
-                    }
+                    // per-round streak max values no longer used
                    playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
@@ -883,149 +871,8 @@
         });
 
         html += `</tbody></table></div>`;
-        html += `<h3>Distribution Charts</h3>`;
-        html += `<div class="chart-grid">`;
-
-        // Chart IDs
-        const charts = [
-            { id: 'chart-total', label: 'Total Points', data: playerRoundData[name] || [], key: 'total', title: 'Points', desc: 'Total score per round (includes carry-in bonuses)' },
-            { id: 'chart-fo', label: 'FO Points', data: playerRoundData[name] || [], key: 'fo', title: 'FO Pts', desc: 'First-on points on par-4/5 holes per round' },
-            { id: 'chart-gr', label: 'Greenie Points', data: playerRoundData[name] || [], key: 'gr', title: 'GR Pts', desc: 'First-on points on par-3 (greenies) per round' },
-            { id: 'chart-cl', label: 'Closest Points', data: playerRoundData[name] || [], key: 'cl', title: 'Closest Pts', desc: 'Closest-to-pin points per round' },
-            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts', desc: 'Putting points per round' }
-        ];
-
-        charts.forEach((c, idx) => {
-            html += `<div class="chart-container"><h3>${c.label}<div class="chart-desc">${c.desc}</div></h3><div style="height:240px;"><canvas id="${c.id}"></canvas></div></div>`;
-        });
-
-        // Streak distribution charts
-        const streakCharts = [
-            { id: 'chart-scoring', label: 'Score Streaks', data: st.scoringStreaks || [], title: 'Holes', desc: 'Longest scoring streak achieved in each round' },
-            { id: 'chart-zero', label: 'Drought Streaks', data: st.zeroStreaks || [], title: 'Holes', desc: 'Longest zero-point drought in each round' },
-            { id: 'chart-fo-streak', label: 'FO Streaks', data: st.foStreaks || [], title: 'Holes', desc: 'Longest consecutive FO streak, per round' },
-            { id: 'chart-cl-streak', label: 'Closest Streaks', data: st.closestStreaks || [], title: 'Holes', desc: 'Longest consecutive closest streak, per round' },
-            { id: 'chart-p-streak', label: 'Putt Streaks', data: st.puttStreaks || [], title: 'Holes', desc: 'Longest consecutive putt streak, per round' },
-            { id: 'chart-greenie', label: 'Greenie Runs', data: st.greenieStreaks || [], title: 'Greenies', desc: 'Most consecutive par-3 FO wins, per round' },
-        ];
-
-        streakCharts.forEach(c => {
-            html += `<div class="chart-container"><h3>${c.label}<div class="chart-desc">${c.desc}</div></h3><div style="height:200px;"><canvas id="${c.id}"></canvas></div></div>`;
-        });
-
-        html += `</div>`;
 
         document.getElementById('player-detail').innerHTML = html;
-
-        // Render charts after DOM update
-        requestAnimationFrame(() => {
-            charts.forEach(c => {
-                const ctx = document.getElementById(c.id);
-                if (!ctx) return;
-
-                const colorIdx = allPlayers.indexOf(name) % PLAYER_COLORS.length;
-                const color = PLAYER_COLORS[colorIdx];
-
-                new Chart(ctx, {
-                    type: 'scatter',
-                    data: {
-                        datasets: [{
-                            label: name,
-                            data: c.data.map(d => ({ x: d.round, y: d[c.key] })),
-                            backgroundColor: color + 'cc',
-                            borderColor: color,
-                            pointRadius: 5,
-                            pointHoverRadius: 8,
-                            pointBorderWidth: 1,
-                            pointBorderColor: '#0f111a'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                title: { display: true, text: 'Round', color: '#94a3b8' },
-                                ticks: { color: '#64748b', stepSize: 1 },
-                                grid: { color: 'rgba(45,49,84,0.5)' }
-                            },
-                            y: {
-                                title: { display: true, text: c.title, color: '#94a3b8' },
-                                ticks: { color: '#64748b' },
-                                grid: { color: 'rgba(45,49,84,0.5)' },
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1a1d2e',
-                                borderColor: '#2d3154',
-                                borderWidth: 1,
-                                titleColor: '#e2e8f0',
-                                bodyColor: '#94a3b8',
-                                padding: 10,
-                                cornerRadius: 6
-                            }
-                        }
-                    }
-                });
-            });
-
-            // Render streak distribution charts
-            streakCharts.forEach(c => {
-                const ctx = document.getElementById(c.id);
-                if (!ctx) return;
-
-                const colorIdx = allPlayers.indexOf(name) % PLAYER_COLORS.length;
-                const color = PLAYER_COLORS[colorIdx];
-
-                new Chart(ctx, {
-                    type: 'scatter',
-                    data: {
-                        datasets: [{
-                            label: name,
-                            data: c.data.map((v, i) => ({ x: i + 1, y: v })),
-                            backgroundColor: color + 'cc',
-                            borderColor: color,
-                            pointRadius: 5,
-                            pointHoverRadius: 8,
-                            pointBorderWidth: 1,
-                            pointBorderColor: '#0f111a'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                title: { display: true, text: 'Round', color: '#94a3b8' },
-                                ticks: { color: '#64748b', stepSize: 1 },
-                                grid: { color: 'rgba(45,49,84,0.5)' }
-                            },
-                            y: {
-                                title: { display: true, text: c.title, color: '#94a3b8' },
-                                ticks: { color: '#64748b' },
-                                grid: { color: 'rgba(45,49,84,0.5)' },
-                                beginAtZero: true
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: '#1a1d2e',
-                                borderColor: '#2d3154',
-                                borderWidth: 1,
-                                titleColor: '#e2e8f0',
-                                bodyColor: '#94a3b8',
-                                padding: 10,
-                                cornerRadius: 6
-                            }
-                        }
-                    }
-                });
-            });
-        });
     }
 
     // ── Init ──
