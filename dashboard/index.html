@@ -351,11 +351,12 @@
 
             allRounds = validRounds.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            // Collect unique players (non-guest)
+           // Collect unique players (non-guest, non-excluded)
+            const excludedPlayers = new Set(['Doug', 'Ryan']);
             const playerSet = new Set();
             allRounds.forEach(r => {
                 (r.players || []).forEach(p => {
-                    if (p?.name && !p.name.toLowerCase().includes('guest')) {
+                    if (p?.name && !p.name.toLowerCase().includes('guest') && !excludedPlayers.has(p.name)) {
                         playerSet.add(p.name);
                     }
                 });
@@ -411,14 +412,6 @@
                     st.pPerRound.push(data.pPts);
 
                     if (data.streaks) {
-                        st.longestScoring = Math.max(st.longestScoring, data.streaks.longestScoring);
-                        st.longestZero = Math.max(st.longestZero, data.streaks.longestZero);
-                        st.longestFO = Math.max(st.longestFO, data.streaks.longestFO);
-                        st.longestClosest = Math.max(st.longestClosest, data.streaks.longestClosest);
-                        st.longestPutt = Math.max(st.longestPutt, data.streaks.longestPutt);
-                        st.longestClean = Math.max(st.longestClean, data.streaks.longestClean);
-                        st.maxGreenies = Math.max(st.maxGreenies, data.streaks.maxGreenies);
-                        st.max3PointHoles = Math.max(st.max3PointHoles, data.streaks.max3PointHoles);
                         st.scoringStreaks.push(data.streaks.longestScoring);
                         st.zeroStreaks.push(data.streaks.longestZero);
                         st.foStreaks.push(data.streaks.longestFO);
@@ -439,6 +432,111 @@
                         p: data.pPts
                     });
                 }
+            }
+
+            // Compute season-long streaks by concatenating all holes across rounds
+            for (const name of allPlayers) {
+                const st = seasonStats[name];
+                if (st.rounds === 0) continue;
+
+                // Collect all hole scores across all rounds for this player
+                const fullSequence = [];
+                const roundIdx = playerRoundData[name]?.map(r => r.round) || [];
+                for (const rIdx of roundIdx) {
+                    const round = allRounds[rIdx - 1];
+                    if (!round) continue;
+                    const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 ? round.pars : DEFAULT_PARS;
+                    const holeSequence = buildHoleSequence(round);
+                    const holeScores = {};
+                    for (let idx = 0; idx < 18; idx++) holeScores[idx] = {};
+                    Object.entries(round.scores || {}).forEach(([n, playerHoles]) => {
+                        if (!Array.isArray(playerHoles) || playerHoles.length !== 18) return;
+                        playerHoles.forEach((s, i) => { holeScores[i][n] = s || {}; });
+                    });
+
+                    // Get carry-in for each hole in this round
+                    const carry = { firstOn: 0, greenie: 0, closest: 0, putt: 0 };
+                    for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
+                        const holeNumber = holeSequence[seqIdx];
+                        const hidx = holeNumber - 1;
+                        const scores = holeScores[hidx];
+                        const par = pars[hidx] || 4;
+                        const isPar3 = par === 3;
+                        if (isPar3) {
+                            if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
+                            else carry.greenie++;
+                        } else {
+                            if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
+                            else carry.firstOn++;
+                        }
+                        if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
+                        else carry.closest++;
+                        if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
+                        else carry.putt++;
+                    }
+
+                    // Now build hole-by-hole data for this player, reusing carry-in logic
+                    const currentCarry = { firstOn: 0, greenie: 0, closest: 0, putt: 0 };
+                    for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
+                        const holeNumber = holeSequence[seqIdx];
+                        const hidx = holeNumber - 1;
+                        const s = holeScores[hidx]?.[name] || {};
+                        const par = pars[hidx] || 4;
+                        const isPar3 = par === 3;
+
+                        let scored = false;
+                        let fo = false;
+                        let gr = false;
+                        let cl = false;
+                        let p = false;
+
+                        if (s.firstOn) {
+                            const c = isPar3 ? currentCarry.greenie : currentCarry.firstOn;
+                            scored = true;
+                            if (isPar3) { gr = true; } else { fo = true; }
+                        }
+                        if (s.closest) { scored = true; cl = true; }
+                        if (s.putt) { scored = true; p = true; }
+
+                        const threePt = s.firstOn && s.closest && s.putt ? 1 : 0;
+
+                        fullSequence.push({ scored, fo, gr, cl, p, threePt });
+
+                        // Update carry-in for next hole
+                        if (s.firstOn) {
+                            if (isPar3) currentCarry.greenie = 0;
+                            else currentCarry.firstOn = 0;
+                        } else {
+                            if (isPar3) currentCarry.greenie++;
+                            else currentCarry.firstOn++;
+                        }
+                        if (s.closest) currentCarry.closest = 0;
+                        else currentCarry.closest++;
+                        if (s.putt) currentCarry.putt = 0;
+                        else currentCarry.putt++;
+                    }
+                }
+
+                // Compute streaks over the full season sequence
+                let ls = 0, cs = 0, lz = 0, cz = 0, lf = 0, cf = 0;
+                let lc = 0, cc = 0, lp = 0, cp = 0, lg = 0, cg = 0, l3 = 0, c3 = 0;
+                for (const h of fullSequence) {
+                    if (h.scored) { cs++; ls = Math.max(ls, cs); } else { cs = 0; }
+                    if (!h.scored) { cz++; lz = Math.max(lz, cz); } else { cz = 0; }
+                    if (h.fo) { cf++; lf = Math.max(lf, cf); } else { cf = 0; }
+                    if (h.cl) { cc++; lc = Math.max(lc, cc); } else { cc = 0; }
+                    if (h.p) { cp++; lp = Math.max(lp, cp); } else { cp = 0; }
+                    if (h.gr) { cg++; lg = Math.max(lg, cg); } else { cg = 0; }
+                    if (h.threePt) { c3++; l3 = Math.max(l3, c3); } else { c3 = 0; }
+                }
+
+                st.longestScoring = ls;
+                st.longestZero = lz;
+                st.longestFO = lf;
+                st.longestClosest = lc;
+                st.longestPutt = lp;
+                st.maxGreenies = lg;
+                st.max3PointHoles = l3;
             }
 
             statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
@@ -556,44 +654,27 @@
         html += `</tbody></table></div>`;
 
         // Top 5 Streak Leaders
-        const leaders = getStreakLeaders();
-        html += `<h3 style="margin:20px 0 10px;">🔥 Top 5 Streak Leaders</h3>`;
-        html += `<div style="overflow-x:auto;"><table>`;
-        html += `<thead><tr><th>Player</th><th>Score Streak</th><th>Drought</th><th>FO Streak</th><th>Closest Streak</th><th>Putt Streak</th><th>Best Greenie</th></tr></thead><tbody>`;
+        const streakStats = [
+            { key: 'scoreStreak', label: 'Score Streak' },
+            { key: 'drought', label: 'Drought' },
+            { key: 'foStreak', label: 'FO Streak' },
+            { key: 'closestStreak', label: 'Closest Streak' },
+            { key: 'puttStreak', label: 'Putt Streak' },
+            { key: 'greenieRun', label: 'Best Greenie Run' },
+        ];
 
-        const stats = ['scoreStreak','drought','foStreak','closestStreak','puttStreak','greenieRun'];
-        const statLabels = ['Score','Drought','FO','Closest','Putt','Greenie'];
-        const statDescs = ['holes','holes','holes','holes','holes','greens'];
-
-        // For each stat, find max and get top 5
-        const allData = [];
-        stats.forEach((s, i) => {
-            const sorted = [...leaders].sort((a, b) => b[s] - a[s]);
-            const maxVal = sorted[0]?.[s] || 0;
-            sorted.slice(0, 5).forEach((entry, j) => {
-                allData.push({ ...entry, stat: s, rank: j + 1, statIdx: i, val: entry[s], maxVal });
+        for (const ss of streakStats) {
+            const sorted = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
+            if (sorted.length === 0) continue;
+            html += `<h3 style="margin:20px 0 10px;">${ss.label} — Top 5</h3>`;
+            html += `<div class="card" style="overflow-x:auto; margin-bottom:10px;"><table>`;
+            html += `<thead><tr><th>Rank</th><th>Player</th><th>Value</th></tr></thead><tbody>`;
+            sorted.forEach((entry, i) => {
+                html += `<tr><td>${i + 1}</td><td>${entry.name}</td><td>${entry[ss.key]}</td></tr>`;
             });
-        });
+            html += `</tbody></table></div>`;
+        }
 
-        // Group by player — show top stats per player
-        // Instead, render a table with one row per player showing all streaks
-        const topPlayers = [...leaders].sort((a, b) => Math.max(...stats.map(s => a[s])) - Math.max(...stats.map(s => b[s]))).slice(0, 5);
-        const maxByStat = {};
-        stats.forEach((s, i) => {
-            maxByStat[s] = Math.max(...leaders.map(p => p[s]));
-        });
-
-        topPlayers.forEach((entry, idx) => {
-            html += `<tr${idx === 0 ? ' style="color:#fbbf24;"' : ''}>`;
-            html += `<td>${idx === 0 ? '★ ' : ''}${entry.name}</td>`;
-            stats.forEach((s, i) => {
-                const isMax = entry[s] === maxByStat[s] && entry[s] > 0;
-                html += `<td${isMax ? ' style="color:#60a5fa;font-weight:bold;"' : ''}>${entry[s]}<sup style="font-size:9px;color:#64748b;">/${statDescs[i]}</sup></td>`;
-            });
-            html += `</tr>`;
-        });
-
-        html += `</tbody></table></div>`;
         container.innerHTML = html;
     }
 
