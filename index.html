@@ -766,7 +766,9 @@ function resumeRound(round) {
   currentHole = round.currentHole || 1;
   currentCourse = round.currentCourse;
   finishedHoles = new Set(round.finishedHoles || []);
-  holeSequence = round.holeSequence || [];
+  holeSequence = round.holeSequence && round.holeSequence.length > 0
+    ? round.holeSequence
+    : [];
   inRound = true;
   hideAll();
   els.game.classList.remove('hidden');
