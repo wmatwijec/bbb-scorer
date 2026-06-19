@@ -1202,6 +1202,10 @@ if (player) player.scores = round.scores[name];
   hideAll();
   els.game.classList.remove('hidden');
   updateHole();
+  updateNavButtons();
+  setupGameButtons();
+  attachFinishHoleListener();
+  attachNavListeners();
   console.log('RESUMED SAVED ROUND');
 }
 
