@@ -1,0 +1,45 @@
+BBB Golf Scorer – Development Summary (as of April 2026)Current Status
+The app is functional for real golf rounds on POP!_OS with the following working flow:Backend data loads from pwa-players-backend on Render.com (players + courses)
+Course dropdown populates correctly
+Player selection screen with checkboxes works
+Start Round button works (after selecting 2+ players)
+Starting hole selector (Hole 1 or Hole 10) works
+Scoring screen appears with checkboxes (FO, CL, P)
+Table updates live when boxes are checked
+Finish Hole + manual Next button works
+Carry summaries (red text) appear below the table
+Round summary at bottom works
+Basic persistence (local + cloud) is partially implemented
+
+Key ArchitectureSingle-file PWA (index.html) with one large inline <script>
+Frontend hosted on Cloudflare Pages
+Backend on Render.com (pwa-players-backend)
+Data format: CSV from backend, parsed in-browser
+Carry logic uses holeSequence for non-linear play (especially starting on hole 10)
+
+Important Notes for Future ChangesAlways test the full flow: Course → Players → Start Round (choose 1 or 10) → Scoring → Finish Hole → Next
+The "Load Course →" button and "Start Round" button are sensitive to timing — listeners must be attached after DOM elements exist.
+renderCourseSelect, renderPlayerSelect, updateHole, renderTable, toggleScore, and finishCurrentHole are the core functions.
+hideAll(), updateNavButtons(), and attachNavListeners() control screen transitions and top bar.
+Carry into hole 18 and non-linear hole order (10-18 then 1-9) are critical — test these scenarios thoroughly.
+Old commented code and duplicate DOMContentLoaded listeners caused most previous breakage.
+
+Current Known Gaps / Nice-to-HavesAutomatic advance after "Finish Hole" (currently manual Next click)
+Full resume round logic (the prompt appears but can still cause errors)
+Bottom bar buttons (BBB Comp, EXIT) need stable listeners
+Final cleanup of old logs (app-v23.js INLINED) and commented code
+
+Backup StrategyKeep index.html.backup-2026-04-20-working.html as the known-good baseline.
+Before major changes, copy the current file and commit it.
+Test after every small change with hard refresh + Cloudflare cache clear.
+
+Future Debugging TipsClear Cloudflare build cache + hard refresh (Ctrl + Shift + R) after every push.
+Watch for "els.courseSelect not ready" or missing listener messages.
+Use direct document.getElementById() for critical elements when timing issues occur.
+
+
+https://x.com/i/grok/share/b5c3605cc4134e97939e86cc3091e1bd
+
+
+
+

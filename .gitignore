@@ -6,6 +6,7 @@ app - Copy*.js
 Thumbs.db
 *.log
 Readme.MD
+AGENTS.MD
 BBB_App_Logic_Flow.png
 index_26_02_23_old.html
 index_26_02_24.html
@@ -13,6 +14,5 @@ index_26_02_24B.html
 rounds-live.json
 rounds_fixed_26_02_25.json
 rounds.json
+session-ses_25eb.md
 Summarizer_26_02_26.html
-
-

@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BBB Golf</title>
+  <link rel="manifest" href="manifest.json?v=20251123-YOU-WIN" />
+  <link rel="icon" href="icon.png" /> 
+  <meta id="cacheBuster" name="version" content="20251123-Absolute-Victory">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <style>
+    /* === GLOBAL: NO TOP GAP + SAFE PADDING === */
+ /* Enable full scroll + safe area    Extra space added here */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  position: static;
+  overscroll-behavior-y: contain;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+
+    :root {
+      --bg: #f4f4f4;
+      --card: #fff;
+      --text: #222;
+      --green: #0f0;
+      --btn-bg: #0f0;
+      --btn-text: #000;
+      --table-header: #555;
+      --table-bg: #eee;
+    }
+    [data-theme="dark"] {
+      --bg: #111;
+      --card: #222;
+      --text: #eee;
+      --green: #0f0;
+      --btn-bg: #0f0;
+      --btn-text: #000;
+      --table-header: #444;
+      --table-bg: #333;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+  -webkit-overflow-scrolling: touch;
+}
+
+    .card {
+  background: var(--card);
+  padding: 1rem;
+  border-radius: 12px;
+  margin: 0 auto 1rem;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* FIX EMPTY SPACE ON MOBILE — PLAYER SETUP & GAME SCREEN */
+#playerSetup,
+#game {
+  padding-top: 0.3rem !important;
+  min-height: auto !important;
+}
+
+#playerSetup > div,
+#game > div:first-child {
+  margin-top: 0.2rem !important;
+}
+
+
+
+
+    #courseSetup, #playerSetup, #game, #summary {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 { 
+      color: var(--green); 
+      text-align: center; 
+      margin: 0.5rem 0; 
+      font-size: 1.4rem; 
+    }
+
+    button {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 0.25rem;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    
+    .hidden {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .center-block { 
+      max-width: 800px; 
+      margin: 0 auto; 
+      width: 100%; 
+    }
+
+    #holeDisplay {
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      margin: 0.5rem 0;
+    }
+
+    #scoreTable { 
+      width: 100%; 
+      max-width: 800px; 
+      margin: 0.5rem auto; 
+      border-collapse: collapse; 
+    }
+    #scoreTable th, #scoreTable td { 
+      padding: 0.75rem; 
+      text-align: center; 
+      border-bottom: 1px solid #ddd; 
+    }
+    #scoreTable th { 
+      background: var(--table-header); 
+      color: #fff; 
+      font-weight: 600; 
+    }
+    #scoreTable th:first-child, #scoreTable td:first-child { text-align: left; }
+    tbody tr:nth-child(even) { background: var(--table-bg); }
+
+    /* === CHECKBOXES: FINAL VERSION (NO DUPLICATES) === */
+    input[type="checkbox"] {
+      width: 28px;
+      height: 28px;
+      transform: scale(1.6);
+      margin: 0 6px;
+      cursor: pointer;
+    }
+
+  
+
+ /* GROK: Final game screen spacing — tight top, comfy bottom */
+#game {
+  padding: 0.4rem 0 1.5rem 0 !important;  /* Top reduced, bottom preserved for control bar */
+}
+
+
+
+    /* === COURSE SETUP (ONLY ONCE) === */
+    #courseSetup {
+      padding: 1rem !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    #courseSetup > div {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      align-items: center !important;
+    }
+    #courseSelect, #addCourse, #nextToPlayers {
+      width: 100% !important;
+      max-width: none !important;
+      font-size: 1rem !important;
+      padding: 0.75rem !important;
+    }
+    #nextToPlayers:disabled {
+      opacity: 0.4 !important;
+      background: #ccc !important;
+      cursor: not-allowed !important;
+    }
+
+    /* PLAYER SETUP & START ROUND */
+    #playerSetup {
+      padding: 1rem 1rem 160px 1rem !important;
+      overflow: visible !important;
+    }
+
+    #playerSetup > div[style*="margin-top: 1rem"] {
+      margin-top: 1.5rem !important;
+      padding: 0.5rem !important;
+      background: var(--card) !important;
+      border-radius: 8px !important;
+      display: block !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    #startGame {
+      width: 100% !important;
+      max-width: none !important;
+      padding: 1.2rem !important;
+      font-size: 1.2rem !important;
+      min-height: 60px !important;
+      background: var(--btn-bg) !important;
+      color: var(--btn-text) !important;
+      border: none !important;
+      border-radius: 12px !important;
+      font-weight: bold !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+    }
+    #startGame:disabled {
+      opacity: 0.6 !important;
+      background: #ccc !important;
+      color: #999 !important;
+      cursor: not-allowed !important;
+    }
+
+    .holeSummary,
+#roundSummary {
+  margin: 0.4rem auto !important;
+  padding: 0.4rem !important;
+  line-height: 1.3 !important;
+  font-size: 0.88rem !important;   /* ← was 0.82rem — now matches round summary */
+  font-weight: 600 !important;
+  text-align: center;
+  background: #fff !important;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #d4edda;
+  max-width: 800px;
+}
+
+.holeSummary {
+  color: #dc3545 !important;
+}
+
+#roundSummary {
+  color: #dc3545 !important;
+}
+
+    #roundSummary small { 
+      color: #a00 !important;
+      font-weight: normal;
+      font-size: 0.76rem !important;
+    }
+
+    /* ONE-LINE TIGHT LAYOUT */
+    .holeSummary > div,
+    .summary-awarded,
+    .summary-carry-in,
+    .summary-no-carry {
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 0.78rem !important;
+      line-height: 1.2 !important;
+    }
+
+    .audit-good { color: #0f0; } 
+    .audit-bad { color: #f00; }
+    .audit-line { margin-top: 0.5rem; font-size: 0.85rem; line-height: 1.5; }
+    .history-item { background: var(--card); padding: 0.75rem; margin: 0.5rem 0; border-radius: 8px; cursor: pointer; }
+    .player-tag { display: inline-block; background: #0f0; color: #000; padding: 0.25rem 0.5rem; border-radius: 6px; margin: 0.25rem; font-size: 0.85rem; }
+
+   
+
+#bbbHelpBtn {
+  transition: color 0.2s;
+}
+#bbbHelpBtn:hover, #bbbHelpBtn:focus {
+  color: #090;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ABSOLUTE FINAL KILL ALL TOP SPACE — PLAYER SETUP & GAME */
+#playerSetup,
+#game {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+#playerSetup > *,
+#game > * {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Kill specific inline-style offenders */
+#playerSetup > div[style*="margin-top"],
+#game > div[style*="margin-top"],
+#game > div[style*="display:flex"] {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Tighten the hole header and table */
+#holeDisplay {
+  margin: 0.4rem 0 0.2rem 0 !important;
+  padding: 0 !important;
+}
+
+#scoreTable {
+  margin-top: 0.3rem !important;
+}
+
+
+
+/* FINAL CONTROL BAR — SMALLER, SUBTLE, CENTERED */
+.control-bar {
+  padding: 0.6rem 0.4rem !important;
+  gap: 0.6rem !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-start !important;   /* ← changed from center */
+  align-items: center !important;
+  background: var(--card) !important;
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.control-bar button {
+  min-width: 64px !important;      /* smaller than before */
+  height: 38px !important;         /* shorter */
+  padding: 0 0.6rem !important;
+  font-size: 0.8rem !important;    /* slightly smaller text */
+  font-weight: bold !important;
+  border-radius: 10px !important;
+  background: #00cc00 !important; /* slightly darker/muted green so it doesn't scream */
+  color: #000 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* PLAYER SELECT — TWO-COLUMN GRID (perfect on every phone) */
+#playerSelect {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.8rem 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+#playerSelect label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Bigger checkboxes on phone */
+@media (max-width: 768px) {
+  #playerSelect {
+    grid-template-columns: 1fr 1fr;   /* forces exactly 2 columns on phone */
+    gap: 0.9rem 1rem;
+    padding: 0 1.5rem;
+  }
+  #playerSelect input[type="checkbox"] {
+    width: 24px !important;
+    height: 24px !important;
+    transform: scale(1.3) !important;
+  }
+}
+
+
+/* FINAL — SCORING TABLE ALWAYS AT THE TOP, NO EMPTY SPACE */
+#game {
+  padding-top: 0.2rem !important;
+  padding-bottom: 1rem !important;
+}
+
+/* Kill every possible top margin/padding above the table */
+#scoreTable */
+#game > div:first-child,
+#holeDisplay,
+#scoreTable {
+  margin-top: 0 !important;
+  margin-bottom: 0.4rem !important;
+  padding-top: 0 !important;
+}
+
+/* Make sure the table itself starts immediately */
+#scoreTable {
+  margin-top: 0.6rem !important;
+}
+
+/* Mobile insurance */
+@media (max-width: 768px) {
+  #game {
+    padding: 0.2rem 0.6rem 1rem !important;
+  }
+  #holeDisplay {
+    margin: 0.2rem 0 0.4rem 0 !important;
+  }
+}
+
+
+/* CHECKBOXES — 50% SMALLER ON PHONE ONLY */
+@media (max-width: 768px) {
+  input[type="checkbox"] {
+    width: 18px !important;     /* was ~28px → now 18px */
+    height: 18px !important;
+    transform: scale(1) !important;   /* removes the 1.6 scale */
+    margin: 0 6px !important;
+  }
+}
+
+/* Optional: make them a touch bigger on PC for mouse users */
+@media (min-width: 769px) {
+  input[type="checkbox"] {
+    width: 22px !important;
+    height: 22px !important;
+    transform: scale(1.2) !important;
+  }
+}
+
+/* FINAL — SCORING TABLE FITS EVERY PHONE, TOT ALWAYS VISIBLE */
+#scoreTable {
+  table-layout: fixed;            /* forces columns to respect widths */
+  width: 100% !important;
+  margin-top: 0.4rem !important;
+}
+
+#scoreTable th:nth-child(1),     /* Player name */
+#scoreTable td:nth-child(1) {
+  width: 28% !important;         /* gives names plenty of room */
+  text-align: left !important;
+  padding-left: 0.6rem !important;
+}
+
+#scoreTable th:nth-child(2),     /* FO/GR */
+#scoreTable td:nth-child(2),
+#scoreTable th:nth-child(3),     /* CL */
+#scoreTable td:nth-child(3),
+#scoreTable th:nth-child(4),     /* P */
+#scoreTable td:nth-child(4) {
+  width: 12% !important;         /* tiny columns for the 3 checkboxes */
+}
+
+#scoreTable th:nth-child(5),     /* H (hole points) */
+#scoreTable td:nth-child(5) {
+  width: 14% !important;
+}
+
+#scoreTable th:nth-child(6),     /* RUN */
+#scoreTable td:nth-child(6),
+#scoreTable th:nth-child(7),     /* TOT */
+#scoreTable td:nth-child(7) {
+  width: 17% !important;         /* gives RUN and TOT breathing room */
+  font-weight: bold !important;
+}
+
+/* Mobile — even tighter if needed */
+@media (max-width: 480px) {
+  #scoreTable th, #scoreTable td {
+    padding: 0.4rem 0.2rem !important;
+    font-size: 0.9rem !important;
+  }
+  #scoreTable th:nth-child(1), td:nth-child(1) {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* TOP NAV BUTTONS — BIGGER AND BOLDER (Prev / Next / Edit / Finish) */
+#game > div:first-child > div > button {
+  height: 46px !important;
+  min-width: 80px !important;
+  padding: 0 1rem !important;
+  font-size: 1.05rem !important;
+  font-weight: bold !important;
+  border-radius: 12px !important;
+}
+
+/* CONTROL-BAR BUTTONS — ~30% SMALLER AND MORE SUBTLE */
+.control-bar {
+  padding: 0.4rem 0 !important;
+  gap: 0.5rem !important;
+  justify-content: center !important;
+}
+
+.control-bar button {
+  min-width: 62px !important;     /* was ~90px → now ~30% smaller */
+  height: 36px !important;        /* was 48px → now smaller */
+  padding: 0 0.6rem !important;
+  font-size: 0.78rem !important;  /* was 0.9rem */
+  font-weight: bold !important;
+  border-radius: 10px !important;
+  background: #00bb00 !important; /* slightly darker so they recede */
+}
+
+/* HELP button stays on the right */
+#bbbHelpBtn {
+  margin-left: auto !important;
+}
+
+
+
+
+/* FINAL — HOLE & ROUND SUMMARIES: ALL RED, CLEAN, MATH VISIBLE */
+.holeSummary,
+#roundSummary {
+  padding: 0.5rem 0.8rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  color: #dc3545 !important;           /* everything red */
+  background: #fff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border: 1px solid #f8d7da;
+}
+
+/* Only the numbers are bold */
+.holeSummary strong,
+#roundSummary strong {
+  font-weight: bold !important;
+}
+
+/* Expected line — smaller and shows the math */
+#roundSummary small {
+  display: block;
+  font-size: 0.78rem !important;
+  margin-top: 0.3rem !important;
+  color: #a00 !important;
+}
+
+
+/* HOLE COLUMN NUMBERS — SAME STYLE AS TOT COLUMN */
+#scoreTable td:nth-child(5) strong {   /* H column = 5th column */
+  color: inherit !important;           /* same as TOT (black in light mode, white in dark) */
+  font-weight: 600 !important;         /* same boldness as TOT */
+  font-size: 1.1em !important;
+}
+
+
+#courseSetup.hidden { height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
+
+</style>
+</head>
+
+<body>
+
+<!-- 1. LAUNCH SCREEN (only shows on root page) -->
+  <div id="launchWrapper" style="text-align:center; padding:40px 20px; background:#f9f9f9; min-height:100vh; display:flex; flex-direction:column; justify-content:center;">
+    <h1 style="font-size:28px; margin-bottom:10px; color:#0f0;">BBB Golf Scorer</h1>
+    <p style="margin-bottom:30px; color:#555; font-size:1.1rem;">Tap below to open the app<br><small>(works perfectly on iPhone & Android)</small></p>
+    <a href="/bbb-scorer" 
+       onclick="localStorage.setItem('appLaunched','true'); window.open('/bbb-scorer/', '_blank'); return false;"
+       style="display:inline-block; padding:18px 40px; background:#2e7d32; color:white; font-size:20px; font-weight:bold; text-decoration:none; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+       Launch Golf Scorer
+    </a>
+    <p style="margin-top:30px; font-size:14px; color:#666;">
+      Pro tip: Bookmark <em>this</em> page and add it to your home screen for one-tap access!
+    </p>
+  </div>
+
+<!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER -->
+<script>
+  // Hide launch screen
+  if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
+    document.getElementById('launchWrapper')?.remove();
+  }
+  else if (localStorage.getItem('appLaunched')) {
+    window.location.href = '/bbb-scorer/';
+  }
+
+  // Simple spinner killer - no early renderCourseSelect call
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      const loader = document.getElementById('courseLoader');
+      const picker = document.getElementById('coursePicker');
+
+      if (loader) loader.remove();
+      if (picker) {
+        picker.classList.remove('hidden');
+        picker.style.display = 'block';
+      }
+
+      console.log('Spinner killer finished - waiting for backend data');
+    }, 800);
+  });
+</script>  
+
+<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+<!-- YOUR ENTIRE APP CODE INLINED BELOW -->
+<script>
+    console.log('=== MAIN INLINE SCRIPT STARTED SUCCESSFULLY v12 ===');
+    console.log('Inline script parsed successfully — 2026-04-19');
+
+    const BACKEND = 'https://pwa-players-backend.onrender.com';
+
+    // ========================
+    // 1. VARIABLES
+    // ========================
+    let roster = [];
+    let players = [];
+    let currentHole = 1;
+    const HOLES = 18;
+    const MAX_PLAYERS = 6;
+    let currentCourse = null;
+    let courses = [];
+    let roundHistory = [];
+    let finishedHoles = new Set();
+    let inRound = false;
+    let els = {};
+    let waltShadowPhone = null;
+    let holeSequence = [];
+    let cloudRounds = [];
+
+    // ========================
+    // 2. DATA LOADING & PARSING
+    // ========================
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"' && line[i+1] === '"') { current += '"'; i++; }
+          else if (char === '"') inQuotes = !inQuotes;
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else current += char;
+        }
+        values.push(current.trim());
+        return values;
+      });
+      return rows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
+      });
+    }
+
+    async function loadDataFromBackend() {
+      console.log('loadDataFromBackend started');
+
+      const loader = document.getElementById('courseLoader');
+      const error = document.getElementById('courseError');
+      const picker = document.getElementById('coursePicker');
+
+      try {
+        const [playersRes, coursesRes] = await Promise.all([
+          fetch(`${BACKEND}/players`),
+          fetch(`${BACKEND}/courses`)
+        ]);
+
+        if (!playersRes.ok || !coursesRes.ok) throw new Error('Failed to fetch data');
+
+        const playersCSV = await playersRes.text();
+        const coursesCSV = await coursesRes.text();
+
+        roster = parseCSV(playersCSV).map(p => ({
+          name: p.Name?.trim(),
+          phone: p.Phone?.trim(),
+          email: p.Email?.trim()
+        })).filter(p => p.name);
+
+        sortPlayersAlphabetically();
+
+        courses = parseCSV(coursesCSV).map(c => {
+          const name = c.Name?.trim();
+          const pars = [];
+          for (let i = 1; i <= 18; i++) {
+            const par = parseInt(c[`Par${i}`]);
+            if (!isNaN(par)) pars.push(par);
+          }
+          return { name, pars };
+        }).filter(c => c.name && c.pars.length === 18);
+
+        console.log('✅ Backend data loaded — courses:', courses.length);
+
+        if (loader) loader.classList.add('hidden');
+        if (picker) picker.classList.remove('hidden');
+
+        renderCourseSelect();
+
+      } catch (err) {
+        console.error('Backend load failed:', err);
+        if (loader) loader.classList.add('hidden');
+        if (error) {
+          error.classList.remove('hidden');
+          error.textContent = `Load failed: ${err.message}`;
+        }
+      }
+    }
+
+    // ========================
+    // 3. UI RENDERING
+    // ========================
+    function renderCourseSelect() {
+      const select = document.getElementById('courseSelect');
+      if (!select) {
+        console.log('Course select element not ready yet, retrying in 300ms...');
+        setTimeout(renderCourseSelect, 300);
+        return;
+      }
+
+      console.log('Rendering courses - count:', courses.length);
+
+      select.innerHTML = '<option value="">-- Select Course --</option>';
+      
+      if (courses.length === 0) {
+        select.innerHTML += '<option disabled>No courses available</option>';
+        document.getElementById('nextToPlayers')?.setAttribute('disabled', 'true');
+        return;
+      }
+
+      courses.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+
+      const nextBtn = document.getElementById('nextToPlayers');
+      if (nextBtn) {
+        const saved = localStorage.getItem('bbb_currentCourse');
+        const savedIdx = parseInt(saved);
+        if (!isNaN(savedIdx) && savedIdx >= 0 && savedIdx < courses.length) {
+          select.value = savedIdx;
+          currentCourse = savedIdx;
+          nextBtn.disabled = false;
+        } else {
+          currentCourse = null;
+          nextBtn.disabled = true;
+        }
+      }
+
+      console.log('✅ Course dropdown populated with', courses.length, 'courses');
+    }
+
+    function renderPlayerSelect() {
+      console.log('renderPlayerSelect called');
+
+      const playerSelect = document.getElementById('playerSelect');
+      if (!playerSelect) {
+        console.error('playerSelect element not found');
+        return;
+      }
+
+      playerSelect.innerHTML = '';
+
+      roster.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <label>
+            <input type="checkbox" data-index="${i}">
+            ${p.name}
+          </label>
+        `;
+        playerSelect.appendChild(div);
+      });
+
+      playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const idx = parseInt(chk.dataset.index);
+          const player = roster[idx];
+
+          if (chk.checked) {
+            if (players.length >= MAX_PLAYERS) {
+              chk.checked = false;
+              alert(`Maximum ${MAX_PLAYERS} players allowed`);
+              return;
+            }
+            if (!players.some(p => p.name === player.name)) {
+              players.push({ 
+                ...player, 
+                scores: Array(HOLES).fill(null).map(() => ({})), 
+                _cachedTotal: 0,
+                _cachedHoleTotals: {} 
+              });
+            }
+          } else {
+            players = players.filter(p => p.name !== player.name);
+          }
+
+          sortPlayersAlphabetically();
+
+          const startGameBtn = document.getElementById('startGame');
+          if (startGameBtn) {
+            startGameBtn.disabled = players.length < 2;
+          }
+
+          console.log('Players selected:', players.length);
+        });
+      });
+
+      const startGameBtn = document.getElementById('startGame');
+      if (startGameBtn) {
+        startGameBtn.disabled = players.length < 2;
+      }
+
+      console.log('Player select rendered with', roster.length, 'players');
+      attachStartGameListener(); 
+    }
+
+    // ========================
+    // 4. STARTING HOLE SELECTOR
+    // ========================
+    function showStartingHoleSelector() {
+      hideAll();
+
+      const startScreenHTML = `
+        <div id="startingHoleScreen" class="card center-block" style="text-align:center; padding:2rem;">
+          <h2 style="color:var(--green); margin-bottom:1.5rem;">Where do you want to start?</h2>
+          <div style="display:flex; flex-direction:column; gap:1rem; max-width:400px; margin:0 auto;">
+            <button id="startHole1" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 1
+            </button>
+            <button id="startHole10" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 10 (Back Nine First)
+            </button>
+          </div>
+        </div>
+      `;
+
+      const playerSetup = document.getElementById('playerSetup');
+      if (playerSetup) {
+        playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
+      } else {
+        document.body.insertAdjacentHTML('beforeend', startScreenHTML);
+      }
+
+      setTimeout(() => {
+        const btn1 = document.getElementById('startHole1');
+        const btn10 = document.getElementById('startHole10');
+
+        if (btn1) btn1.onclick = () => startRoundWithHole(1);
+        if (btn10) btn10.onclick = () => startRoundWithHole(10);
+      }, 100);
+    }
+
+    function startRoundWithHole(startHole) {
+      const selector = document.getElementById('startingHoleScreen');
+      if (selector) selector.remove();
+
+      currentHole = startHole;
+      finishedHoles.clear();
+      holeSequence = [];
+
+      players.forEach(p => {
+        p.scores = Array(HOLES).fill(null).map(() => ({}));
+        p._cachedTotal = 0;
+        p._cachedHoleTotals = {};
+      });
+
+      inRound = true;
+
+      hideAll();
+      const gameScreen = document.getElementById('game');
+      if (gameScreen) gameScreen.classList.remove('hidden');
+
+      updateHole();
+      updateNavButtons();
+      attachNavListeners();
+      attachBottomBarListeners();
+
+      console.log(`Round started on hole ${startHole}`);
+    }
+
+    // ========================
+    // 5. GAME LOGIC & SCORING
+    // ========================
+    function sortPlayersAlphabetically() {
+      players.sort((a, b) => a.name.localeCompare(b.name));
+      roster.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function hideAll() {
+      console.log('hideAll called');
+      const screens = [
+        document.getElementById('courseSetup'),
+        document.getElementById('playerSetup'),
+        document.getElementById('game'),
+        document.getElementById('summary')
+      ];
+      screens.forEach(screen => {
+        if (screen) screen.classList.add('hidden');
+      });
+    }
+
+    function getCarryInForHole(holeNumber) {
+      const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+      if (!courses[currentCourse]) return carry;
+
+      const sequenceToCheck = holeSequence.length > 0 ? holeSequence : Array.from({ length: holeNumber - 1 }, (_, i) => i + 1);
+
+      for (const h of sequenceToCheck) {
+        if (h >= holeNumber || !finishedHoles.has(h)) continue;
+
+        const idx = h - 1;
+        const par = courses[currentCourse].pars[idx];
+        const isPar3 = par === 3;
+        const scores = players.map(p => p.scores[idx]).filter(Boolean);
+
+        if (!isPar3) {
+          if (scores.some(s => s.firstOn)) carry.firstOn = 0;
+          else carry.firstOn++;
+        } else {
+          if (scores.some(s => s.firstOn)) carry.greenie = 0;
+          else carry.greenie++;
+        }
+        if (scores.some(s => s.closest)) carry.closest = 0;
+        else carry.closest++;
+        if (scores.some(s => s.putt)) carry.putt = 0;
+        else carry.putt++;
+      }
+      return carry;
+    }
+
+    function precomputeAllTotals() {
+      players.forEach(p => {
+        let total = 0;
+        p._cachedHoleTotals = {};
+
+        for (let idx = 0; idx < HOLES; idx++) {
+          const holeNumber = idx + 1;
+          if (!finishedHoles.has(holeNumber)) continue;
+
+          const s = p.scores[idx] || {};
+          const carryIn = getCarryInForHole(holeNumber);
+          const par = courses[currentCourse].pars[idx];
+          const isPar3 = par === 3;
+
+          let holePoints = 0;
+          if (s.firstOn) holePoints += 1;
+          if (s.closest) holePoints += 1;
+          if (s.putt) holePoints += 1;
+
+          if (s.firstOn) holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
+          if (s.closest) holePoints += carryIn.closest;
+          if (s.putt) holePoints += carryIn.putt;
+
+          p._cachedHoleTotals[idx] = holePoints;
+          total += holePoints;
+        }
+        p._cachedTotal = total;
+      });
+    }
+
+    function getRunningTotal(player) {
+      let sum = 0;
+      for (let h = 1; h <= currentHole; h++) {
+        if (finishedHoles.has(h)) {
+          sum += player._cachedHoleTotals?.[h - 1] || 0;
+        }
+      }
+      return sum;
+    }
+
+    function updateHole() {
+      if (!inRound || players.length === 0 || currentCourse === null || !courses[currentCourse]) return;
+
+      precomputeAllTotals();
+
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse].pars[holeIdx];
+      const isPar3 = par === 3;
+
+      const courseName = courses[currentCourse].name;
+      const holeDisplay = document.getElementById('holeDisplay');
+      if (holeDisplay) {
+        holeDisplay.innerHTML = `<strong>${courseName}</strong> • Hole ${currentHole} (Par ${par}) • ${finishedHoles.size} finished`;
+      }
+
+      const firstOnHeader = document.getElementById('firstOnHeader');
+      if (firstOnHeader) firstOnHeader.textContent = isPar3 ? 'GR' : 'FO';
+
+      const carryIn = getCarryInForHole(currentHole);
+      renderTable(carryIn, finishedHoles.has(currentHole));
+
+      renderHoleSummary();
+      renderRoundSummary();
+
+      updateNavButtons();
+      console.log('updateHole completed for hole', currentHole);
+    }
+
+    function renderTable(carryIn, isFinished) {
+      const tbody = document.querySelector('#scoreTable tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const holeIdx = currentHole - 1;
+      const par = courses[currentCourse] ? courses[currentCourse].pars[holeIdx] : 4;
+      const isPar3 = par === 3;
+
+      players.forEach(p => {
+        const s = p.scores[holeIdx] || {};
+        const row = tbody.insertRow();
+
+        row.insertCell().textContent = p.name;
+
+        const createCheckbox = (point) => {
+          const cell = row.insertCell();
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = !!s[point];
+          input.disabled = isFinished;
+          input.onclick = () => toggleScore(p, holeIdx, point);
+          cell.appendChild(input);
+        };
+
+        createCheckbox('firstOn');
+        createCheckbox('closest');
+        createCheckbox('putt');
+
+        const holeCell = row.insertCell();
+        if (isFinished) {
+          const totalPts = p._cachedHoleTotals?.[holeIdx] || 0;
+          holeCell.innerHTML = `<strong>${totalPts}</strong>`;
+        } else {
+          holeCell.textContent = '—';
+        }
+
+        const runCell = row.insertCell();
+        runCell.textContent = getRunningTotal(p) || 0;
+        runCell.style.fontWeight = '600';
+
+        const totalCell = row.insertCell();
+        totalCell.textContent = p._cachedTotal || 0;
+        totalCell.style.fontWeight = '600';
+      });
+    }
+
+    function toggleScore(player, holeIdx, point) {
+      const s = player.scores[holeIdx] || (player.scores[holeIdx] = {});
+      s[point] = !s[point];
+
+      precomputeAllTotals();
+      updateHole();
+    }
+
+    function finishCurrentHole() {
+      finishedHoles.add(currentHole);
+      if (!holeSequence.includes(currentHole)) {
+        holeSequence.push(currentHole);
+      }
+
+      precomputeAllTotals();
+      updateHole();
+
+      console.log(`Finished hole ${currentHole}`);
+    }
+
+    function renderHoleSummary() {
+      const holeSummary = document.querySelector('.holeSummary');
+      if (!holeSummary) return;
+
+      const carryIn = getCarryInForHole(currentHole);
+
+      const parts = [];
+      if (carryIn.firstOn)  parts.push(`FO: +${carryIn.firstOn}`);
+      if (carryIn.closest) parts.push(`CL: +${carryIn.closest}`);
+      if (carryIn.putt)     parts.push(`P: +${carryIn.putt}`);
+      if (carryIn.greenie)  parts.push(`GR: +${carryIn.greenie}`);
+
+      let text = '';
+      if (parts.length > 0) {
+        text = `<strong>Available Carry:</strong> ${parts.join(' • ')}`;
+      } else if (finishedHoles.has(currentHole)) {
+        const nextCarry = getCarryInForHole(currentHole + 1);
+        const totalOpen = nextCarry.firstOn + nextCarry.closest + nextCarry.putt + nextCarry.greenie;
+        text = totalOpen > 0 ? `<strong>Open Carry:</strong> ${totalOpen}` : `<strong>Open Carry: 0</strong>`;
+      } else {
+        text = `<strong>Open Carry: 0</strong>`;
+      }
+
+      holeSummary.innerHTML = `<div class="summary-carry-in">${text}</div>`;
+      holeSummary.style.color = '#dc3545';
+    }
+
+    function renderRoundSummary() {
+      const roundSummary = document.getElementById('roundSummary');
+      if (!roundSummary) return;
+
+      let wins = 0;
+      players.forEach(p => wins += p._cachedTotal || 0);
+
+      const expected = finishedHoles.size * 3;
+      const openCarry = expected - wins;
+
+      roundSummary.innerHTML = `
+        <div style="font-size:0.9rem;line-height:1.4;">
+          Wins: <strong>${wins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
+          <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
+        </div>
+      `;
+      roundSummary.classList.remove('hidden');
+    }
+
+    // ========================
+    // 6. NAVIGATION & BUTTONS
+    // ========================
+
+    function updateNavButtons() {
+      const prevBtn = document.getElementById('prevHole');
+      const nextBtn = document.getElementById('nextHole');
+
+      const canPrev = currentHole > 1;
+      const canNext = currentHole < HOLES;
+
+      if (prevBtn) prevBtn.disabled = !canPrev;
+      if (nextBtn) nextBtn.disabled = !canNext;
+
+      console.log('Nav buttons updated - Prev:', canPrev, 'Next:', canNext);
+    }
+
+    function attachNavListeners() {
+      console.log('Attaching top nav listeners');
+
+      const prevBtn = document.getElementById('prevHole');
+      const nextBtn = document.getElementById('nextHole');
+      const finishBtn = document.getElementById('finishHole');
+      const editBtn = document.getElementById('editHole');
+
+      if (prevBtn) prevBtn.onclick = () => {
+        if (currentHole > 1) {
+          currentHole--;
+          updateHole();
+        }
+      };
+
+      if (nextBtn) nextBtn.onclick = () => {
+        if (currentHole < HOLES) {
+          currentHole++;
+          updateHole();
+        }
+      };
+
+      if (finishBtn) finishBtn.onclick = finishCurrentHole;
+
+      if (editBtn) editBtn.onclick = () => {
+        if (finishedHoles.has(currentHole)) {
+          finishedHoles.delete(currentHole);
+          precomputeAllTotals();
+          updateHole();
+        }
+      };
+    }
+
+    function attachBottomBarListeners() {
+      const completeBtn = document.getElementById('completeRound');
+      const exitBtn = document.getElementById('exitRound');
+
+      if (completeBtn) {
+        completeBtn.onclick = () => {
+          if (finishedHoles.size !== HOLES) {
+            alert(`Please finish all ${HOLES} holes first.`);
+            return;
+          }
+          precomputeAllTotals();
+          showSummary();
+        };
+      }
+
+      if (exitBtn) {
+        exitBtn.onclick = () => {
+          if (confirm('Exit round without saving?')) {
+            resetRound();
+            hideAll();
+            const courseSetup = document.getElementById('courseSetup');
+            if (courseSetup) courseSetup.classList.remove('hidden');
+          }
+        };
+      }
+    }
+
+    // ========================
+    // 7. STARTING HOLE SELECTOR
+    // ========================
+
+    function showStartingHoleSelector() {
+      hideAll();
+
+      const startScreenHTML = `
+        <div id="startingHoleScreen" class="card center-block" style="text-align:center; padding:2rem;">
+          <h2 style="color:var(--green); margin-bottom:1.5rem;">Where do you want to start?</h2>
+          <div style="display:flex; flex-direction:column; gap:1rem; max-width:400px; margin:0 auto;">
+            <button id="startHole1" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 1
+            </button>
+            <button id="startHole10" style="padding:1.2rem; font-size:1.3rem; font-weight:bold; background:#0f0; color:#000;">
+              Start on Hole 10 (Back Nine First)
+            </button>
+          </div>
+        </div>
+      `;
+
+      const playerSetup = document.getElementById('playerSetup');
+      if (playerSetup) {
+        playerSetup.insertAdjacentHTML('afterend', startScreenHTML);
+      } else {
+        document.body.insertAdjacentHTML('beforeend', startScreenHTML);
+      }
+
+      setTimeout(() => {
+        const btn1 = document.getElementById('startHole1');
+        const btn10 = document.getElementById('startHole10');
+
+        if (btn1) btn1.onclick = () => startRoundWithHole(1);
+        if (btn10) btn10.onclick = () => startRoundWithHole(10);
+      }, 100);
+    }
+
+    function startRoundWithHole(startHole) {
+      const selector = document.getElementById('startingHoleScreen');
+      if (selector) selector.remove();
+
+      currentHole = startHole;
+      finishedHoles.clear();
+      holeSequence = [];
+
+      players.forEach(p => {
+        p.scores = Array(HOLES).fill(null).map(() => ({}));
+        p._cachedTotal = 0;
+        p._cachedHoleTotals = {};
+      });
+
+      inRound = true;
+
+      hideAll();
+      const gameScreen = document.getElementById('game');
+      if (gameScreen) gameScreen.classList.remove('hidden');
+
+      updateHole();
+      updateNavButtons();
+      attachNavListeners();
+      attachBottomBarListeners();
+
+      console.log(`Round started on hole ${startHole}`);
+    }
+
+    // ========================
+    // 8. UTILITY & RESET
+    // ========================
+
+    function resetRound() {
+      console.log('Resetting round');
+      localStorage.removeItem('bbb');
+      inRound = false;
+      players = [];
+      currentCourse = null;
+      currentHole = 1;
+      finishedHoles.clear();
+      holeSequence = [];
+    }
+
+    function sortPlayersAlphabetically() {
+      players.sort((a, b) => a.name.localeCompare(b.name));
+      roster.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // ========================
+    // 9. INITIALIZATION
+    // ========================
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOMContentLoaded fired - starting loadDataFromBackend');
+      loadDataFromBackend();
+
+      setTimeout(() => {
+        attachCourseSelectListener();
+        attachNextToPlayersListener();
+      }, 800);
+    });
+
+  </script>
+
+ <!-- COURSE SETUP – BACKEND-DRIVEN (FINAL) -->
+<section id="courseSetup" class="card center-block">
+  <h2 style="text-align:center; color:var(--green); margin:1rem 0 0.5rem; font-size:1.6rem;">
+    BBB Golf
+  </h2>
+
+  <div id="courseLoader" style="text-align:center; padding:2rem 1rem;">
+    <div style="font-size:1rem; color:#666; margin-bottom:1rem;">Loading your courses...</div>
+    <div style="width:48px; height:48px; border:5px solid #f0f0f0; border-top:5px solid var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
+  </div>
+
+  <div id="courseError" class="hidden" style="text-align:center; padding:1.5rem; color:#a00;">
+    <p>Failed to load data from server.</p>
+    <button id="retryBtn" style="background:var(--btn-bg); color:var(--btn-text); padding:0.8rem 1.6rem; font-size:1rem; margin:0.5rem;">
+      Retry
+    </button>
+    <p style="font-size:0.9rem; color:#666; margin-top:1rem;">
+      Check internet or wake the backend (it may be sleeping).
+    </p>
+  </div>
+
+  <div id="coursePicker" class="hidden">
+    <select id="courseSelect" style="width:100%; padding:0.9rem; font-size:1.2rem; margin-bottom:1rem; border-radius:8px; border:1px solid #aaa;">
+      <option value="">– Select Course –</option>
+    </select>
+    <button id="nextToPlayers" disabled style="width:100%; padding:1.1rem; font-size:1.3rem; font-weight:bold;">
+      Load Course →
+    </button>
+  </div>
+
+  
+</section>
+
+ 
+  <!-- PLAYER SETUP -->
+  <section id="playerSetup" class="card hidden center-block" role="region" aria-labelledby="playerSetupTitle">
+    <h2 id="playerSetupTitle" class="hidden">Player Setup</h2>
+    <button id="backToCourse">Back</button>
+    <div id="playerSelect"></div>
+    <div style="margin-top: 1rem; text-align: center;">
+      <button id="startGame" disabled style="width: 100%; padding: 1rem; font-size: 1.1rem;">Start Round</button>
+    </div>
+  </section>
+
+  <!-- ROSTER -->
+  <section id="roster" class="card hidden center-block" role="region" aria-labelledby="rosterTitle">
+    <h2 id="rosterTitle" class="hidden">Roster</h2>
+    <button id="backToCourseFromRoster">Back</button>
+    <input id="rosterName" placeholder="Name" style="width:100%;margin:0.5rem 0;" />
+    <input id="rosterPhone" placeholder="Phone" style="width:100%;margin:0.5rem 0;" />
+    <input id="rosterEmail" placeholder="Email" style="width:100%;margin:0.5rem 0;" />
+    <button id="addToRoster">Add</button>
+    <div id="rosterList"></div>
+  </section>
+
+  <!-- COURSE FORM -->
+  <section id="courseForm" class="card hidden center-block" role="region" aria-labelledby="courseFormTitle">
+    <h2 id="courseFormTitle" class="hidden">Add Course</h2>
+    <button id="cancelCourse">Cancel</button>
+    <input id="courseName" placeholder="Course Name" style="width:100%;margin:0.5rem 0;" />
+    <div id="pars"></div>
+    <button id="saveCourse">Save Course</button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game" class="card hidden center-block">
+
+    <!-- Top Navigation Bar -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <h3 id="holeDisplay"></h3>
+      <div>
+        <button id="prevHole">Prev</button>
+        <button id="nextHole">Next</button>
+        <button id="editHole" class="hidden">Edit</button>
+        <button id="finishHole">Finish Hole</button>
+      </div>
+    </div>
+
+    <table id="scoreTable">
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th id="firstOnHeader">FO</th>
+          <th>CL</th>
+          <th>P</th>
+          <th>H</th>
+          <th>RUN</th>
+          <th>TOT</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="holeSummary"></div>
+    <div id="roundSummary" class="hidden"></div>
+
+    <!-- Bottom Control Bar -->
+    <div class="control-bar" style="margin-top:1.5rem; padding:0.8rem 0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center;">
+      <button id="completeRound" style="background:#0f0; color:#000; font-weight:bold; padding:0.8rem 1.2rem;">BBB COMP</button>
+      <button id="exitRound">EXIT</button>
+      <button id="darkModeToggle">DARK</button>
+      <button id="bbbHelpBtn" style="margin-left:auto;">HELP</button>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary" class="card hidden center-block" role="region" aria-labelledby="summaryTitle">
+    <h2 id="summaryTitle" class="hidden">Summary</h2>
+    <button id="backToSetup" onclick="resetRound(); hideAll(); document.getElementById('courseSetup').classList.remove('hidden');">Back to Setup</button>
+    <h3>Final Leaderboard</h3>
+    <ol id="leaderboard"></ol>    
+  </section>
+
+  
+
+  <!-- DEBUG -->
+  <div id="debugPanel" class="card hidden" style="position:fixed;bottom:10px;right:10px;width:300px;max-height:80vh;overflow:auto;z-index:1000;">
+    <button id="closeDebug" style="float:right;">Close</button>
+    <h4>Carry Debug</h4>
+    <div id="debugOutput"></div>
+  </div>
+
+  <div id="simResult"></div>
+
+  
+
+  <!-- COURSE + HOLE INFO BAR -->
+  <div id="courseInfoBar" class="card center-block" style="margin: 0.5rem auto; padding: 0.75rem; font-size: 0.95rem; text-align: center; background: var(--card); border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: none;">
+    <strong id="infoCourseName"></strong> — 
+    Hole <span id="infoCurrentHole"></span> of 18
+    <span id="infoPar" style="margin-left: 0.5rem; color: #0a6b0a;"></span>
+  </div>
+
+    <!-- BBB HELP MODAL -->
+  <div id="bbbHelpModal" class="card hidden" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:400px;z-index:9999;max-height:80vh;overflow:auto;background:var(--card);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.3);padding-top:env(safe-area-inset-top, 0px);">
+    <div style="text-align:center;padding:0.75rem;border-bottom:1px solid #ddd;position:relative;">
+      <h3 id="helpModalTitle" style="margin:0;color:var(--green);font-size:1.1rem;">BBB Help</h3>
+      <button id="closeHelp" type="button" aria-label="Close help" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text);">×</button>
+    </div>
+    <div style="padding:1rem;display:grid;gap:1.5rem;font-size:0.9rem;">
+
+      <!-- CONTROL BAR -->
+      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Control Bar</div>
+      <div>SMS – Send live update to the group</div>
+      <div>CSV – Export scores to file</div>
+      <div>BBB COMP – Complete the round</div>
+      <div>EXIT – Quit current round</div>
+      <div>DARK – Toggle dark mode</div>
+      <div>HELP – You are here :)</div>
+
+      <!-- SCORE TABLE -->
+      <hr style="margin:1rem 0;border:0;border-top:1px solid #ddd;">
+      <div style="font-weight:bold;color:var(--green);margin-bottom:0.5rem;">Score Table</div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">FO</span>
+        <div><strong>FO</strong> – First On</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">CL</span>
+        <div><strong>CL</strong> – Closest to pin</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">P</span>
+        <div><strong>P</strong> – Putts</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">H</span>
+        <div><strong>H</strong> – Points this hole</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">RUN</span>
+        <div><strong>RUN</strong> – Running total</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:0.8rem;color:#000;background:#0f0;border-radius:4px;">TOT</span>
+        <div><strong>TOT</strong> – Final total</div>
+      </div>
+
+    </div>
+  </div> 
+
+  <!-- BACKDROP -->
+  <div id="bbbHelpBackdrop" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;" aria-hidden="true"></div>
+
+
+
+
+
+  
+
+    <!-- MODAL JS (DOM READY) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('bbbHelpModal');
+      const backdrop = document.getElementById('bbbHelpBackdrop');
+      if (modal) modal.classList.add('hidden');
+      if (backdrop) backdrop.classList.add('hidden');
+
+      const helpBtn = document.getElementById('bbbHelpBtn');
+      const closeBtn = document.getElementById('closeHelp');
+
+      if (!helpBtn || !modal || !backdrop || !closeBtn) return;
+
+      const openModal = () => {
+        modal.classList.remove('hidden');
+        backdrop.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        backdrop.setAttribute('aria-hidden', 'false');
+      };
+
+      const closeModal = () => {
+        modal.classList.add('hidden');
+        backdrop.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        backdrop.setAttribute('aria-hidden', 'true');
+      };
+
+      helpBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+      });
+    });
+  </script>
+ </body>
+</html>
