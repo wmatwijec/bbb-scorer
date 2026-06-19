@@ -142,14 +142,25 @@
 
         let currentDate = '';
 
-        function getCarryInForHole(holeScores, pars, holeNumber) {
+        function buildHoleSequence(round) {
+            const finished = round.finishedHoles || [];
+            if (finished.length === 18) {
+                return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
+            }
+            return finished.slice().sort((a,b) => a - b);
+        }
+
+        function getCarryInForHole(holeScores, pars, holeNumber, holeSequence) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-            for (let h = 1; h < holeNumber; h++) {
-                const idx = h - 1;
-                if (!holeScores[idx]) continue;
-                const par = pars[idx] || 4;
+            const idx = holeSequence.indexOf(holeNumber);
+            if (idx === -1) return carry;
+            for (let i = 0; i < idx; i++) {
+                const h = holeSequence[i];
+                const hidx = h - 1;
+                if (!holeScores[hidx]) continue;
+                const par = pars[hidx] || 4;
                 const isPar3 = par === 3;
-                const scores = holeScores[idx];
+                const scores = holeScores[hidx];
 
                 if (isPar3) {
                     if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
@@ -191,6 +202,9 @@
                 });
             }
 
+            const holeSequence = buildHoleSequence(round);
+            const playedHoles = holeSequence.filter(h => holeScores[h-1]);
+
             const playerTotals = {}, runningTotals = {};
             const cumFO = {}, cumGreenie = {}, cumClosest = {}, cumPutt = {};
             const perHoleFO = {}, perHoleGreenie = {}, perHoleClosest = {}, perHolePutt = {};
@@ -209,9 +223,12 @@
                 perHolePutt[name] = new Array(18).fill(0);
 
                 let total = 0, fo = 0, gr = 0, cl = 0, pu = 0;
+                let running = 0;
 
-                for (let idx = 0; idx < 18; idx++) {
-                    const carryIn = getCarryInForHole(holeScores, pars, idx + 1);
+                for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
+                    const holeNumber = holeSequence[seqIdx];
+                    const idx = holeNumber - 1;
+                    const carryIn = getCarryInForHole(holeScores, pars, holeNumber, holeSequence);
                     const s = holeScores[idx]?.[name] || {};
                     const isPar3 = pars[idx] === 3;
                     let pts = 0, foPts = 0, grPts = 0, clPts = 0, puPts = 0;
@@ -225,7 +242,8 @@
                     if (s.putt)    { puPts = 1 + carryIn.putt;    pts += puPts; }
 
                     total += pts;
-                    runningTotals[name][idx] = total;
+                    running += pts;
+                    runningTotals[name][idx] = running;
                     cumFO[name][idx] = fo += foPts;
                     cumGreenie[name][idx] = gr += grPts;
                     cumClosest[name][idx] = cl += clPts;
