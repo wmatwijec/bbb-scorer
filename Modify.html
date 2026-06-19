@@ -67,6 +67,7 @@
             const data = await res.json();
 
             currentRounds = data.rounds || [];
+            currentRounds.sort((a, b) => new Date(b.date) - new Date(a.date));
             renderRounds(currentRounds);
         } catch (e) {
             document.getElementById('status').textContent = 'Error loading rounds: ' + e.message;
