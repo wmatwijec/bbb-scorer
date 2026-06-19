@@ -1739,12 +1739,9 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
   // 1. Show the nice leaderboard screen first
   showSummary();
 
-  // 2. Auto-email the CSV to you (Walt)
-  emailRoundToWalt();
-
-  // 3. Optional: give them a second to read it, then offer New Round
+  // 2. Optional: give them a second to read it, then offer New Round
   setTimeout(() => {
-    if (confirm('Round complete – summary emailed to Walt!\n\nStart a new round?')) {
+    if (confirm('Start a new round?')) {
       resetRound();
       hideAll();
       els.courseSetup.classList.remove('hidden');
