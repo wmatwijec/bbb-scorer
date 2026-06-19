@@ -210,7 +210,7 @@
 
         (round.players || []).forEach(p => {
             if (!p?.name || p.name.toLowerCase().includes('guest')) return;
-            let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0, carryPts = 0;
+            let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0;
 
             for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
                 const holeNumber = holeSequence[seqIdx];
@@ -220,20 +220,17 @@
                 const par = pars[idx] || 4;
                 const isPar3 = par === 3;
 
-                let roundTotal = 0, roundFO = 0, roundGR = 0, roundCL = 0, roundP = 0, roundCarry = 0;
+                let roundTotal = 0, roundFO = 0, roundGR = 0, roundCL = 0, roundP = 0;
 
                 if (s.firstOn) {
                     const c = isPar3 ? carryIn.greenie : carryIn.firstOn;
                     roundTotal += 1 + c; roundFO = 1 + c; roundGR = 1 + c;
-                    roundCarry = c;
                 }
                 if (s.closest) {
                     roundTotal += 1 + carryIn.closest; roundCL = 1 + carryIn.closest;
-                    roundCarry += carryIn.closest;
                 }
                 if (s.putt) {
                     roundTotal += 1 + carryIn.putt; roundP = 1 + carryIn.putt;
-                    roundCarry += carryIn.putt;
                 }
 
                 totalPts += roundTotal;
@@ -241,11 +238,10 @@
                 grPts += roundGR;
                 clPts += roundCL;
                 pPts += roundP;
-                carryPts += roundCarry;
             }
 
             result.playerData[p.name] = {
-                totalPts, foPts, grPts, clPts, pPts, carryPts,
+                totalPts, foPts, grPts, clPts, pPts,
                 numHoles: holeSequence.length
             };
         });
@@ -314,9 +310,9 @@
                 seasonStats[name] = {
                     rounds: 0, totalPoints: 0,
                     foWins: 0, grWins: 0, clWins: 0, pWins: 0,
-                    carryPts: 0, bestRound: 0,
+                    bestRound: 0,
                     pointsPerRound: [], foPerRound: [], grPerRound: [],
-                    clPerRound: [], pPerRound: [], carryPerRound: []
+                    clPerRound: [], pPerRound: []
                 };
                 playerRoundData[name] = [];
             });
@@ -335,25 +331,22 @@
                     st.grWins += data.grPts > 0 ? 1 : 0;
                     st.clWins += data.clPts > 0 ? 1 : 0;
                     st.pWins += data.pPts > 0 ? 1 : 0;
-                    st.carryPts += data.carryPts;
+  
                     st.bestRound = Math.max(st.bestRound, data.totalPts);
                     st.pointsPerRound.push(data.totalPts);
                     st.foPerRound.push(data.foPts);
                     st.grPerRound.push(data.grPts);
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
-                    st.carryPerRound.push(data.carryPts);
-
-                    playerRoundData[name].push({
+                   playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
-                        course: round.courseName || 'Unknown',
+                        course: round.course,
                         total: data.totalPts,
                         fo: data.foPts,
                         gr: data.grPts,
                         cl: data.clPts,
-                        p: data.pPts,
-                        carry: data.carryPts
+                        p: data.pPts
                     });
                 }
             }
@@ -434,7 +427,7 @@
                     <th class="sortable${sortIcon('gr')}" onclick="sortBy('gr')">GR</th>
                     <th class="sortable${sortIcon('cl')}" onclick="sortBy('cl')">CL</th>
                     <th class="sortable" onclick="sortBy('p')">P</th>
-                    <th>Carry</th>
+  
                     <th>Med Rk</th>
                     <th>Mean Rk</th>
                 </tr>
@@ -457,7 +450,6 @@
                 <td>${entry.grWins}</td>
                 <td>${entry.clWins}</td>
                 <td>${entry.pWins}</td>
-                <td>${entry.carryPts}</td>
                 <td class="rank">#${medRank}</td>
                 <td class="rank">#${meanRank}</td>
             </tr>`;
@@ -534,11 +526,6 @@
             return sum + (ps.pPerRound.length ? ps.pPerRound.reduce((a, b) => a + b, 0) / ps.pPerRound.length : 0);
         }, 0) / allPlayers.length;
 
-        const groupAvgCarry = allPlayers.reduce((sum, p) => {
-            const ps = seasonStats[p];
-            return sum + (ps.carryPerRound.length ? ps.carryPerRound.reduce((a, b) => a + b, 0) / ps.carryPerRound.length : 0);
-        }, 0) / allPlayers.length;
-
         const diff = (val, avg) => (val - avg).toFixed(1);
         const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
 
@@ -598,13 +585,6 @@
                             <td>${groupAvgP.toFixed(1)}</td>
                             <td class="${diffClass(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}">${diff(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}</td>
                         </tr>
-                        <tr>
-                            <td>Carry-In Pts</td>
-                            <td>${st.carryPts}</td>
-                            <td>${st.carryPerRound.length ? (st.carryPerRound.reduce((a,b) => a+b,0)/st.carryPerRound.length).toFixed(1) : '—'}</td>
-                            <td>${groupAvgCarry.toFixed(1)}</td>
-                            <td class="${diffClass(st.carryPerRound.length ? st.carryPerRound.reduce((a,b)=>a+b,0)/st.carryPerRound.length : 0, groupAvgCarry)}">${diff(st.carryPerRound.length ? st.carryPerRound.reduce((a,b)=>a+b,0)/st.carryPerRound.length : 0, groupAvgCarry)}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -612,12 +592,12 @@
             <h3>Round-by-Round</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
-                    <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th><th>Carry</th></tr></thead>
+                    <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th></tr></thead>
                     <tbody>`;
 
         playerRoundData[name]?.forEach((r, i) => {
             const best = r.total === st.bestRound ? ' class="pos"' : '';
-            html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td><td style="font-size:11px;">${r.course}</td><td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td><td>${r.carry}</td></tr>`;
+            html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td><td style="font-size:11px;">${r.course}</td><td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td></tr>`;
         });
 
         html += `</tbody></table></div>`;
@@ -629,8 +609,7 @@
             { id: 'chart-total', label: 'Total Points', data: playerRoundData[name] || [], key: 'total', title: 'Points' },
             { id: 'chart-fo', label: 'FO/Greenie Points', data: playerRoundData[name] || [], key: 'fo', title: 'FO/GR Pts' },
             { id: 'chart-cl', label: 'Closest Points', data: playerRoundData[name] || [], key: 'cl', title: 'Closest Pts' },
-            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts' },
-            { id: 'chart-carry', label: 'Carry-In Points', data: playerRoundData[name] || [], key: 'carry', title: 'Carry Pts' }
+            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts' }
         ];
 
         charts.forEach((c, idx) => {
