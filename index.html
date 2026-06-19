@@ -605,6 +605,183 @@ body {
 </script>  
 
 <script>
+
+// === INDEXEDDB PERSISTENCE — SURVIVES CRASHES & CLOSES ===
+const DB_NAME = 'bbb-golf';
+const STORE_NAME = 'round';
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(db); };
+    req.onerror = e => reject(e);
+  });
+}
+
+async function saveRoundLocal(data) {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).put({ id: 'current', data, savedAt: Date.now() });
+  return tx.complete;
+}
+
+async function loadRoundLocal() {
+  if (!db) await openDB();
+  return new Promise(resolve => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get('current');
+    req.onsuccess = () => resolve(req.result?.data || null);
+  });
+}
+
+async function clearRoundLocal() {
+  if (!db) await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).delete('current');
+  return tx.complete;
+}
+
+
+async function loadCloudRounds() {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetch(`${BACKEND}/rounds?date=${today}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.rounds || [];
+  } catch (e) {
+    console.error('Failed to load cloud rounds:', e);
+    return [];
+  }
+}
+
+function showRoundSelection(rounds) {
+  const incomplete = rounds.filter(r => {
+    const finished = r.finishedHoles?.length || 0;
+    return finished < 18;
+  });
+  if (incomplete.length === 0) {
+    els.courseSetup.classList.remove('hidden');
+    return;
+  }
+  if (incomplete.length === 1) {
+    const round = incomplete[0];
+    const dateStr = new Date(round.date).toLocaleDateString();
+    const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+    const holes = round.finishedHoles?.length || 0;
+    
+    const sureConfirm = confirm(
+      `Resume round from ${dateStr}?\n\n` +
+      `Group: ${playerNames}\n` +
+      `Course: ${round.courseName || 'Unknown'}\n` +
+      `Holes: ${holes}/18`
+    );
+    
+    if (sureConfirm) {
+      resumeRound(round);
+    } else {
+      els.courseSetup.classList.remove('hidden');
+    }
+    return;
+  }
+  // Multiple incomplete - build selection UI
+  const html = `
+    <div id="roundSelection" class="card center-block" style="display:block;">
+      <h2 style="text-align:center; color:var(--green); margin:1rem 0;">
+        Resume Round
+      </h2>
+      <p style="text-align:center; margin-bottom:1rem;">
+        Select a round to resume:
+      </p>
+      <div id="roundList" style="max-height:60vh; overflow-y:auto;">
+        ${incomplete.map((r, i) => {
+          const dateStr = new Date(r.date).toLocaleDateString();
+          const playerNames = r.players?.map(p => p.name).join(', ') || 'Unknown';
+          const holes = r.finishedHoles?.length || 0;
+          return `
+            <div class="round-option" style="padding:0.75rem; border:2px solid var(--border); border-radius:8px; margin-bottom:0.5rem; cursor:pointer;" 
+              onclick="selectRoundConfirm(${i})">
+              <strong>${r.courseName || 'Unknown Course'}</strong><br>
+              <small>${playerNames}</small><br>
+              <small>Holes: ${holes}/18 • ${dateStr}</small>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <button onclick="startFreshRound()" style="width:100%; margin-top:1rem; background:#ccc;">
+        Start New Round
+      </button>
+    </div>
+  `;
+  
+  els.courseSetup.insertAdjacentHTML('beforebegin', html);
+  window.incompleteRounds = incomplete;
+}
+
+window.selectRoundConfirm = function(index) {
+  const round = window.incompleteRounds[index];
+  const dateStr = new Date(round.date).toLocaleDateString();
+  const playerNames = round.players?.map(p => p.name).join(', ') || 'Unknown';
+  const holes = round.finishedHoles?.length || 0;
+  
+  const sureConfirm = confirm(
+    `Are you SURE you want to resume this round?\n\n` +
+    `Group: ${playerNames}\n` +
+    `Course: ${round.courseName || 'Unknown'}\n` +
+    `Holes: ${holes}/18\n` +
+    `Date: ${dateStr}`
+  );
+  
+  if (sureConfirm) {
+    resumeRound(round);
+  }
+};
+window.startFreshRound = function() {
+  const div = document.getElementById('roundSelection');
+  if (div) div.remove();
+  els.courseSetup.classList.remove('hidden');
+};
+
+function resumeRound(round) {
+  const selDiv = document.getElementById('roundSelection');
+  if (selDiv) selDiv.remove();
+  
+  players = round.players.map(p => ({
+    ...p,
+    scores: Array(18).fill(null).map(() => ({})),
+    _cachedTotal: round._cachedTotals?.[p.name] || 0
+  }));
+  
+  Object.keys(round.scores || {}).forEach(name => {
+    const player = players.find(p => p.name === name);
+    if (player) player.scores = round.scores[name];
+  });
+  currentHole = round.currentHole || 1;
+  currentCourse = round.currentCourse;
+  finishedHoles = new Set(round.finishedHoles || []);
+  holeSequence = round.holeSequence || [];
+  inRound = true;
+  hideAll();
+  els.game.classList.remove('hidden');
+  updateHole();
+  logScreen('RESUMED SAVED ROUND');
+}
+
+function getWaltPhone() {
+  if (!roster || !Array.isArray(roster)) return;
+  const walt = roster.find(p => p.name && p.name.toLowerCase().includes('walt'));
+  if (walt && walt.phone) {
+    waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
+    console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
+  }
+}
 // === DOM READY ===
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('BBB Golf starting...');
@@ -1655,6 +1832,36 @@ function attachNavListeners() {
       hideAll();
       logScreen('BACK TO SETUP');
     });
+  });
+
+  // === BEFOREUNLOAD: save on tab close / refresh ===
+  window.addEventListener('beforeunload', () => {
+    if (inRound) {
+      saveRoundLocal().catch(() => {});
+      // fire-and-forget cloud save
+      const roundData = {
+        matchId: `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`,
+        date: new Date().toISOString(),
+        courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
+        players: players.map(p => ({ name: p.name, phone: p.phone })),
+        currentHole,
+        currentCourse,
+        finishedHoles: Array.from(finishedHoles),
+        holeSequence,
+        scores: players.reduce((acc, p, i) => {
+          acc[p.name] = p.scores;
+          return acc;
+        }, {}),
+        _cachedTotals: players.reduce((acc, p) => {
+          acc[p.name] = p._cachedTotal || 0;
+          return acc;
+        }, {})
+      };
+      navigator.sendBeacon(
+        'https://pwa-players-backend.onrender.com/save-round',
+        new Blob([JSON.stringify(roundData)], { type: 'application/json' })
+      ).catch(() => {});
+    }
   });
 });
 
