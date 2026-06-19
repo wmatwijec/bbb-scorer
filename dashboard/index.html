@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BBB Season Stats</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -472,7 +472,7 @@
             const grAvg = st.grPerRound.length ? st.grPerRound.reduce((a, b) => a + b, 0) / st.grPerRound.length : 0;
             const clAvg = st.clPerRound.length ? st.clPerRound.reduce((a, b) => a + b, 0) / st.clPerRound.length : 0;
             const pAvg = st.pPerRound.length ? st.pPerRound.reduce((a, b) => a + b, 0) / st.pPerRound.length : 0;
-            return { name, ...st, mean, median, foAvg, grAvg, clAvg, pAvg };
+            return { name, ...st, mean, median: med, foAvg, grAvg, clAvg, pAvg };
         }).sort((a, b) => b.median - a.median);
     }
 
