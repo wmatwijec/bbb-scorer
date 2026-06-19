@@ -819,16 +819,16 @@ function startRoundWithHole(startHole) {
   const gameScreen = document.getElementById('game');
   if (gameScreen) gameScreen.classList.remove('hidden');
 
-  updateHole();
-  updateNavButtons();
-  attachNavListeners();
+  window.updateHole();
+  window.updateNavButtons();
+  window.attachNavListeners();
   attachBottomBarListeners();
 
   // Game-specific setup (from original app)
   players.sort((a, b) => a.name.localeCompare(b.name));
-  updateCourseInfoBar();
-  setupGameButtons();
-  attachFinishHoleListener();
+  window.updateCourseInfoBar();
+  window.setupGameButtons();
+  window.attachFinishHoleListener();
 
   console.log(`Round started on hole ${startHole}`);
 }
@@ -1212,10 +1212,6 @@ waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
 console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
   }
 }
-
-// Prevent iOS from sleeping / killing the tab during a round
-let wakeLock = null;
-
 // === DOM READY ===
 async function requestWakeLock() {
   if ('wakeLock' in navigator && inRound) {
@@ -2199,7 +2195,34 @@ return;
 // Fresh start — show course picker
   if (saved) await clearRoundLocal();
 
+  // Expose game functions globally for use by event handlers
+  window.updateHole = updateHole;
+  window.updateCourseInfoBar = updateCourseInfoBar;
+  window.setupGameButtons = setupGameButtons;
+  window.attachFinishHoleListener = attachFinishHoleListener;
+  window.attachNavListeners = attachNavListeners;
+  window.precomputeAllTotals = precomputeAllTotals;
+  window.getCarryInForHole = getCarryInForHole;
+  window.renderTable = renderTable;
+  window.renderHoleSummary = renderHoleSummary;
+  window.renderRoundSummary = renderRoundSummary;
+  window.getRunningTotal = getRunningTotal;
+  window.finishCurrentHole = finishCurrentHole;
+  window.toggleScore = toggleScore;
+  window.showSummary = showSummary;
+  window.resetRound = resetRound;
+  window.saveRoundEverywhere = saveRoundEverywhere;
+  window.simulateRound = simulateRound;
+  window.exportToCSV = exportToCSV;
+  window.updateNavButtons = updateNavButtons;
+
 });
+
+
+// Prevent iOS from sleeping / killing the tab during a round
+let wakeLock = null;
+
+
 
 
 </script>
