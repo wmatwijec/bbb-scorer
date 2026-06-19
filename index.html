@@ -1206,6 +1206,7 @@ if (player) player.scores = round.scores[name];
   setupGameButtons();
   attachFinishHoleListener();
   attachNavListeners();
+  attachBottomBarListeners();
   console.log('RESUMED SAVED ROUND');
 }
 
@@ -1399,7 +1400,9 @@ return;
 function setupGameButtons() {
 if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-if (!els.sendSMS) return;
+if (!els.sendSMS) {
+  // sendSMS button doesn't exist in HTML — skip but continue with other buttons
+} else {
 els.sendSMS.onclick = () => {
   const holeIdx = currentHole - 1;
   const par = courses[currentCourse].pars[holeIdx];
@@ -1443,6 +1446,7 @@ window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowM
   if (!phones) return alert('Add phone numbers');
   window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
 };
+}
 
 if (els.exportCSV) els.exportCSV.onclick = exportToCSV;
 // ←←← ADD THIS BLOCK — FIXES NEXT/PREV FOREVER
@@ -2002,29 +2006,7 @@ if (cloudRounds.length > 0) {
 } else if (saved) {
   // Fallback to local-only if no cloud rounds
   if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
-players = saved.players.map(p => ({
-  ...p,
-  scores: Array(18).fill(null).map(() => ({})),
-  _cachedTotal: saved._cachedTotals?.[p.name] || 0
-}));
-Object.keys(saved.scores || {}).forEach(name => {
-  const player = players.find(p => p.name === name);
-  if (player) player.scores = saved.scores[name];
-});
-currentHole = saved.currentHole;
-currentCourse = saved.currentCourse;
-finishedHoles = new Set(saved.finishedHoles || []);
-inRound = true;
-
-// Restore holeSequence if saved
-if (saved.holeSequence) {
-  holeSequence = saved.holeSequence;
-}
-hideAll();
-els.game.classList.remove('hidden');
-updateHole();
-console.log('RESUMED SAVED ROUND');
-return;
+    resumeRound(saved);
   }
 }
 
