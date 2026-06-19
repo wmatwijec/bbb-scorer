@@ -980,6 +980,10 @@ function hideAll() {
   screens.forEach(screen => {
  if (screen) screen.classList.add('hidden');
   });
+  // Remove any lingering round complete banner
+  const oldBanner = document.getElementById('roundCompleteBanner');
+  oldBanner?.remove();
+  document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
 }
 // === END FUNCTION ===
 
@@ -1035,6 +1039,24 @@ function sortPlayersAlphabetically() {
             const courseSetup = document.getElementById('courseSetup');
             if (courseSetup) courseSetup.classList.remove('hidden');
           }
+        };
+      }
+
+      const backToCourse = document.getElementById('backToCourse');
+      if (backToCourse) {
+        backToCourse.onclick = () => {
+          hideAll();
+          const courseSetup = document.getElementById('courseSetup');
+          if (courseSetup) courseSetup.classList.remove('hidden');
+        };
+      }
+
+      const backToCourseFromRoster = document.getElementById('backToCourseFromRoster');
+      if (backToCourseFromRoster) {
+        backToCourseFromRoster.onclick = () => {
+          hideAll();
+          const courseSetup = document.getElementById('courseSetup');
+          if (courseSetup) courseSetup.classList.remove('hidden');
         };
       }
     }
@@ -1191,6 +1213,8 @@ resumeRound(round);
 window.startFreshRound = function() {
   const div = document.getElementById('roundSelection');
   if (div) div.remove();
+  resetRound();
+  hideAll();
   els.courseSetup.classList.remove('hidden');
 };
 
