@@ -1202,7 +1202,7 @@ if (player) player.scores = round.scores[name];
   hideAll();
   els.game.classList.remove('hidden');
   updateHole();
-  logScreen('RESUMED SAVED ROUND');
+  console.log('RESUMED SAVED ROUND');
 }
 
 function getWaltPhone() {
@@ -1452,7 +1452,7 @@ if (prevBtn) {
       currentHole--;
       updateHole();
       updateCourseInfoBar();
-      logScreen(`PREV → HOLE ${currentHole}`);
+      console.log(`PREV → HOLE ${currentHole}`);
     }
   });
 }
@@ -1464,7 +1464,7 @@ if (nextBtn) {
       currentHole++;
       updateHole();
       updateCourseInfoBar();
-      logScreen(`NEXT → HOLE ${currentHole}`);
+      console.log(`NEXT → HOLE ${currentHole}`);
     }
   });
 }
@@ -1646,7 +1646,7 @@ renderTable(getCarryInForHole(currentHole), true);  // Final visual state
 console.log('Hole finished — Next should be enabled');
   }, 80);
 
-  logScreen('FINISHED HOLE ' + currentHole);
+  console.log('FINISHED HOLE ' + currentHole);
   
 
 
@@ -1758,7 +1758,7 @@ els.simResult.innerHTML = `
   </div>
 `;
 
-logScreen('SIMULATION COMPLETE');
+console.log('SIMULATION COMPLETE');
   }
 
 function showSummary() {
@@ -1874,7 +1874,7 @@ prev.addEventListener('click', () => {
     currentHole--;
     updateHole();
     updateCourseInfoBar();
-    logScreen(`PREV → HOLE ${currentHole}`);
+    console.log(`PREV → HOLE ${currentHole}`);
   }
 });
   }
@@ -1888,7 +1888,7 @@ next.addEventListener('click', () => {
     currentHole++;
     updateHole();
     updateCourseInfoBar();
-    logScreen(`NEXT → HOLE ${currentHole}`);
+    console.log(`NEXT → HOLE ${currentHole}`);
   }
 });
   }
@@ -1902,7 +1902,7 @@ edit.addEventListener('click', () => {
     finishedHoles.delete(currentHole);
     precomputeAllTotals();
     updateHole();
-    logScreen('EDIT MODE');
+    console.log('EDIT MODE');
   }
 });
   }
@@ -2019,7 +2019,7 @@ if (saved.holeSequence) {
 hideAll();
 els.game.classList.remove('hidden');
 updateHole();
-logScreen('RESUMED SAVED ROUND');
+console.log('RESUMED SAVED ROUND');
 return;
   }
 }
