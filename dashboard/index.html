@@ -94,6 +94,7 @@
             border-radius: 8px; padding: 16px; position: relative;
         }
         .chart-container canvas { max-height: 260px; }
+        .chart-desc { font-size: 11px; color: #64748b; margin-top: 2px; font-style: italic; }
 
         /* ── Status ── */
         .status { color: #64748b; font-size: 13px; margin: 20px 0; text-align: center; font-style: italic; }
@@ -230,7 +231,12 @@
 
                 if (s.firstOn) {
                     const c = isPar3 ? carryIn.greenie : carryIn.firstOn;
-                    roundTotal += 1 + c; roundFO = 1 + c; roundGR = 1 + c;
+                    roundTotal += 1 + c;
+                    if (isPar3) {
+                        roundGR = 1 + c;
+                    } else {
+                        roundFO = 1 + c;
+                    }
                 }
                 if (s.closest) {
                     roundTotal += 1 + carryIn.closest; roundCL = 1 + carryIn.closest;
@@ -425,7 +431,7 @@
                    playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
-                        course: round.course,
+                        course: round.courseName,
                         total: data.totalPts,
                         fo: data.foPts,
                         gr: data.grPts,
@@ -462,7 +468,11 @@
             const mean = st.pointsPerRound.length
                 ? st.pointsPerRound.reduce((a, b) => a + b, 0) / st.pointsPerRound.length : 0;
             const med = median(st.pointsPerRound);
-            return { name, ...st, mean, median: med };
+            const foAvg = st.foPerRound.length ? st.foPerRound.reduce((a, b) => a + b, 0) / st.foPerRound.length : 0;
+            const grAvg = st.grPerRound.length ? st.grPerRound.reduce((a, b) => a + b, 0) / st.grPerRound.length : 0;
+            const clAvg = st.clPerRound.length ? st.clPerRound.reduce((a, b) => a + b, 0) / st.clPerRound.length : 0;
+            const pAvg = st.pPerRound.length ? st.pPerRound.reduce((a, b) => a + b, 0) / st.pPerRound.length : 0;
+            return { name, ...st, mean, median, foAvg, grAvg, clAvg, pAvg };
         }).sort((a, b) => b.median - a.median);
     }
 
@@ -483,10 +493,14 @@
             case 'rounds_desc': sorted.sort((a, b) => b.rounds - a.rounds); break;
             case 'best': sorted.sort((a, b) => b.bestRound - a.bestRound); break;
             case 'best_desc': sorted.sort((a, b) => a.bestRound - b.bestRound); break;
-            case 'fo': sorted.sort((a, b) => b.foWins - a.foWins); break;
-            case 'fo_desc': sorted.sort((a, b) => a.foWins - b.foWins); break;
-            case 'cl': sorted.sort((a, b) => b.clWins - a.clWins); break;
-            case 'cl_desc': sorted.sort((a, b) => a.clWins - b.clWins); break;
+            case 'fo': sorted.sort((a, b) => a.foAvg - b.foAvg); break;
+            case 'fo_desc': sorted.sort((a, b) => b.foAvg - a.foAvg); break;
+            case 'gr': sorted.sort((a, b) => a.grAvg - b.grAvg); break;
+            case 'gr_desc': sorted.sort((a, b) => b.grAvg - a.grAvg); break;
+            case 'cl': sorted.sort((a, b) => a.clAvg - b.clAvg); break;
+            case 'cl_desc': sorted.sort((a, b) => b.clAvg - a.clAvg); break;
+            case 'p': sorted.sort((a, b) => a.pAvg - b.pAvg); break;
+            case 'p_desc': sorted.sort((a, b) => b.pAvg - a.pAvg); break;
         }
 
         const sortIcon = (col) => {
@@ -510,7 +524,7 @@
                     <th class="sortable${sortIcon('fo')}" onclick="sortBy('fo')">FO</th>
                     <th class="sortable${sortIcon('gr')}" onclick="sortBy('gr')">GR</th>
                     <th class="sortable${sortIcon('cl')}" onclick="sortBy('cl')">CL</th>
-                    <th class="sortable" onclick="sortBy('p')">P</th>
+                    <th class="sortable${sortIcon('p')}" onclick="sortBy('p')">P</th>
   
                     <th>Med Rk</th>
                     <th>Mean Rk</th>
@@ -523,21 +537,61 @@
             const medRank = sortedIdx(entry.name);
             const meanRank = [...lb].sort((a, b) => b.mean - a.mean).findIndex(s => s.name === entry.name) + 1;
 
-            html += `<tr onclick="showView('player'); document.getElementById('playerSelect').value='${entry.name}'; onPlayerChange('${entry.name}');" style="cursor:pointer;" title="Click for player details">
+            html += `           <tr onclick="showView('player'); document.getElementById('playerSelect').value='${entry.name}'; onPlayerChange('${entry.name}');" style="cursor:pointer;" title="Click for player details">
                 <td>${entry.name}</td>
                 <td>${entry.rounds}</td>
                 <td>${entry.totalPoints}</td>
                 <td>${entry.median.toFixed(1)}</td>
                 <td>${entry.mean.toFixed(1)}</td>
                 <td class="pos">${entry.bestRound}</td>
-                <td>${entry.foWins}</td>
-                <td>${entry.grWins}</td>
-                <td>${entry.clWins}</td>
-                <td>${entry.pWins}</td>
+                <td>${entry.foWins} (${entry.foAvg.toFixed(1)})</td>
+                <td>${entry.grWins} (${entry.grAvg.toFixed(1)})</td>
+                <td>${entry.clWins} (${entry.clAvg.toFixed(1)})</td>
+                <td>${entry.pWins} (${entry.pAvg.toFixed(1)})</td>
                 <td class="rank">#${medRank}</td>
                 <td class="rank">#${meanRank}</td>
             </tr>`;
         }
+
+        html += `</tbody></table></div>`;
+
+        // Top 5 Streak Leaders
+        const leaders = getStreakLeaders();
+        html += `<h3 style="margin:20px 0 10px;">🔥 Top 5 Streak Leaders</h3>`;
+        html += `<div style="overflow-x:auto;"><table>`;
+        html += `<thead><tr><th>Player</th><th>Score Streak</th><th>Drought</th><th>FO Streak</th><th>Closest Streak</th><th>Putt Streak</th><th>Best Greenie</th></tr></thead><tbody>`;
+
+        const stats = ['scoreStreak','drought','foStreak','closestStreak','puttStreak','greenieRun'];
+        const statLabels = ['Score','Drought','FO','Closest','Putt','Greenie'];
+        const statDescs = ['holes','holes','holes','holes','holes','greens'];
+
+        // For each stat, find max and get top 5
+        const allData = [];
+        stats.forEach((s, i) => {
+            const sorted = [...leaders].sort((a, b) => b[s] - a[s]);
+            const maxVal = sorted[0]?.[s] || 0;
+            sorted.slice(0, 5).forEach((entry, j) => {
+                allData.push({ ...entry, stat: s, rank: j + 1, statIdx: i, val: entry[s], maxVal });
+            });
+        });
+
+        // Group by player — show top stats per player
+        // Instead, render a table with one row per player showing all streaks
+        const topPlayers = [...leaders].sort((a, b) => Math.max(...stats.map(s => a[s])) - Math.max(...stats.map(s => b[s]))).slice(0, 5);
+        const maxByStat = {};
+        stats.forEach((s, i) => {
+            maxByStat[s] = Math.max(...leaders.map(p => p[s]));
+        });
+
+        topPlayers.forEach((entry, idx) => {
+            html += `<tr${idx === 0 ? ' style="color:#fbbf24;"' : ''}>`;
+            html += `<td>${idx === 0 ? '★ ' : ''}${entry.name}</td>`;
+            stats.forEach((s, i) => {
+                const isMax = entry[s] === maxByStat[s] && entry[s] > 0;
+                html += `<td${isMax ? ' style="color:#60a5fa;font-weight:bold;"' : ''}>${entry[s]}<sup style="font-size:9px;color:#64748b;">/${statDescs[i]}</sup></td>`;
+            });
+            html += `</tr>`;
+        });
 
         html += `</tbody></table></div>`;
         container.innerHTML = html;
@@ -552,6 +606,19 @@
             currentSort = col + '_desc';
         }
         renderLeaderboard();
+    }
+
+    // ── Streak Leaders ──
+    function getStreakLeaders() {
+        return allPlayers.map(name => ({
+            name,
+            scoreStreak: seasonStats[name].longestScoring,
+            drought: seasonStats[name].longestZero,
+            foStreak: seasonStats[name].longestFO,
+            closestStreak: seasonStats[name].longestClosest,
+            puttStreak: seasonStats[name].longestPutt,
+            greenieRun: seasonStats[name].maxGreenies,
+        }));
     }
 
     // ── Player selector ──
@@ -649,11 +716,18 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>FO/Greenie Wins</td>
-                            <td>${st.foWins} / ${st.grWins}</td>
+                            <td>FO Wins</td>
+                            <td>${st.foWins}</td>
                             <td>${st.foPerRound.length ? (st.foPerRound.reduce((a,b) => a+b,0)/st.foPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgFo.toFixed(1)}</td>
                             <td class="${diffClass(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}">${diff(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}</td>
+                        </tr>
+                        <tr>
+                            <td>Greenie Wins</td>
+                            <td>${st.grWins}</td>
+                            <td>${st.grPerRound.length ? (st.grPerRound.reduce((a,b) => a+b,0)/st.grPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${groupAvgGr.toFixed(1)}</td>
+                            <td class="${diffClass(st.grPerRound.length ? st.grPerRound.reduce((a,b)=>a+b,0)/st.grPerRound.length : 0, groupAvgGr)}">${diff(st.grPerRound.length ? st.grPerRound.reduce((a,b)=>a+b,0)/st.grPerRound.length : 0, groupAvgGr)}</td>
                         </tr>
                         <tr>
                             <td>Closest Wins</td>
@@ -677,51 +751,53 @@
                 <h3>🔥 Streaks</h3>
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
                     <div class="stat-card">
-                        <div class="label">Score Streak</div>
+                        <div class="label">Score Streak<div class="sub">consecutive holes scoring any point</div></div>
                         <div class="value">${st.longestScoring}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Drought</div>
+                        <div class="label">Drought<div class="sub">consecutive holes with zero points</div></div>
                         <div class="value">${st.longestZero}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">FO Streak</div>
+                        <div class="label">FO Streak<div class="sub">consecutive par-4/5 first-ons</div></div>
                         <div class="value">${st.longestFO}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Closest Streak</div>
+                        <div class="label">Closest Streak<div class="sub">consecutive closest-to-pin</div></div>
                         <div class="value">${st.longestClosest}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Putt Streak</div>
+                        <div class="label">Putt Streak<div class="sub">consecutive putting points</div></div>
                         <div class="value">${st.longestPutt}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Clean Streak</div>
+                        <div class="label">Clean Streak<div class="sub">scoring without carry-in bonus</div></div>
                         <div class="value">${st.longestClean}</div>
-                        <div class="sub">no carries</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Best Greenie Run</div>
+                        <div class="label">Best Greenie Run<div class="sub">most consecutive par-3 FO in one round</div></div>
                         <div class="value">${st.maxGreenies}</div>
-                        <div class="sub">round max</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">3-Ptr Streak</div>
+                        <div class="label">3-Ptr Streak<div class="sub">FO + Closest + Putt on same hole</div></div>
                         <div class="value">${st.max3PointHoles}</div>
                     </div>
                 </div>
             </div>
 
-            <h3>Round-by-Round</h3>
+             <h3>Round-by-Round</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
-                    <thead><tr><th>#</th><th>Date</th><th>Course</th><th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th></tr></thead>
+                    <thead><tr><th>#</th><th>Date`;
+        const hasCourse = playerRoundData[name]?.some(r => r.course);
+        if (hasCourse) html += `<th>Course</th>`;
+        html += `<th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th></tr></thead>
                     <tbody>`;
 
         playerRoundData[name]?.forEach((r, i) => {
             const best = r.total === st.bestRound ? ' class="pos"' : '';
-            html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td><td style="font-size:11px;">${r.course}</td><td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td></tr>`;
+            const courseCell = hasCourse ? `<td style="font-size:11px;">${r.course || '—'}</td>` : '';
+            html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td>${courseCell}<td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td></tr>`;
         });
 
         html += `</tbody></table></div>`;
@@ -730,28 +806,29 @@
 
         // Chart IDs
         const charts = [
-            { id: 'chart-total', label: 'Total Points', data: playerRoundData[name] || [], key: 'total', title: 'Points' },
-            { id: 'chart-fo', label: 'FO/Greenie Points', data: playerRoundData[name] || [], key: 'fo', title: 'FO/GR Pts' },
-            { id: 'chart-cl', label: 'Closest Points', data: playerRoundData[name] || [], key: 'cl', title: 'Closest Pts' },
-            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts' }
+            { id: 'chart-total', label: 'Total Points', data: playerRoundData[name] || [], key: 'total', title: 'Points', desc: 'Total score per round (includes carry-in bonuses)' },
+            { id: 'chart-fo', label: 'FO Points', data: playerRoundData[name] || [], key: 'fo', title: 'FO Pts', desc: 'First-on points on par-4/5 holes per round' },
+            { id: 'chart-gr', label: 'Greenie Points', data: playerRoundData[name] || [], key: 'gr', title: 'GR Pts', desc: 'First-on points on par-3 (greenies) per round' },
+            { id: 'chart-cl', label: 'Closest Points', data: playerRoundData[name] || [], key: 'cl', title: 'Closest Pts', desc: 'Closest-to-pin points per round' },
+            { id: 'chart-p', label: 'Putt Points', data: playerRoundData[name] || [], key: 'p', title: 'Putt Pts', desc: 'Putting points per round' }
         ];
 
         charts.forEach((c, idx) => {
-            html += `<div class="chart-container"><h3>${c.label}</h3><div style="height:240px;"><canvas id="${c.id}"></canvas></div></div>`;
+            html += `<div class="chart-container"><h3>${c.label}<div class="chart-desc">${c.desc}</div></h3><div style="height:240px;"><canvas id="${c.id}"></canvas></div></div>`;
         });
 
         // Streak distribution charts
         const streakCharts = [
-            { id: 'chart-scoring', label: 'Score Streaks', data: st.scoringStreaks || [], title: 'Holes' },
-            { id: 'chart-zero', label: 'Drought Streaks', data: st.zeroStreaks || [], title: 'Holes' },
-            { id: 'chart-fo-streak', label: 'FO Streaks', data: st.foStreaks || [], title: 'Holes' },
-            { id: 'chart-cl-streak', label: 'Closest Streaks', data: st.closestStreaks || [], title: 'Holes' },
-            { id: 'chart-p-streak', label: 'Putt Streaks', data: st.puttStreaks || [], title: 'Holes' },
-            { id: 'chart-greenie', label: 'Greenie Runs', data: st.greenieStreaks || [], title: 'Greenies' },
+            { id: 'chart-scoring', label: 'Score Streaks', data: st.scoringStreaks || [], title: 'Holes', desc: 'Longest scoring streak achieved in each round' },
+            { id: 'chart-zero', label: 'Drought Streaks', data: st.zeroStreaks || [], title: 'Holes', desc: 'Longest zero-point drought in each round' },
+            { id: 'chart-fo-streak', label: 'FO Streaks', data: st.foStreaks || [], title: 'Holes', desc: 'Longest consecutive FO streak, per round' },
+            { id: 'chart-cl-streak', label: 'Closest Streaks', data: st.closestStreaks || [], title: 'Holes', desc: 'Longest consecutive closest streak, per round' },
+            { id: 'chart-p-streak', label: 'Putt Streaks', data: st.puttStreaks || [], title: 'Holes', desc: 'Longest consecutive putt streak, per round' },
+            { id: 'chart-greenie', label: 'Greenie Runs', data: st.greenieStreaks || [], title: 'Greenies', desc: 'Most consecutive par-3 FO wins, per round' },
         ];
 
         streakCharts.forEach(c => {
-            html += `<div class="chart-container"><h3>${c.label}</h3><div style="height:200px;"><canvas id="${c.id}"></canvas></div></div>`;
+            html += `<div class="chart-container"><h3>${c.label}<div class="chart-desc">${c.desc}</div></h3><div style="height:200px;"><canvas id="${c.id}"></canvas></div></div>`;
         });
 
         html += `</div>`;
