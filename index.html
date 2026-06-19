@@ -964,6 +964,23 @@ players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: 
 }
 // === END FUNCTION ===
 
+// === save alias ===
+function save() { saveRoundLocal({ players, currentHole, currentCourse, finishedHoles, holeSequence, scores: players.reduce((o,p)=>{o[p.name]=p.scores;return o},{}) }); }
+
+// === hideAll ===
+function hideAll() {
+  const screens = [
+  els.courseSetup,
+  els.playerSetup,
+  els.game,
+  els.summary
+  ];
+  screens.forEach(screen => {
+ if (screen) screen.classList.add('hidden');
+  });
+}
+// === END FUNCTION ===
+
 // === sortPlayersAlphabetically ===
 function sortPlayersAlphabetically() {
   console.log('Sorting players and roster alphabetically');
@@ -1416,21 +1433,6 @@ method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify(roundData)
   }).catch(() => {});
-}
-
-  // ==== FLOW ====
- function hideAll() {
-  const screens = [
-els.courseSetup,
-els.playerSetup,
-els.game,
-els.summary
-// roster, history, courseForm are gone — no longer referenced
-  ];
-
-  screens.forEach(screen => {
-if (screen) screen.classList.add('hidden');
-  });
 }
 
   els.courseSelect.addEventListener('change', () => {
