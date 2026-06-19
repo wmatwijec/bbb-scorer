@@ -643,26 +643,29 @@
 
         // Top 5 Streak Leaders
         const leaders = getStreakLeaders();
+        html += `<h3 style="margin:20px 0 10px;">🔥 Streak Leaders</h3>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season-long streaks across all rounds. Drought = consecutive holes scoring zero; FO = par-4/5 first-ons; Closest = consecutive closest-to-pin; Putt = consecutive putting points; Greenie = consecutive par-3 first-ons.</p>`;
+
         const streakStats = [
-            { key: 'scoreStreak', label: 'Score Streak' },
-            { key: 'drought', label: 'Drought' },
-            { key: 'foStreak', label: 'FO Streak' },
-            { key: 'closestStreak', label: 'Closest Streak' },
-            { key: 'puttStreak', label: 'Putt Streak' },
-            { key: 'greenieRun', label: 'Best Greenie Run' },
+            { key: 'scoreStreak', label: 'Score Streak', desc: 'consecutive holes scoring any point' },
+            { key: 'drought', label: 'Drought', desc: 'consecutive holes with zero points' },
+            { key: 'foStreak', label: 'FO Streak', desc: 'consecutive par-4/5 first-ons' },
+            { key: 'closestStreak', label: 'Closest Streak', desc: 'consecutive closest-to-pin' },
+            { key: 'puttStreak', label: 'Putt Streak', desc: 'consecutive putting points' },
+            { key: 'greenieRun', label: 'Greenie Run', desc: 'consecutive par-3 first-ons' },
         ];
 
+        html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">`;
         for (const ss of streakStats) {
             const sorted = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
             if (sorted.length === 0) continue;
-            html += `<h3 style="margin:20px 0 10px;">${ss.label} — Top 5</h3>`;
-            html += `<div class="card" style="overflow-x:auto; margin-bottom:10px;"><table>`;
-            html += `<thead><tr><th>Rank</th><th>Player</th><th>Value</th></tr></thead><tbody>`;
+            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
             sorted.forEach((entry, i) => {
-                html += `<tr><td>${i + 1}</td><td>${entry.name}</td><td>${entry[ss.key]}</td></tr>`;
+                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${entry[ss.key]}</span></div>`;
             });
-            html += `</tbody></table></div>`;
+            html += `</div>`;
         }
+        html += `</div>`;
 
         container.innerHTML = html;
     }
