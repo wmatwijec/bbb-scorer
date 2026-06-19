@@ -1030,7 +1030,8 @@ function sortPlayersAlphabetically() {
       const nextBtn = document.getElementById('nextHole');
 
       const canPrev = currentHole > 1;
-      const canNext = currentHole < HOLES;
+      const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
+      const canNext = currentHole < HOLES || isLastHoleInSequence;
 
       if (prevBtn) prevBtn.disabled = !canPrev;
       if (nextBtn) nextBtn.disabled = !canNext;
@@ -1358,8 +1359,11 @@ const carryIn = getCarryInForHole(currentHole);
   updateCourseInfoBar();
   updateNavButtons();
 
-  if (finishedHoles.size === HOLES && inRound) {
-  // All 18 holes done — show banner, but keep Next button visible for wrap-around
+  const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
+  const showWrapBanner = (isLastHoleInSequence && finishedHoles.has(currentHole));
+
+  if (showWrapBanner) {
+  // We're at the last played hole — show wrap banner
   let banner = document.getElementById('roundCompleteBanner');
   if (!banner) {
 banner = document.createElement('div');
@@ -1370,20 +1374,20 @@ banner.style.cssText = `
   max-width:800px;box-shadow:0 4px 12px rgba(0,255,0,0.3);
 `;
 banner.innerHTML = `
-  🎉 All 18 holes complete! 🎉<br>
+  🎉 Last hole played complete! 🎉<br>
   Next: wrap to Hole 1 with carry-in intact<br>
   <strong>BBB COMP</strong> to finalize and email Walt!
 `;
 document.getElementById('game').insertBefore(banner, document.getElementById('scoreTable'));
 document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1.1)');
   }
-  // Keep Next button visible so user can wrap to hole 1
   document.getElementById('nextHole')?.classList.remove('hidden');
 } else {
-  // Remove banner when not at round complete
   const oldBanner = document.getElementById('roundCompleteBanner');
-  oldBanner?.remove();
-  document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
+  if (oldBanner) {
+    oldBanner.remove();
+    document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
+  }
 }
 
    saveRoundEverywhere();
@@ -1908,12 +1912,14 @@ prev.addEventListener('click', () => {
   if (next) {
 next.onclick = null;
 next.addEventListener('click', () => {
-  if (currentHole < HOLES) {
+  const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
+  const lastHoleFinished = finishedHoles.has(currentHole) && isLastHoleInSequence;
+  if (currentHole < HOLES && !isLastHoleInSequence) {
     currentHole++;
     updateHole();
     updateCourseInfoBar();
     console.log(`NEXT → HOLE ${currentHole}`);
-  } else if (finishedHoles.size === HOLES) {
+  } else if (lastHoleFinished) {
     currentHole = 1;
     updateHole();
     updateCourseInfoBar();
