@@ -1444,15 +1444,17 @@ players.sort((a, b) => a.name.localeCompare(b.name));
  attachCourseSelectListener();
  attachNextToPlayersListener();
 
-function generateParInputs() {
- const container = document.getElementById('pars');
- container.innerHTML = '';
- for (let i = 0; i < HOLES; i++) {
-   const label = document.createElement('label');
-   label.innerHTML = `Hole ${i+1}: <input type="number" min="3" max="5" value="4" class="par-input" data-hole="${i}">`;
-   container.appendChild(label);
- }
-   }
+}
+
+ function generateParInputs() {
+const container = document.getElementById('pars');
+container.innerHTML = '';
+for (let i = 0; i < HOLES; i++) {
+  const label = document.createElement('label');
+  label.innerHTML = `Hole ${i+1}: <input type="number" min="3" max="5" value="4" class="par-input" data-hole="${i}">`;
+  container.appendChild(label);
+}
+  }
 
   
   // === CARRY LOGIC ===
