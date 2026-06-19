@@ -630,6 +630,7 @@ let waltShadowPhone = null;
 let holeSequence = [];
 let cloudRounds = [];
 let debugMode = false;
+const ENABLE_WALT_SHADOW_TEXT = false;
 
 // === CSV PARSER ===
 // === END GLOBALS ===
@@ -1030,8 +1031,7 @@ function sortPlayersAlphabetically() {
       const nextBtn = document.getElementById('nextHole');
 
       const canPrev = currentHole > 1;
-      const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
-      const canNext = currentHole < HOLES || isLastHoleInSequence;
+      const canNext = currentHole < HOLES || (currentHole === HOLES && finishedHoles.has(currentHole));
 
       if (prevBtn) prevBtn.disabled = !canPrev;
       if (nextBtn) nextBtn.disabled = !canNext;
@@ -1359,11 +1359,10 @@ const carryIn = getCarryInForHole(currentHole);
   updateCourseInfoBar();
   updateNavButtons();
 
-  const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
-  const showWrapBanner = (isLastHoleInSequence && finishedHoles.has(currentHole));
+  const isLastHoleInSequence = currentHole === HOLES && finishedHoles.has(currentHole);
+  const showWrapBanner = isLastHoleInSequence;
 
   if (showWrapBanner) {
-  // We're at the last played hole — show wrap banner
   let banner = document.getElementById('roundCompleteBanner');
   if (!banner) {
 banner = document.createElement('div');
@@ -1912,14 +1911,12 @@ prev.addEventListener('click', () => {
   if (next) {
 next.onclick = null;
 next.addEventListener('click', () => {
-  const isLastHoleInSequence = holeSequence.length > 0 && holeSequence[holeSequence.length - 1] === currentHole;
-  const lastHoleFinished = finishedHoles.has(currentHole) && isLastHoleInSequence;
-  if (currentHole < HOLES && !isLastHoleInSequence) {
+  if (currentHole < HOLES) {
     currentHole++;
     updateHole();
     updateCourseInfoBar();
     console.log(`NEXT → HOLE ${currentHole}`);
-  } else if (lastHoleFinished) {
+  } else if (finishedHoles.has(currentHole)) {
     currentHole = 1;
     updateHole();
     updateCourseInfoBar();
