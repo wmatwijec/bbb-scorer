@@ -1719,12 +1719,27 @@ if (ENABLE_WALT_SHADOW_TEXT && waltShadowPhone && finishedHoles.has(currentHole)
     els.summary.classList.remove('hidden');
     const totals = players.map(p => ({ name: p.name, points: p._cachedTotal || 0 }));
     totals.sort((a,b) => b.points - a.points);
+    
+    // Calculate open carry
+    const totalAwarded = totals.reduce((sum, t) => sum + t.points, 0);
+    const openCarry = 54 - totalAwarded;
+    
     els.leaderboard.innerHTML = '';
     totals.forEach(t => {
       const li = document.createElement('li');
       li.textContent = `${t.name}: ${t.points} pts`;
       els.leaderboard.appendChild(li);
     });
+    
+    // Add open carry line
+    const carryDiv = document.createElement('div');
+    carryDiv.className = 'card center-block';
+    carryDiv.style.marginTop = '1rem';
+    carryDiv.innerHTML = `<div style="text-align:center; font-size:1.1em;">
+      <strong>Open Carry: ${openCarry}</strong>
+      <span style="font-size:0.85em; color:#999;">(Total awarded: ${totalAwarded}/54)</span>
+    </div>`;
+    els.leaderboard.parentElement.appendChild(carryDiv);
     
   }
 
