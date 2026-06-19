@@ -211,6 +211,7 @@
         (round.players || []).forEach(p => {
             if (!p?.name || p.name.toLowerCase().includes('guest')) return;
             let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0;
+            const holeScoresPerPlayer = [];
 
             for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
                 const holeNumber = holeSequence[seqIdx];
@@ -221,6 +222,11 @@
                 const isPar3 = par === 3;
 
                 let roundTotal = 0, roundFO = 0, roundGR = 0, roundCL = 0, roundP = 0;
+                const hasAny = s.firstOn || s.closest || s.putt;
+                const foRaw = s.firstOn ? 1 : 0;
+                const grRaw = isPar3 && s.firstOn ? 1 : 0;
+                const clRaw = s.closest ? 1 : 0;
+                const pRaw = s.putt ? 1 : 0;
 
                 if (s.firstOn) {
                     const c = isPar3 ? carryIn.greenie : carryIn.firstOn;
@@ -238,15 +244,68 @@
                 grPts += roundGR;
                 clPts += roundCL;
                 pPts += roundP;
+
+                holeScoresPerPlayer.push({
+                    points: roundTotal, scored: hasAny ? 1 : 0,
+                    fo: foRaw, gr: grRaw, cl: clRaw, p: pRaw, threePt: (s.firstOn && s.closest && s.putt) ? 1 : 0
+                });
             }
+
+            // Compute streaks for this round
+            const streaks = computeStreaksFromHoles(holeScoresPerPlayer);
 
             result.playerData[p.name] = {
                 totalPts, foPts, grPts, clPts, pPts,
-                numHoles: holeSequence.length
+                numHoles: holeSequence.length, streaks
             };
         });
 
         return result;
+    }
+
+    function computeStreaksFromHoles(holeScores) {
+        let longestScoring = 0, currentScoring = 0;
+        let longestZero = 0, currentZero = 0;
+        let longestFO = 0, currentFO = 0;
+        let longestClosest = 0, currentClosest = 0;
+        let longestPutt = 0, currentPutt = 0;
+        let longestClean = 0, currentClean = 0;
+        let maxGreenies = 0, currentGreenies = 0;
+        let max3PointHoles = 0, current3PointHoles = 0;
+
+        for (const h of holeScores) {
+            if (h.scored) { currentScoring++; longestScoring = Math.max(longestScoring, currentScoring); }
+            else { currentScoring = 0; }
+
+            if (!h.scored) { currentZero++; longestZero = Math.max(longestZero, currentZero); }
+            else { currentZero = 0; }
+
+            if (h.fo) { currentFO++; longestFO = Math.max(longestFO, currentFO); }
+            else { currentFO = 0; }
+
+            if (h.cl) { currentClosest++; longestClosest = Math.max(longestClosest, currentClosest); }
+            else { currentClosest = 0; }
+
+            if (h.p) { currentPutt++; longestPutt = Math.max(longestPutt, currentPutt); }
+            else { currentPutt = 0; }
+
+            // Clean streak: scoring without carry-in (points == 1 means no carry bonus)
+            if (h.scored && h.points === 1) { currentClean++; longestClean = Math.max(longestClean, currentClean); }
+            else { currentClean = 0; }
+
+            // Greenie streak (par-3 FO, no carries counted — just raw FO on par-3)
+            if (h.gr) { currentGreenies++; maxGreenies = Math.max(maxGreenies, currentGreenies); }
+            else { currentGreenies = 0; }
+
+            // 3-point hole streak (won FO + Closest + Putt on same hole)
+            if (h.threePt) { current3PointHoles++; max3PointHoles = Math.max(max3PointHoles, current3PointHoles); }
+            else { current3PointHoles = 0; }
+        }
+
+        return {
+            longestScoring, longestZero, longestFO, longestClosest,
+            longestPutt, longestClean, maxGreenies, max3PointHoles
+        };
     }
 
     // ── Data loading ──
@@ -312,7 +371,13 @@
                     foWins: 0, grWins: 0, clWins: 0, pWins: 0,
                     bestRound: 0,
                     pointsPerRound: [], foPerRound: [], grPerRound: [],
-                    clPerRound: [], pPerRound: []
+                    clPerRound: [], pPerRound: [],
+                    // Streak season totals
+                    longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
+                    longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
+                    // Streak distributions
+                    scoringStreaks: [], zeroStreaks: [], foStreaks: [], closestStreaks: [],
+                    puttStreaks: [], cleanStreaks: [], greenieStreaks: [], threePtStreaks: []
                 };
                 playerRoundData[name] = [];
             });
@@ -338,6 +403,25 @@
                     st.grPerRound.push(data.grPts);
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
+
+                    if (data.streaks) {
+                        st.longestScoring = Math.max(st.longestScoring, data.streaks.longestScoring);
+                        st.longestZero = Math.max(st.longestZero, data.streaks.longestZero);
+                        st.longestFO = Math.max(st.longestFO, data.streaks.longestFO);
+                        st.longestClosest = Math.max(st.longestClosest, data.streaks.longestClosest);
+                        st.longestPutt = Math.max(st.longestPutt, data.streaks.longestPutt);
+                        st.longestClean = Math.max(st.longestClean, data.streaks.longestClean);
+                        st.maxGreenies = Math.max(st.maxGreenies, data.streaks.maxGreenies);
+                        st.max3PointHoles = Math.max(st.max3PointHoles, data.streaks.max3PointHoles);
+                        st.scoringStreaks.push(data.streaks.longestScoring);
+                        st.zeroStreaks.push(data.streaks.longestZero);
+                        st.foStreaks.push(data.streaks.longestFO);
+                        st.closestStreaks.push(data.streaks.longestClosest);
+                        st.puttStreaks.push(data.streaks.longestPutt);
+                        st.cleanStreaks.push(data.streaks.longestClean);
+                        st.greenieStreaks.push(data.streaks.maxGreenies);
+                        st.threePtStreaks.push(data.streaks.max3PointHoles);
+                    }
                    playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
@@ -589,6 +673,46 @@
                 </table>
             </div>
 
+            <div class="card">
+                <h3>🔥 Streaks</h3>
+                <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
+                    <div class="stat-card">
+                        <div class="label">Score Streak</div>
+                        <div class="value">${st.longestScoring}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Drought</div>
+                        <div class="value">${st.longestZero}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">FO Streak</div>
+                        <div class="value">${st.longestFO}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Closest Streak</div>
+                        <div class="value">${st.longestClosest}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Putt Streak</div>
+                        <div class="value">${st.longestPutt}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Clean Streak</div>
+                        <div class="value">${st.longestClean}</div>
+                        <div class="sub">no carries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Best Greenie Run</div>
+                        <div class="value">${st.maxGreenies}</div>
+                        <div class="sub">round max</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">3-Ptr Streak</div>
+                        <div class="value">${st.max3PointHoles}</div>
+                    </div>
+                </div>
+            </div>
+
             <h3>Round-by-Round</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
@@ -616,6 +740,20 @@
             html += `<div class="chart-container"><h3>${c.label}</h3><div style="height:240px;"><canvas id="${c.id}"></canvas></div></div>`;
         });
 
+        // Streak distribution charts
+        const streakCharts = [
+            { id: 'chart-scoring', label: 'Score Streaks', data: st.scoringStreaks || [], title: 'Holes' },
+            { id: 'chart-zero', label: 'Drought Streaks', data: st.zeroStreaks || [], title: 'Holes' },
+            { id: 'chart-fo-streak', label: 'FO Streaks', data: st.foStreaks || [], title: 'Holes' },
+            { id: 'chart-cl-streak', label: 'Closest Streaks', data: st.closestStreaks || [], title: 'Holes' },
+            { id: 'chart-p-streak', label: 'Putt Streaks', data: st.puttStreaks || [], title: 'Holes' },
+            { id: 'chart-greenie', label: 'Greenie Runs', data: st.greenieStreaks || [], title: 'Greenies' },
+        ];
+
+        streakCharts.forEach(c => {
+            html += `<div class="chart-container"><h3>${c.label}</h3><div style="height:200px;"><canvas id="${c.id}"></canvas></div></div>`;
+        });
+
         html += `</div>`;
 
         document.getElementById('player-detail').innerHTML = html;
@@ -635,6 +773,60 @@
                         datasets: [{
                             label: name,
                             data: c.data.map(d => ({ x: d.round, y: d[c.key] })),
+                            backgroundColor: color + 'cc',
+                            borderColor: color,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            pointBorderWidth: 1,
+                            pointBorderColor: '#0f111a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Round', color: '#94a3b8' },
+                                ticks: { color: '#64748b', stepSize: 1 },
+                                grid: { color: 'rgba(45,49,84,0.5)' }
+                            },
+                            y: {
+                                title: { display: true, text: c.title, color: '#94a3b8' },
+                                ticks: { color: '#64748b' },
+                                grid: { color: 'rgba(45,49,84,0.5)' },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1a1d2e',
+                                borderColor: '#2d3154',
+                                borderWidth: 1,
+                                titleColor: '#e2e8f0',
+                                bodyColor: '#94a3b8',
+                                padding: 10,
+                                cornerRadius: 6
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Render streak distribution charts
+            streakCharts.forEach(c => {
+                const ctx = document.getElementById(c.id);
+                if (!ctx) return;
+
+                const colorIdx = allPlayers.indexOf(name) % PLAYER_COLORS.length;
+                const color = PLAYER_COLORS[colorIdx];
+
+                new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: name,
+                            data: c.data.map((v, i) => ({ x: i + 1, y: v })),
                             backgroundColor: color + 'cc',
                             borderColor: color,
                             pointRadius: 5,
