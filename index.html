@@ -1213,123 +1213,6 @@ console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
   }
 }
 // === DOM READY ===
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('BBB Golf starting...');
-
-  // === BUILD ELS CACHE ===
-  els = {
-  courseSetup: document.getElementById('courseSetup'),
-  playerSetup: document.getElementById('playerSetup'),
-  game: document.getElementById('game'),
-  summary: document.getElementById('summary'),
-
-  darkModeToggle: document.getElementById('darkModeToggle'),
-  backToSetup: document.querySelectorAll('#backToSetup'),
-
-  courseSelect: document.getElementById('courseSelect'),
-  nextToPlayers: document.getElementById('nextToPlayers'),
-  playerSelect: document.getElementById('playerSelect'),
-  startGame: document.getElementById('startGame'),
-
-  holeDisplay: document.getElementById('holeDisplay'),
-  prevHole: document.getElementById('prevHole'),
-  nextHole: document.getElementById('nextHole'),
-  finishHole: document.getElementById('finishHole'),
-  editHole: document.getElementById('editHole'),
-  firstOnHeader: document.getElementById('firstOnHeader'),
-  scoreTable: document.getElementById('scoreTable'),
-  holeSummary: document.querySelector('.holeSummary'),
-  roundSummary: document.getElementById('roundSummary'),
-
-  sendSMS: document.getElementById('sendSMS'),
-  exportCSV: document.getElementById('exportCSV'),
-  completeRound: document.getElementById('completeRound'),
-  exitRound: document.getElementById('exitRound'),
-
-  leaderboard: document.getElementById('leaderboard'),
-  restart: document.getElementById('restart'),
-
-  courseInfoBar: document.getElementById('courseInfoBar'),
-  infoCourseName: document.getElementById('infoCourseName'),
-  infoCurrentHole: document.getElementById('infoCurrentHole'),
-  infoPar: document.getElementById('infoPar'),
-
-  debugPanel: document.getElementById('debugPanel'),
-  debugOutput: document.getElementById('debugOutput'),
-  closeDebug: document.getElementById('closeDebug'),
-  simResult: document.getElementById('simResult')
-};
-
-// NUCLEAR: Force courses to load and show picker — NO ESCAPE
-  try {
-await loadDataFromBackend();
-  } catch (e) {
-console.error('loadDataFromBackend failed:', e);
-  }
-
-  // Force UI update — iOS cannot ignore this
-  const loader = document.getElementById('courseLoader');
-  const picker = document.getElementById('coursePicker');
-  const error = document.getElementById('courseError');
-
-  if (loader) loader.classList.add('hidden');
-  if (error) error.classList.add('hidden');
-  if (picker) {
-picker.classList.remove('hidden');
-// renderCourseSelect();
-  }
-
-  
-// Check for saved local round first
-const saved = await loadRoundLocal();
-// Try to get cloud rounds for selection
-cloudRounds = await loadCloudRounds();
-
-// Attach listeners BEFORE showing round selection so startFreshRound can use them
-attachStartGameListener();
-attachCourseSelectListener();
-attachNextToPlayersListener();
-
-if (cloudRounds.length > 0) {
-  // Show selection UI (handles 0, 1, or multiple)
-  showRoundSelection(cloudRounds);
-  return;  // showRoundSelection will handle what to show
-} else if (saved) {
-  // Fallback to local-only if no cloud rounds
-  if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
-players = saved.players.map(p => ({
-  ...p,
-  scores: Array(18).fill(null).map(() => ({})),
-  _cachedTotal: saved._cachedTotals?.[p.name] || 0
-}));
-Object.keys(saved.scores || {}).forEach(name => {
-  const player = players.find(p => p.name === name);
-  if (player) player.scores = saved.scores[name];
-});
-currentHole = saved.currentHole;
-currentCourse = saved.currentCourse;
-finishedHoles = new Set(saved.finishedHoles || []);
-inRound = true;
-
-// Restore holeSequence if saved
-if (saved.holeSequence) {
-  holeSequence = saved.holeSequence;
-}
-hideAll();
-els.game.classList.remove('hidden');
-updateHole();
-logScreen('RESUMED SAVED ROUND');
-return;
-  }
-}
-
-// Fresh start — show course picker
-  if (saved) await clearRoundLocal();
-  
-
-// Prevent iOS from sleeping / killing the tab during a round
-let wakeLock = null;
-
 async function requestWakeLock() {
   if ('wakeLock' in navigator && inRound) {
 try {
@@ -2199,9 +2082,127 @@ if (inRound) {
   ).catch(() => {});
 }
   });
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('BBB Golf starting...');
+
+  // === BUILD ELS CACHE ===
+  els = {
+  courseSetup: document.getElementById('courseSetup'),
+  playerSetup: document.getElementById('playerSetup'),
+  game: document.getElementById('game'),
+  summary: document.getElementById('summary'),
+
+  darkModeToggle: document.getElementById('darkModeToggle'),
+  backToSetup: document.querySelectorAll('#backToSetup'),
+
+  courseSelect: document.getElementById('courseSelect'),
+  nextToPlayers: document.getElementById('nextToPlayers'),
+  playerSelect: document.getElementById('playerSelect'),
+  startGame: document.getElementById('startGame'),
+
+  holeDisplay: document.getElementById('holeDisplay'),
+  prevHole: document.getElementById('prevHole'),
+  nextHole: document.getElementById('nextHole'),
+  finishHole: document.getElementById('finishHole'),
+  editHole: document.getElementById('editHole'),
+  firstOnHeader: document.getElementById('firstOnHeader'),
+  scoreTable: document.getElementById('scoreTable'),
+  holeSummary: document.querySelector('.holeSummary'),
+  roundSummary: document.getElementById('roundSummary'),
+
+  sendSMS: document.getElementById('sendSMS'),
+  exportCSV: document.getElementById('exportCSV'),
+  completeRound: document.getElementById('completeRound'),
+  exitRound: document.getElementById('exitRound'),
+
+  leaderboard: document.getElementById('leaderboard'),
+  restart: document.getElementById('restart'),
+
+  courseInfoBar: document.getElementById('courseInfoBar'),
+  infoCourseName: document.getElementById('infoCourseName'),
+  infoCurrentHole: document.getElementById('infoCurrentHole'),
+  infoPar: document.getElementById('infoPar'),
+
+  debugPanel: document.getElementById('debugPanel'),
+  debugOutput: document.getElementById('debugOutput'),
+  closeDebug: document.getElementById('closeDebug'),
+  simResult: document.getElementById('simResult')
+};
+
+// NUCLEAR: Force courses to load and show picker — NO ESCAPE
+  try {
+await loadDataFromBackend();
+  } catch (e) {
+console.error('loadDataFromBackend failed:', e);
+  }
+
+  // Force UI update — iOS cannot ignore this
+  const loader = document.getElementById('courseLoader');
+  const picker = document.getElementById('coursePicker');
+  const error = document.getElementById('courseError');
+
+  if (loader) loader.classList.add('hidden');
+  if (error) error.classList.add('hidden');
+  if (picker) {
+picker.classList.remove('hidden');
+// renderCourseSelect();
+  }
+
+  
+// Check for saved local round first
+const saved = await loadRoundLocal();
+// Try to get cloud rounds for selection
+cloudRounds = await loadCloudRounds();
+
+// Attach listeners BEFORE showing round selection so startFreshRound can use them
+attachStartGameListener();
+attachCourseSelectListener();
+attachNextToPlayersListener();
+
+if (cloudRounds.length > 0) {
+  // Show selection UI (handles 0, 1, or multiple)
+  showRoundSelection(cloudRounds);
+  return;  // showRoundSelection will handle what to show
+} else if (saved) {
+  // Fallback to local-only if no cloud rounds
+  if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
+players = saved.players.map(p => ({
+  ...p,
+  scores: Array(18).fill(null).map(() => ({})),
+  _cachedTotal: saved._cachedTotals?.[p.name] || 0
+}));
+Object.keys(saved.scores || {}).forEach(name => {
+  const player = players.find(p => p.name === name);
+  if (player) player.scores = saved.scores[name];
+});
+currentHole = saved.currentHole;
+currentCourse = saved.currentCourse;
+finishedHoles = new Set(saved.finishedHoles || []);
+inRound = true;
+
+// Restore holeSequence if saved
+if (saved.holeSequence) {
+  holeSequence = saved.holeSequence;
+}
+hideAll();
+els.game.classList.remove('hidden');
+updateHole();
+logScreen('RESUMED SAVED ROUND');
+return;
+  }
+}
+
+// Fresh start — show course picker
+  if (saved) await clearRoundLocal();
+
 });
 
- 
+
+// Prevent iOS from sleeping / killing the tab during a round
+let wakeLock = null;
+
+
+
 
 </script>
 
