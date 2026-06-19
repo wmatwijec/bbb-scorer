@@ -1212,6 +1212,10 @@ waltShadowPhone = walt.phone.replace(/[^\d+]/g, '');
 console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
   }
 }
+
+// Prevent iOS from sleeping / killing the tab during a round
+let wakeLock = null;
+
 // === DOM READY ===
 async function requestWakeLock() {
   if ('wakeLock' in navigator && inRound) {
@@ -2217,12 +2221,6 @@ return;
   window.updateNavButtons = updateNavButtons;
 
 });
-
-
-// Prevent iOS from sleeping / killing the tab during a round
-let wakeLock = null;
-
-
 
 
 </script>
