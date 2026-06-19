@@ -1374,8 +1374,7 @@ banner.style.cssText = `
 `;
 banner.innerHTML = `
   🎉 Last hole played complete! 🎉<br>
-  Next: wrap to Hole 1 with carry-in intact<br>
-  <strong>BBB COMP</strong> to finalize and email Walt!
+  Next: wrap to Hole 1 with carry-in intact
 `;
 document.getElementById('game').insertBefore(banner, document.getElementById('scoreTable'));
 document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1.1)');
@@ -1468,34 +1467,7 @@ window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowM
 }
 
 if (els.exportCSV) els.exportCSV.onclick = exportToCSV;
-// ←←← ADD THIS BLOCK — FIXES NEXT/PREV FOREVER
-const prevBtn = document.getElementById('prevHole');
-const nextBtn = document.getElementById('nextHole');
-
-if (prevBtn) {
-  prevBtn.replaceWith(prevBtn.cloneNode(true));
-  document.getElementById('prevHole').addEventListener('click', () => {
-    if (currentHole > 1) {
-      currentHole--;
-      updateHole();
-      updateCourseInfoBar();
-      console.log(`PREV → HOLE ${currentHole}`);
-    }
-  });
 }
-
-if (nextBtn) {
-  nextBtn.replaceWith(nextBtn.cloneNode(true));
-  document.getElementById('nextHole').addEventListener('click', () => {
-    if (currentHole < HOLES) {
-      currentHole++;
-      updateHole();
-      updateCourseInfoBar();
-      console.log(`NEXT → HOLE ${currentHole}`);
-    }
-  });
-}
-  }
 
 function renderTable(carryIn, isFinished) {
 if (!els.scoreTable || !els.scoreTable.tBodies || !els.scoreTable.tBodies[0]) return;
