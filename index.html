@@ -907,6 +907,63 @@ function attachNextToPlayersListener() {
 }
 // === END FUNCTION ===
 
+// === renderPlayerSelect ===
+function renderPlayerSelect() {
+  console.log('%cDEBUG: renderPlayerSelect() called', 'color: orange; font-weight: bold');
+  console.log('Players:', players.length, 'Roster:', roster.length);
+
+  els.playerSelect.innerHTML = '';
+  roster.forEach((p, i) => {
+const div = document.createElement('div');
+div.innerHTML = `<label><input type="checkbox" data-index="${i}" ${players.find(pl => pl.name === p.name) ? 'checked' : ''}> ${p.name}</label>`;
+els.playerSelect.appendChild(div);
+  });
+
+  // === GET startGame BUTTON ===
+  els.startGame = document.getElementById('startGame');
+  if (!els.startGame) {
+console.error('%cFATAL: #startGame NOT FOUND!', 'color: red');
+return;
+  }
+
+  // === SHOW BUTTON CONTAINER (FORCE ENTIRE CHAIN) ===
+  const container = els.startGame.parentElement;
+  container.style.display = 'block';
+  els.playerSetup.style.display = 'block';  // Force show parent
+  els.playerSetup.classList.remove('hidden');  // Remove hidden class
+
+  // === ATTACH CHECKBOX LISTENERS ===
+  els.playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+chk.addEventListener('change', () => {
+  const idx = parseInt(chk.dataset.index);
+  const player = roster[idx];
+
+   if (chk.checked) {
+if (players.length >= MAX_PLAYERS) {
+ chk.checked = false;
+ alert(`Max ${MAX_PLAYERS} players`);
+ return;
+}
+players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: Array(HOLES).fill(false), _cachedTotal: 0, _cachedHoleTotals: {} });
+  } else {
+  players = players.filter(p => p.name !== player.name);
+}
+
+  players.sort((a, b) => a.name.localeCompare(b.name));
+
+   els.startGame.disabled = players.length < 2;
+   save();
+  });
+  });
+
+  // === ATTACH EVENT LISTENERS ===
+  attachStartGameListener();
+  attachCourseSelectListener();
+  attachNextToPlayersListener();
+
+}
+// === END FUNCTION ===
+
 // === sortPlayersAlphabetically ===
 function sortPlayersAlphabetically() {
   console.log('Sorting players and roster alphabetically');
@@ -1388,64 +1445,6 @@ if (val === '') {
 }
 save();
   });
-
-function renderPlayerSelect() {
-  console.log('%cDEBUG: renderPlayerSelect() called', 'color: orange; font-weight: bold');
-  console.log('Players:', players.length, 'Roster:', roster.length);
-
-  els.playerSelect.innerHTML = '';
-  roster.forEach((p, i) => {
-const div = document.createElement('div');
-div.innerHTML = `<label><input type="checkbox" data-index="${i}" ${players.find(pl => pl.name === p.name) ? 'checked' : ''}> ${p.name}</label>`;
-els.playerSelect.appendChild(div);
-  });
-
-  // === GET startGame BUTTON ===
-  els.startGame = document.getElementById('startGame');
-  if (!els.startGame) {
-console.error('%cFATAL: #startGame NOT FOUND!', 'color: red');
-return;
-  }
-
- // === SHOW BUTTON CONTAINER (FORCE ENTIRE CHAIN) ===
-  const container = els.startGame.parentElement;
-  container.style.display = 'block';
-  els.playerSetup.style.display = 'block';  // Force show parent
-  els.playerSetup.classList.remove('hidden');  // Remove hidden class
-
-  // === ATTACH CHECKBOX LISTENERS ===
-  els.playerSelect.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-chk.addEventListener('change', () => {
-  const idx = parseInt(chk.dataset.index);
-  const player = roster[idx];
-
-   if (chk.checked) {
-if (players.length >= MAX_PLAYERS) {
- chk.checked = false;
- alert(`Max ${MAX_PLAYERS} players`);
- return;
-}
-players.push({ ...player, scores: Array(HOLES).fill(null).map(() => ({})), gir: Array(HOLES).fill(false), _cachedTotal: 0, _cachedHoleTotals: {} });
-  } else {
-  players = players.filter(p => p.name !== player.name);
-}
-
-// ADD THIS LINE — keeps table and standings alphabetical
-players.sort((a, b) => a.name.localeCompare(b.name));
-
-
-players.sort((a, b) => a.name.localeCompare(b.name));
-   els.startGame.disabled = players.length < 2;
-   save();
- });
- });
-
- // === ATTACH EVENT LISTENERS ===
- attachStartGameListener();
- attachCourseSelectListener();
- attachNextToPlayersListener();
-
-}
 
  function generateParInputs() {
 const container = document.getElementById('pars');
