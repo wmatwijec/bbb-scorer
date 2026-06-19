@@ -1395,7 +1395,7 @@ return;
 function setupGameButtons() {
 if (!inRound || currentCourse === null || !courses[currentCourse]) return;
 
-els.sendSMS.onclick = () => {
+els.sendSMS?.onclick = () => {
   const holeIdx = currentHole - 1;
   const par = courses[currentCourse].pars[holeIdx];
   const isPar3 = par === 3;
@@ -1439,7 +1439,7 @@ window.location.href = `sms:${waltShadowPhone}?body=${encodeURIComponent(shadowM
   window.location.href = `sms:${phones}?body=${encodeURIComponent(message)}`;
 };
 
-els.exportCSV.onclick = exportToCSV;
+els.exportCSV?.onclick = exportToCSV;
 // ←←← ADD THIS BLOCK — FIXES NEXT/PREV FOREVER
 const prevBtn = document.getElementById('prevHole');
 const nextBtn = document.getElementById('nextHole');
