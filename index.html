@@ -999,6 +999,21 @@ function sortPlayersAlphabetically() {
     function attachBottomBarListeners() {
       const completeBtn = document.getElementById('completeRound');
       const exitBtn = document.getElementById('exitRound');
+      const darkToggle = document.getElementById('darkModeToggle');
+
+      if (darkToggle) {
+        darkToggle.onclick = () => {
+          const html = document.documentElement;
+          const current = html.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          html.setAttribute('data-theme', next);
+          localStorage.setItem('bbb-theme', next);
+          console.log(`Theme: ${next}`);
+        };
+        // Restore saved theme
+        const saved = localStorage.getItem('bbb-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+      }
 
       if (completeBtn) {
         completeBtn.onclick = () => {
