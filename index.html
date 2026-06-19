@@ -1999,6 +1999,27 @@ return;
 // Fresh start — show course picker
   if (saved) await clearRoundLocal();
 
+  // === EXPOSE GAME FUNCTIONS GLOBALLY ===
+  window.updateHole = updateHole;
+  window.updateCourseInfoBar = updateCourseInfoBar;
+  window.setupGameButtons = setupGameButtons;
+  window.attachFinishHoleListener = attachFinishHoleListener;
+  window.attachNavListeners = attachNavListeners;
+  window.precomputeAllTotals = precomputeAllTotals;
+  window.getCarryInForHole = getCarryInForHole;
+  window.renderTable = renderTable;
+  window.renderHoleSummary = renderHoleSummary;
+  window.renderRoundSummary = renderRoundSummary;
+  window.getRunningTotal = getRunningTotal;
+  window.finishCurrentHole = finishCurrentHole;
+  window.toggleScore = toggleScore;
+  window.showSummary = showSummary;
+  window.resetRound = resetRound;
+  window.saveRoundEverywhere = saveRoundEverywhere;
+  window.simulateRound = simulateRound;
+  window.exportToCSV = exportToCSV;
+  window.updateNavButtons = updateNavButtons;
+
 });
 
 
