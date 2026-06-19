@@ -1216,52 +1216,6 @@ console.log('%cWalt shadow phone loaded ✓', 'color: lime; font-weight: bold');
 // Prevent iOS from sleeping / killing the tab during a round
 let wakeLock = null;
 
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('BBB Golf starting...');
-
-  // === BUILD ELS CACHE ===
-  els = {
-  courseSetup: document.getElementById('courseSetup'),
-  playerSetup: document.getElementById('playerSetup'),
-  game: document.getElementById('game'),
-  summary: document.getElementById('summary'),
-
-  darkModeToggle: document.getElementById('darkModeToggle'),
-  backToSetup: document.querySelectorAll('#backToSetup'),
-
-  courseSelect: document.getElementById('courseSelect'),
-  nextToPlayers: document.getElementById('nextToPlayers'),
-  playerSelect: document.getElementById('playerSelect'),
-  startGame: document.getElementById('startGame'),
-
-  holeDisplay: document.getElementById('holeDisplay'),
-  prevHole: document.getElementById('prevHole'),
-  nextHole: document.getElementById('nextHole'),
-  finishHole: document.getElementById('finishHole'),
-  editHole: document.getElementById('editHole'),
-  firstOnHeader: document.getElementById('firstOnHeader'),
-  scoreTable: document.getElementById('scoreTable'),
-  holeSummary: document.querySelector('.holeSummary'),
-  roundSummary: document.getElementById('roundSummary'),
-
-  sendSMS: document.getElementById('sendSMS'),
-  exportCSV: document.getElementById('exportCSV'),
-  completeRound: document.getElementById('completeRound'),
-  exitRound: document.getElementById('exitRound'),
-
-  leaderboard: document.getElementById('leaderboard'),
-  restart: document.getElementById('restart'),
-
-  courseInfoBar: document.getElementById('courseInfoBar'),
-  infoCourseName: document.getElementById('infoCourseName'),
-  infoCurrentHole: document.getElementById('infoCurrentHole'),
-  infoPar: document.getElementById('infoPar'),
-
-  debugPanel: document.getElementById('debugPanel'),
-  debugOutput: document.getElementById('debugOutput'),
-  closeDebug: document.getElementById('closeDebug'),
-  simResult: document.getElementById('simResult')
-};
 function accumulateCarryForHole(h, carry) {
 const idx = h - 1;
 const par = courses[currentCourse].pars[idx];
@@ -1951,6 +1905,71 @@ edit.addEventListener('click', () => {
 });
   }
 }
+
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('BBB Golf starting...');
+
+  // === BUILD ELS CACHE ===
+  els = {
+  courseSetup: document.getElementById('courseSetup'),
+  playerSetup: document.getElementById('playerSetup'),
+  game: document.getElementById('game'),
+  summary: document.getElementById('summary'),
+
+  darkModeToggle: document.getElementById('darkModeToggle'),
+  backToSetup: document.querySelectorAll('#backToSetup'),
+
+  courseSelect: document.getElementById('courseSelect'),
+  nextToPlayers: document.getElementById('nextToPlayers'),
+  playerSelect: document.getElementById('playerSelect'),
+  startGame: document.getElementById('startGame'),
+
+  holeDisplay: document.getElementById('holeDisplay'),
+  prevHole: document.getElementById('prevHole'),
+  nextHole: document.getElementById('nextHole'),
+  finishHole: document.getElementById('finishHole'),
+  editHole: document.getElementById('editHole'),
+  firstOnHeader: document.getElementById('firstOnHeader'),
+  scoreTable: document.getElementById('scoreTable'),
+  holeSummary: document.querySelector('.holeSummary'),
+  roundSummary: document.getElementById('roundSummary'),
+
+  sendSMS: document.getElementById('sendSMS'),
+  exportCSV: document.getElementById('exportCSV'),
+  completeRound: document.getElementById('completeRound'),
+  exitRound: document.getElementById('exitRound'),
+
+  leaderboard: document.getElementById('leaderboard'),
+  restart: document.getElementById('restart'),
+
+  courseInfoBar: document.getElementById('courseInfoBar'),
+  infoCourseName: document.getElementById('infoCourseName'),
+  infoCurrentHole: document.getElementById('infoCurrentHole'),
+  infoPar: document.getElementById('infoPar'),
+
+  debugPanel: document.getElementById('debugPanel'),
+  debugOutput: document.getElementById('debugOutput'),
+  closeDebug: document.getElementById('closeDebug'),
+  simResult: document.getElementById('simResult')
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // === EXPOSE GAME FUNCTIONS TO GLOBAL SCOPE (immediately available) ===
 // Check for saved local round first
