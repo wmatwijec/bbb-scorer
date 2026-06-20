@@ -585,12 +585,11 @@
                         running[key] = Math.max(running[key], roundStreaks[key] || 0);
                     }
                     
-                   // Mox Hole Score: max single-hole score this round
-                    const holeScores = round.scores?.[name];
-                    if (holeScores) {
-                        const holeMax = holeScores.reduce((m, h) => Math.max(m, h.points || 0), 0);
-                        running.maxHoleScore = Math.max(running.maxHoleScore, holeMax);
-                    }
+                   // Max Hole Score: max single-hole score this round
+                     const pd = round._playerData?.[name];
+                     if (pd) {
+                         running.maxHoleScore = Math.max(running.maxHoleScore, pd.maxHole || 0);
+                     }
                     
                     // Win/loss streak (consecutive rounds)
                     const playerScores = Object.entries(round._cachedTotals || {})
