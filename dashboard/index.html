@@ -707,25 +707,26 @@
    // ── Round Card ──
     let roundDatesByDate = [];
     let roundDatesByRound = [];
-    function populateRoundDateDropdown() {
-        const dateSet = new Set();
-        allRounds.forEach(r => dateSet.add(r.date));
-        roundDatesByDate = Array.from(dateSet).sort();
+   function populateRoundDateDropdown() {
+        const dateMap = new Map();
+        allRounds.forEach(r => {
+            const dateKey = r.date.slice(0, 10);
+            if (!dateMap.has(dateKey)) dateMap.set(dateKey, r.date);
+        });
+        roundDatesByDate = Array.from(dateMap.values()).sort();
         const sel = document.getElementById('roundDateSelect');
         sel.innerHTML = roundDatesByDate.map((d, i) => {
-            const date = new Date(d);
-            return `<option value="${i}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
+            const dateKey = d.slice(0, 10);
+            const date = new Date(dateKey);
+            return `<option value="${i}" data-date="${dateKey}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
         // Default to last date
         sel.value = String(roundDatesByDate.length - 1);
     }
     function populateRoundSelect(dateIdx) {
-        const date = roundDatesByDate[parseInt(dateIdx)];
-        const dateRounds = allRounds.filter(r => {
-            const d = new Date(r.date);
-            const s = d.toISOString().slice(0, 10);
-            return s === date;
-        });
+        const opt = document.getElementById('roundDateSelect').options[parseInt(dateIdx)];
+        const dateKey = opt ? opt.dataset.date : '';
+        const dateRounds = allRounds.filter(r => r.date.slice(0, 10) === dateKey);
         roundDatesByRound = dateRounds;
         const sel = document.getElementById('roundSelect');
         sel.innerHTML = dateRounds.map((r, i) => {
