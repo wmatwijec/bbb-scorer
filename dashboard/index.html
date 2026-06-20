@@ -259,9 +259,18 @@
             // Compute streaks for this round
             const streaks = computeStreaksFromHoles(holeScoresPerPlayer);
 
+           let holesScored = 0, carryInTotal = 0, maxHole = 0, threePtrCount = 0;
+            holeScoresPerPlayer.forEach(h => {
+                if (h.scored) holesScored++;
+                carryInTotal += Math.max(0, h.points - 1);
+                maxHole = Math.max(maxHole, h.points);
+                threePtrCount += h.threePt || 0;
+            });
+
             result.playerData[p.name] = {
                 totalPts, foPts, grPts, clPts, pPts,
-                numHoles: holeSequence.length, streaks
+                numHoles: holeSequence.length, streaks,
+                holesScored, carryInTotal, maxHole, threePtrCount
             };
         });
 
@@ -372,7 +381,7 @@
             seasonStats = {};
             playerRoundData = {};
             allPlayers.forEach(name => {
-                seasonStats[name] = {
+              seasonStats[name] = {
                     rounds: 0, totalPoints: 0,
                     foWins: 0, grWins: 0, clWins: 0, pWins: 0,
                     bestRound: 0,
@@ -381,7 +390,8 @@
                     // Streak season totals
                     longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
                     longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
-   
+                    // Additional season stats
+                    totalHolesScored: 0, totalCarryIn: 0, maxHoleScore: 0, total3PtrHoles: 0,
                 };
                 playerRoundData[name] = [];
             });
@@ -408,7 +418,7 @@
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
 
-                    if (data.streaks) {
+                  if (data.streaks) {
                         st.longestScoring = Math.max(st.longestScoring, data.streaks.longestScoring);
                         st.longestZero = Math.max(st.longestZero, data.streaks.longestZero);
                         st.longestFO = Math.max(st.longestFO, data.streaks.longestFO);
@@ -418,6 +428,10 @@
                         st.maxGreenies = Math.max(st.maxGreenies, data.streaks.maxGreenies);
                         st.max3PointHoles = Math.max(st.max3PointHoles, data.streaks.max3PointHoles);
                     }
+                    st.totalHolesScored += data.holesScored || 0;
+                    st.totalCarryIn += data.carryInTotal || 0;
+                    st.maxHoleScore = Math.max(st.maxHoleScore, data.maxHole || 0);
+                    st.total3PtrHoles += data.threePtrCount || 0;
                    playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
@@ -568,6 +582,37 @@
             html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
             sorted.forEach((entry, i) => {
                 html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${entry[ss.key]}</span></div>`;
+            });
+            html += `</div>`;
+        }
+       html += `</div>`;
+
+        // Other Leaders — Season Summary stats
+        html += `<h3 style="margin:20px 0 10px;">📊 Other Leaders</h3>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season totals and best single-round achievements across all categories.</p>`;
+
+        const otherStats = [
+            { key: 'totalHolesScored', label: 'Holes Scored', desc: 'total holes with any point', sort: 'sum', fmt: v => v },
+            { key: 'totalCarryIn', label: 'Carry-In Points', desc: 'bonus points from carries', sort: 'sum', fmt: v => v },
+            { key: 'maxHoleScore', label: 'Max Hole Score', desc: 'highest points in one hole', sort: 'max', fmt: v => v },
+            { key: 'total3PtrHoles', label: '3-Ptr Holes', desc: 'FO+Closest+Putt same hole', sort: 'sum', fmt: v => v },
+        ];
+
+        html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
+        for (const os of otherStats) {
+            let sorted;
+            if (os.sort === 'sum') {
+                sorted = [...leaders].sort((a, b) => (seasonStats[b.name][os.key] || 0) - (seasonStats[a.name][os.key] || 0)).slice(0, 5);
+            } else {
+                sorted = [...leaders].sort((a, b) => (b[os.key] || 0) - (a[os.key] || 0)).slice(0, 5);
+            }
+            sorted = sorted.filter(p => (os.sort === 'sum' ? seasonStats[p.name][os.key] || 0 : p[os.key] || 0) > 0);
+            if (sorted.length === 0) continue;
+            const val = (p) => os.sort === 'sum' ? (seasonStats[p.name][os.key] || 0) : (p[os.key] || 0);
+            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+            sorted.forEach((entry, i) => {
+                const v = val(entry);
+                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${os.fmt(v)}</span></div>`;
             });
             html += `</div>`;
         }
@@ -759,14 +804,40 @@
                         <div class="label">Best Greenie Run<div class="sub">most consecutive par-3 FO in one round</div></div>
                         <div class="value">${st.maxGreenies}</div>
                     </div>
-                    <div class="stat-card">
+              <div class="stat-card">
                         <div class="label">3-Ptr Streak<div class="sub">FO + Closest + Putt on same hole</div></div>
                         <div class="value">${st.max3PointHoles}</div>
                     </div>
                 </div>
             </div>
 
-             <h3>Round-by-Round</h3>
+            <div class="card">
+                <h3>📊 Season Summary</h3>
+                <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+                    <div class="stat-card">
+                        <div class="label">Holes Scored<div class="sub">of ${st.rounds * 18} total</div></div>
+                        <div class="value">${st.totalHolesScored}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Score Rate<div class="sub">holes with points</div></div>
+                        <div class="value">${st.rounds > 0 ? ((st.totalHolesScored / (st.rounds * 18)) * 100).toFixed(0) : 0}%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Carry-In Pts<div class="sub">bonus points earned</div></div>
+                        <div class="value">${st.totalCarryIn}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Max Hole Score<div class="sub">highest pts in one hole</div></div>
+                        <div class="value">${st.maxHoleScore}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">3-Ptr Holes<div class="sub">FO+Closest+Putt same hole</div></div>
+                        <div class="value">${st.total3PtrHoles}</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Round-by-Round</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
                     <thead><tr><th>#</th><th>Date`;
