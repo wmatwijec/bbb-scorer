@@ -408,7 +408,16 @@
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
 
-                    // per-round streak max values no longer used
+                    if (data.streaks) {
+                        st.longestScoring = Math.max(st.longestScoring, data.streaks.longestScoring);
+                        st.longestZero = Math.max(st.longestZero, data.streaks.longestZero);
+                        st.longestFO = Math.max(st.longestFO, data.streaks.longestFO);
+                        st.longestClosest = Math.max(st.longestClosest, data.streaks.longestClosest);
+                        st.longestPutt = Math.max(st.longestPutt, data.streaks.longestPutt);
+                        st.longestClean = Math.max(st.longestClean, data.streaks.longestClean);
+                        st.maxGreenies = Math.max(st.maxGreenies, data.streaks.maxGreenies);
+                        st.max3PointHoles = Math.max(st.max3PointHoles, data.streaks.max3PointHoles);
+                    }
                    playerRoundData[name].push({
                         round: roundIndex,
                         date: round.date,
@@ -420,111 +429,6 @@
                         p: data.pPts
                     });
                 }
-            }
-
-            // Compute season-long streaks by concatenating all holes across rounds
-            for (const name of allPlayers) {
-                const st = seasonStats[name];
-                if (st.rounds === 0) continue;
-
-                // Collect all hole scores across all rounds for this player
-                const fullSequence = [];
-                const roundIdx = playerRoundData[name]?.map(r => r.round) || [];
-                for (const rIdx of roundIdx) {
-                    const round = allRounds[rIdx - 1];
-                    if (!round) continue;
-                    const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18 ? round.pars : DEFAULT_PARS;
-                    const holeSequence = buildHoleSequence(round);
-                    const holeScores = {};
-                    for (let idx = 0; idx < 18; idx++) holeScores[idx] = {};
-                    Object.entries(round.scores || {}).forEach(([n, playerHoles]) => {
-                        if (!Array.isArray(playerHoles) || playerHoles.length !== 18) return;
-                        playerHoles.forEach((s, i) => { holeScores[i][n] = s || {}; });
-                    });
-
-                    // Get carry-in for each hole in this round
-                    const carry = { firstOn: 0, greenie: 0, closest: 0, putt: 0 };
-                    for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
-                        const holeNumber = holeSequence[seqIdx];
-                        const hidx = holeNumber - 1;
-                        const scores = holeScores[hidx];
-                        const par = pars[hidx] || 4;
-                        const isPar3 = par === 3;
-                        if (isPar3) {
-                            if (Object.values(scores).some(s => s.firstOn)) carry.greenie = 0;
-                            else carry.greenie++;
-                        } else {
-                            if (Object.values(scores).some(s => s.firstOn)) carry.firstOn = 0;
-                            else carry.firstOn++;
-                        }
-                        if (Object.values(scores).some(s => s.closest)) carry.closest = 0;
-                        else carry.closest++;
-                        if (Object.values(scores).some(s => s.putt)) carry.putt = 0;
-                        else carry.putt++;
-                    }
-
-                    // Now build hole-by-hole data for this player, reusing carry-in logic
-                    const currentCarry = { firstOn: 0, greenie: 0, closest: 0, putt: 0 };
-                    for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
-                        const holeNumber = holeSequence[seqIdx];
-                        const hidx = holeNumber - 1;
-                        const s = holeScores[hidx]?.[name] || {};
-                        const par = pars[hidx] || 4;
-                        const isPar3 = par === 3;
-
-                        let scored = false;
-                        let fo = false;
-                        let gr = false;
-                        let cl = false;
-                        let p = false;
-
-                        if (s.firstOn) {
-                            const c = isPar3 ? currentCarry.greenie : currentCarry.firstOn;
-                            scored = true;
-                            if (isPar3) { gr = true; } else { fo = true; }
-                        }
-                        if (s.closest) { scored = true; cl = true; }
-                        if (s.putt) { scored = true; p = true; }
-
-                        const threePt = s.firstOn && s.closest && s.putt ? 1 : 0;
-
-                        fullSequence.push({ scored, fo, gr, cl, p, threePt });
-
-                        // Update carry-in for next hole
-                        if (s.firstOn) {
-                            if (isPar3) currentCarry.greenie = 0;
-                            else currentCarry.firstOn = 0;
-                        } else {
-                            if (isPar3) currentCarry.greenie++;
-                            else currentCarry.firstOn++;
-                        }
-                        if (s.closest) currentCarry.closest = 0;
-                        else currentCarry.closest++;
-                        if (s.putt) currentCarry.putt = 0;
-                        else currentCarry.putt++;
-                    }
-                }
-
-                // Compute streaks over the full season sequence
-                let ls = 0, cs = 0, lz = 0, cz = 0, lf = 0, cf = 0;
-                let lc = 0, cc = 0, lp = 0, cp = 0, lg = 0, cg = 0, l3 = 0, c3 = 0;
-                for (const h of fullSequence) {
-                    if (h.scored) { cs++; ls = Math.max(ls, cs); } else { cs = 0; }
-                    if (!h.scored) { cz++; lz = Math.max(lz, cz); } else { cz = 0; }
-                    if (h.fo) { cf++; lf = Math.max(lf, cf); } else { cf = 0; }
-                    if (h.cl) { cc++; lc = Math.max(lc, cc); } else { cc = 0; }
-                    if (h.p) { cp++; lp = Math.max(lp, cp); } else { cp = 0; }
-                    if (h.gr) { cg++; lg = Math.max(lg, cg); } else { cg = 0; }
-                    if (h.threePt) { c3++; l3 = Math.max(l3, c3); } else { c3 = 0; }
-                }
-
-                st.longestScoring = ls;
-                st.longestZero = lz;
-                st.longestFO = lf;
-                st.longestClosest = lc;
-                st.longestPutt = lp;
-                st.maxGreenies = lg;
-                st.max3PointHoles = l3;
             }
 
             statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
