@@ -892,8 +892,9 @@
         });
         html += `</div>`;
 
-        container.innerHTML = html;
-    }
+      container.innerHTML = html;
+         console.log('renderScorecard done, html length:', html.length);
+     }
 
     // ── Leaderboard rendering ──
     function getLeaderboardData() {
