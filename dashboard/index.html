@@ -605,20 +605,19 @@
                     if (isWinner.has(name)) { currentWinStreak++; currentLossStreak = 0; running.winStreak = Math.max(running.winStreak, currentWinStreak); }
                     else { currentWinStreak = 0; currentLossStreak++; running.lossDrought = Math.max(running.lossDrought, currentLossStreak); }
                     
-                    // Accumulate Other Leaders fields (sum, not max) and win/loss counts
-                    const pd = round._playerData?.[name];
-                    running.rounds++;
-                    running.totalHolesScored += pd?.holesScored || 0;
-                    running.totalCarryIn += pd?.carryInTotal || 0;
-                    running.total3PtrHoles += pd?.threePtrCount || 0;
-                    running.wins += isWinner.has(name) ? 1 : 0;
-                    running.losses += !isWinner.has(name) && n > 1 ? 1 : 0;
-                    
-                    cumulativeStreaks[name].push({
-                        date: round.date,
-                        ...running
-                    });
-                }
+                 // Accumulate Other Leaders fields (sum, not max) and win/loss counts
+                     running.rounds++;
+                     running.totalHolesScored += pd?.holesScored || 0;
+                     running.totalCarryIn += pd?.carryInTotal || 0;
+                     running.total3PtrHoles += pd?.threePtrCount || 0;
+                     running.wins += isWinner.has(name) ? 1 : 0;
+                     running.losses += !isWinner.has(name) && n > 1 ? 1 : 0;
+
+              cumulativeStreaks[name].push({
+                     date: round.date,
+                         ...running
+                     });
+                 }
                 // Save current running streaks (what they are NOW)
                 playerCurrentStreaks[name] = { ...currentHoleStreaks };
             }
