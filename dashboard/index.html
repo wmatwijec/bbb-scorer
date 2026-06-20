@@ -870,9 +870,6 @@
 
         html += `<div class="streak-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-        // Init streak slider (called after each renderLeaderboard)
-        initStreakSlider(leaders, streakStats);
-
         // Other Leaders — Season Summary stats
         html += `<h3 style="margin:20px 0 10px;">📊 Other Leaders</h3>`;
         html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season totals and best single-round achievements across all categories.</p>`;
@@ -939,6 +936,7 @@
         html += `</div>`;
 
         container.innerHTML = html;
+        initStreakSlider(leaders, streakStats);
     }
 
     function sortBy(col) {
