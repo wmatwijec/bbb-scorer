@@ -896,12 +896,8 @@
                 html += `</div>`;
             }
            const winLossGridEl = document.querySelector('.win-loss-grid');
-            if (winLossGridEl) winLossGridEl.innerHTML = html;
-       }
-
-        renderGrid();
-        renderOtherGrid();
-        renderWinLossGrid();
+           if (winLossGridEl) winLossGridEl.innerHTML = html;
+        }
 
     function renderLeaderboard() {
         const lb = getLeaderboardData();
