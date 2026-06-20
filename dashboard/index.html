@@ -7,6 +7,7 @@
   
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --hl-color: #60a5fa; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0f111a; color: #e2e8f0;
@@ -100,10 +101,10 @@
         .error { color: #f87171; font-style: normal; }
 
         .player-highlight {
-            background: rgba(96, 165, 250, 0.25) !important;
+            background: var(--hl-bg, rgba(96, 165, 250, 0.25)) !important;
             border-radius: 3px;
             padding: 0 2px;
-            color: #60a5fa !important;
+            color: var(--hl-color) !important;
             font-weight: bold;
         }
 
@@ -127,6 +128,10 @@
         <div class="actions">
             <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
+            <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
+                Highlight:
+                <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
+            </label>
             <a href="/" class="btn btn-primary btn-sm" style="margin-left:8px;">⛳ Scorer</a>
         </div>
     </div>
@@ -1217,6 +1222,19 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
     function onPlayerHighlight(player) {
         _selectedPlayer = player;
         highlightPlayer(player);
+    }
+
+    function onHighlightColorChange(color) {
+        document.documentElement.style.setProperty('--hl-color', color);
+        // Compute background rgba from hex
+        const r = parseInt(color.slice(1,3),16);
+        const g = parseInt(color.slice(3,5),16);
+        const b = parseInt(color.slice(5,7),16);
+        document.documentElement.style.setProperty('--hl-bg', `rgba(${r},${g},${b},0.25)`);
+        // Update CSS to use the computed background
+        document.querySelectorAll('.player-highlight').forEach(el => {
+            el.style.background = `rgba(${r},${g},${b},0.25)`;
+        });
     }
 
     function highlightPlayer(playerName) {
