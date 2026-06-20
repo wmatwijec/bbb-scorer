@@ -264,9 +264,9 @@
                 const isPar3 = par === 3;
 
                 let roundTotal = 0, roundFO = 0, roundGR = 0, roundCL = 0, roundP = 0;
-                const hasAny = s.firstOn || s.closest || s.putt;
-                const foRaw = s.firstOn ? 1 : 0;
-                const grRaw = isPar3 && s.firstOn ? 1 : 0;
+     const hasAny = s.firstOn || s.closest || s.putt;
+                 const foRaw = !isPar3 && s.firstOn ? 1 : 0;
+                 const grRaw = isPar3 && s.firstOn ? 1 : 0;
                 const clRaw = s.closest ? 1 : 0;
                 const pRaw = s.putt ? 1 : 0;
 
@@ -432,10 +432,11 @@
                 const coursesRes = await fetch(`${BACKEND}/courses`);
                 if (coursesRes.ok) {
                     const coursesCSV = await coursesRes.text();
-                    coursesCSV.trim().split('\n').forEach(line => {
+                   coursesCSV.trim().split('\n').forEach(line => {
                         const cols = line.split(',');
                         const name = cols[0]?.trim();
-                        if (name && cols.length >= 20) {
+                        console.log('CSV line:', name, 'cols:', cols.length, 'values:', cols.slice(1,20));
+                        if (name && cols.length >= 19) {
                             const pars = [];
                             for (let i = 1; i <= 18; i++) {
                                 const par = parseInt(cols[i]);
@@ -445,7 +446,8 @@
                         }
                     });
                 }
-            } catch(e) { console.warn('Could not load course pars:', e); }
+ } catch(e) { console.warn('Could not load course pars:', e); }
+             console.log('Final coursePars:', coursePars);
 
             // Collect unique players (non-guest, non-excluded)
             const excludedPlayers = new Set(['Doug', 'Ryan']);
