@@ -603,10 +603,10 @@
                     else { currentWinStreak = 0; currentLossStreak++; running.lossDrought = Math.max(running.lossDrought, currentLossStreak); }
                     
                  // Accumulate Other Leaders fields (sum, not max) and win/loss counts
-                     running.rounds++;
-                     running.totalHolesScored += pd?.holesScored || 0;
-                     running.totalCarryIn += pd?.carryInTotal || 0;
-                     running.total3PtrHoles += pd?.threePtrCount || 0;
+                      running.rounds++;
+                      running.totalHolesScored += pData?.holesScored || 0;
+                      running.totalCarryIn += pData?.carryInTotal || 0;
+                      running.total3PtrHoles += pData?.threePtrCount || 0;
                      running.wins += isWinner.has(name) ? 1 : 0;
                      running.losses += !isWinner.has(name) && n > 1 ? 1 : 0;
 
