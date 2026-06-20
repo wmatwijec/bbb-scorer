@@ -946,13 +946,9 @@ const otherGridEl = document.querySelector('.other-leaders-grid');
 
 
 function renderWinLossGrid() {
-                const slider = document.querySelector('.streak-slider');
-                updateButtons();
-       // Remove old sticky bar if re-rendering
-        const oldBar = document.getElementById('stickySliderBar');
-        if (oldBar) oldBar.remove();
-
-        let html = '';
+                 const slider = document.querySelector('.streak-slider');
+                 updateButtons();
+                 let html = '';
                 const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
                 if (shouldLog) {
                     console.group('renderWinLossGrid |', _streakMode);
@@ -1002,6 +998,10 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
          }
 
     function renderLeaderboard() {
+        // Remove old sticky bar if re-rendering
+        const oldBar = document.getElementById('stickySliderBar');
+        if (oldBar) oldBar.remove();
+
         const lb = getLeaderboardData();
         const container = document.getElementById('leaderboard-container');
 
