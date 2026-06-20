@@ -659,6 +659,20 @@
    let _currentLeaders = null, _currentStreakStats = null, _currentOtherStats = null, _currentWinLossStats = null;
     let _listenersAttached = false;
     let _hasLoggedInitial = false;
+    function syncFromBottom() {
+        const bottom = document.getElementById('fixedSliderBar');
+        const top = document.getElementById('topSliderBar');
+        if (!bottom || !top) return;
+        const bSlider = bottom.querySelector('.streak-slider');
+        const bSelect = bottom.querySelector('.streak-date-select');
+        const bLabel = bottom.querySelector('.streak-date-label');
+        const tSlider = top.querySelector('.streak-slider');
+        const tSelect = top.querySelector('.streak-date-select');
+        const tLabel = top.querySelector('.streak-date-label');
+        if (bSlider && tSlider) tSlider.value = bSlider.value;
+        if (bSelect && tSelect) tSelect.value = bSelect.value;
+        if (bLabel && tLabel) tLabel.textContent = bLabel.textContent;
+    }
     function initStreakSlider(leaders, streakStats, otherStats, winLossStats) {
         _currentLeaders = leaders;
         _currentStreakStats = streakStats;
@@ -671,15 +685,17 @@
         if (!slider || !select || !label) return;
 
         if (!_listenersAttached) {
-            // Use document-level event delegation to survive innerHTML re-renders
+           // Use document-level event delegation to survive innerHTML re-renders
             document.addEventListener('click', (e) => {
                 const modeBtn = e.target.closest('.streak-mode-btn');
                 if (modeBtn && modeBtn.dataset.mode) {
                  _streakMode = modeBtn.dataset.mode;
                     console.log('mode-btn clicked:', _streakMode);
+                    syncFromBottom();
                     renderGrid();
                     renderOtherGrid();
                     renderWinLossGrid();
+                    adjustPadding();
                 }
             });
 
@@ -689,9 +705,11 @@
                     const idx = parseInt(e.target.value);
                     const sel = document.querySelector('.streak-date-select');
                     if (sel) sel.value = String(idx);
+                    syncFromBottom();
                     renderGrid();
                     renderOtherGrid();
                     renderWinLossGrid();
+                    adjustPadding();
                 }
             });
 
@@ -701,17 +719,24 @@
                     const sl = document.querySelector('.streak-slider');
                     if (sl) sl.value = idx;
         _streakMode = 'date';
-                     console.log('slider date changed:', allRoundDates[parseInt(sl.value)], 'mode:', _streakMode);
-                     renderGrid();
-                     renderOtherGrid();
-                     renderWinLossGrid();
-                 }
-             });
+                      console.log('slider date changed:', allRoundDates[parseInt(sl.value)], 'mode:', _streakMode);
+                      syncFromBottom();
+                      renderGrid();
+                      renderOtherGrid();
+                      renderWinLossGrid();
+                      adjustPadding();
+                  }
+              });
              _listenersAttached = true;
-         }
+          }
+     }
+
+    function adjustPadding() {
+        const c = document.getElementById('leaderboard-container');
+        if (c) c.style.paddingBottom = '50px';
     }
 
-        function updateButtons() {
+    function updateButtons() {
             document.querySelectorAll('.streak-mode-btn').forEach(btn => {
                 if (btn.dataset.mode === _streakMode) {
                     btn.style.background = '#0f111a'; btn.style.color = '#60a5fa'; btn.style.borderColor = '#60a5fa';
@@ -1047,7 +1072,7 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             return `<option value="${i}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
 
-        html += `<div style="margin:10px 0 15px;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;">
+        html += `<div id="topSliderBar" style="margin:10px 0 15px;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;display:none;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
                 <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
@@ -1097,6 +1122,19 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         ];
 
         html += `<div class="winloss-leaders-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
+
+        // Fixed bottom slider bar
+        html += `<div id="fixedSliderBar" style="position:fixed;bottom:0;left:0;right:0;background:#1a1d2e;border-top:1px solid #2d3154;padding:8px 16px;z-index:1000;display:flex;gap:10px;flex-wrap:nowrap;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:bold;cursor:pointer;white-space:nowrap;" title="Current running streaks">⚡ Now</button>
+                <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap;" title="Season-long best streaks">🏆 Season</button>
+                <input type="range" class="streak-slider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:100px;accent-color:#60a5fa;" title="Slider">
+                <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:3px 6px;font-size:11px;white-space:nowrap;max-width:140px;" title="Select date">
+                    ${dateLabels}
+                </select>
+                <span class="streak-date-label" style="font-size:11px;color:#60a5fa;font-weight:bold;white-space:nowrap;">Now</span>
+            </div>
+        </div>`;
 
        container.innerHTML = html;
         initStreakSlider(leaders, streakStats, otherStats, winLossStats);
