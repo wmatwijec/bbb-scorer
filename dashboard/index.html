@@ -707,13 +707,14 @@
    // ── Round Card ──
     let roundDatesByDate = [];
     let roundDatesByRound = [];
-   function populateRoundDateDropdown() {
+  function populateRoundDateDropdown() {
         const dateMap = new Map();
         allRounds.forEach(r => {
             const dateKey = r.date.slice(0, 10);
             if (!dateMap.has(dateKey)) dateMap.set(dateKey, r.date);
         });
         roundDatesByDate = Array.from(dateMap.values()).sort();
+        console.log('RoundCard dates:', roundDatesByDate.length, 'last:', roundDatesByDate[roundDatesByDate.length-1]);
         const sel = document.getElementById('roundDateSelect');
         sel.innerHTML = roundDatesByDate.map((d, i) => {
             const dateKey = d.slice(0, 10);
@@ -726,7 +727,9 @@
     function populateRoundSelect(dateIdx) {
         const opt = document.getElementById('roundDateSelect').options[parseInt(dateIdx)];
         const dateKey = opt ? opt.dataset.date : '';
+        console.log('RoundCard populateRoundSelect:', dateIdx, 'dateKey:', dateKey);
         const dateRounds = allRounds.filter(r => r.date.slice(0, 10) === dateKey);
+        console.log('RoundCard found rounds:', dateRounds.length, dateRounds.map(r => r.date.slice(0,10)));
         roundDatesByRound = dateRounds;
         const sel = document.getElementById('roundSelect');
         sel.innerHTML = dateRounds.map((r, i) => {
