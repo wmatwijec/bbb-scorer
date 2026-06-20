@@ -826,7 +826,7 @@
                  const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
                  unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
                  const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
-(top.length === 0) continue;
+                  if (top.length === 0) continue;
               if (shouldLog) console.log(`  "${ss.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
@@ -869,9 +869,9 @@ html += `</div>`;
                      dynamicVal: getOtherDynVal(name, os)
                  }));
                  allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                 const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
-(top.length === 0) continue;
-              if (shouldLog) console.log(`  "${os.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+               const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
+                 if (top.length === 0) continue;
+                  if (shouldLog) console.log(`  "${os.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
                  top.forEach((entry, i) => {
                     const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
@@ -909,9 +909,9 @@ function renderWinLossGrid() {
                     dynamicVal: getWinLossDynVal(name, wl)
                 }));
                 allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
-(top.length === 0) continue;
-              if (shouldLog) console.log(`  "${wl.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+            const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
+                 if (top.length === 0) continue;
+                  if (shouldLog) console.log(`  "${wl.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
                  top.forEach((entry, i) => {
                      const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
