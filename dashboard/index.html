@@ -280,7 +280,7 @@
         return result;
     }
 
-   function computeStreaksFromHoles(holeScores, opts) {
+  function computeStreaksFromHoles(holeScores, opts) {
         let longestScoring = opts?.longestScoring ?? 0, currentScoring = opts?.currentScoring ?? 0;
         let longestZero = opts?.longestZero ?? 0, currentZero = opts?.currentZero ?? 0;
         let longestFO = opts?.longestFO ?? 0, currentFO = opts?.currentFO ?? 0;
@@ -292,34 +292,40 @@
 
         for (let i = 0; i < holeScores.length; i++) {
             const h = holeScores[i];
-            const scored = h.scored || h.fo || h.cl || h.p || h.gr || h.points > 0;
+            // Raw backend holes use firstOn/closest/putt; mapped data uses fo/cl/p
+            const hasFO = h.firstOn || h.fo;
+            const hasCl = h.closest || h.cl;
+            const hasP = h.p;
+            const hasGR = h.gr;
+            const hasPoints = h.points > 0;
+            const scored = h.scored || hasFO || hasCl || hasP || hasGR || hasPoints;
             if (scored) { currentScoring++; longestScoring = Math.max(longestScoring, currentScoring); }
             else { currentScoring = 0; }
 
             if (!scored) { currentZero++; longestZero = Math.max(longestZero, currentZero); }
             else { currentZero = 0; }
 
-            if (h.fo) { currentFO++; longestFO = Math.max(longestFO, currentFO); }
+            if (hasFO) { currentFO++; longestFO = Math.max(longestFO, currentFO); }
             else { currentFO = 0; }
 
-            if (h.cl) { currentClosest++; longestClosest = Math.max(longestClosest, currentClosest); }
+            if (hasCl) { currentClosest++; longestClosest = Math.max(longestClosest, currentClosest); }
             else { currentClosest = 0; }
 
-            if (h.p) { currentPutt++; longestPutt = Math.max(longestPutt, currentPutt); }
+            if (hasP) { currentPutt++; longestPutt = Math.max(longestPutt, currentPutt); }
             else { currentPutt = 0; }
 
-            // Clean streak: scoring without carry-in (points == 1 means no carry bonus)
-            if (scored && (h.points === 1 || (!h.gr && !h.cl))) { currentClean++; longestClean = Math.max(longestClean, currentClean); }
+            // Clean streak: scoring without carry-in (single-point scores)
+            if (scored && h.points === 1) { currentClean++; longestClean = Math.max(longestClean, currentClean); }
             else { currentClean = 0; }
 
             // Greenie streak (par-3 FO, skip non-par-3 holes — don't reset)
             if (DEFAULT_PARS[i] === 3) {
-                if (h.gr || h.fo) { currentGreenies++; maxGreenies = Math.max(maxGreenies, currentGreenies); }
+                if (hasGR || hasFO) { currentGreenies++; maxGreenies = Math.max(maxGreenies, currentGreenies); }
                 else { currentGreenies = 0; }
             }
 
             // 3-point hole streak (won FO + Closest + Putt on same hole)
-            if (h.threePt) { current3PointHoles++; max3PointHoles = Math.max(max3PointHoles, current3PointHoles); }
+            if (h.threePt || (hasFO && hasCl && hasP)) { current3PointHoles++; max3PointHoles = Math.max(max3PointHoles, current3PointHoles); }
             else { current3PointHoles = 0; }
         }
 
