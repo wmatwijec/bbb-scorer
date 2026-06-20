@@ -860,13 +860,13 @@
                       name,
                       seasonVal: ss.special ? seasonStats[name].maxHoleScore : seasonStats[name][ss.statsKey] || 0,
                       dynamicVal: getDynVal(name, ss)
-                  }));
-                  const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
-                  const currentTop10 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
-                  if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
-                  if (shouldLog) console.log(`${ss.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+          }));
+                   const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
+                   const currentTop10 = _streakMode === 'now' ? allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10) : allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
+                   if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
+                   if (shouldLog) console.log(`${ss.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                   const labelEl = document.querySelector('.streak-date-label');
                   if (labelEl) labelEl.textContent = colLabel;
                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
@@ -1137,6 +1137,19 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             { key: 'winPct', label: 'Win %', desc: 'wins / rounds played', sort: 'ratio', fmt: v => (v * 100).toFixed(1) + '%' },
             { key: 'winStreak', label: 'Win Streak', desc: 'most consecutive wins', sort: 'sum', fmt: v => v },
         ];
+
+        // Fixed bottom slider bar
+        html += `<div id="fixedSliderBar" style="position:fixed;bottom:0;left:0;right:0;background:#1a1d2e;border-top:1px solid #2d3154;padding:8px 16px;z-index:1000;display:flex;gap:10px;flex-wrap:nowrap;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:bold;cursor:pointer;white-space:nowrap;" title="Current running streaks">⚡ Now</button>
+                <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;white-space:nowrap;" title="Season-long best streaks">🏆 Season</button>
+                <input type="range" class="streak-slider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:100px;accent-color:#60a5fa;" title="Slider">
+                <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:3px 6px;font-size:11px;white-space:nowrap;max-width:140px;" title="Select date">
+                    ${dateLabels}
+                </select>
+                <span class="streak-date-label" style="font-size:11px;color:#60a5fa;font-weight:bold;white-space:nowrap;">Now</span>
+            </div>
+        </div>`;
 
     container.innerHTML = html;
           initStreakSlider(leaders, streakStats, otherStats, winLossStats);
