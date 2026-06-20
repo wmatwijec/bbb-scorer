@@ -661,9 +661,8 @@
     }
    let _streakMode = 'now';
 
-    let _sliderEl = null, _selectEl = null, _labelEl = null, _gridEl = null, _otherGridEl = null, _winLossGridEl = null;
-
     let _currentLeaders = null, _currentStreakStats = null, _currentOtherStats = null, _currentWinLossStats = null;
+    let _listenersAttached = false;
     function initStreakSlider(leaders, streakStats, otherStats, winLossStats) {
         _currentLeaders = leaders;
         _currentStreakStats = streakStats;
@@ -673,20 +672,9 @@
         const slider = document.querySelector('.streak-slider');
         const select = document.querySelector('.streak-date-select');
         const label = document.querySelector('.streak-date-label');
-        const grid = document.querySelector('.streak-grid');
-        const otherGrid = document.querySelector('.other-leaders-grid');
-        const winLossGrid = document.querySelector('.winloss-leaders-grid');
-        if (!slider || !select || !label || !grid) return;
+        if (!slider || !select || !label) return;
 
-        // Only attach listeners once
-        if (!_sliderEl) {
-            _sliderEl = slider;
-            _selectEl = select;
-            _labelEl = label;
-            _gridEl = grid;
-            _otherGridEl = otherGrid;
-            _winLossGridEl = winLossGrid;
-
+        if (!_listenersAttached) {
             // Use document-level event delegation to survive innerHTML re-renders
             document.addEventListener('click', (e) => {
                 const modeBtn = e.target.closest('.streak-mode-btn');
@@ -700,6 +688,7 @@
 
             document.addEventListener('input', (e) => {
                 if (e.target.classList.contains('streak-slider')) {
+                    console.log('Slider input fired, value:', e.target.value, 'mode:', _streakMode);
                     _streakMode = 'date';
                     const idx = parseInt(e.target.value);
                     const sel = document.querySelector('.streak-date-select');
@@ -721,7 +710,9 @@
                     renderWinLossGrid();
                 }
             });
+            _listenersAttached = true;
         }
+    }
 
         function updateButtons() {
             document.querySelectorAll('.streak-mode-btn').forEach(btn => {
@@ -737,7 +728,8 @@
             if (ss.special) {
                 // Mox Hole Score: cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
-                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                const slider = document.querySelector('.streak-slider');
+                const targetDate = allRoundDates[parseInt(slider?.value ?? 0)];
                 let val = 0;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
@@ -753,7 +745,8 @@
             } else {
                 // Cumulative max streak up to selected date
                 const cum = cumulativeStreaks[name] || [];
-                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                const slider = document.querySelector('.streak-slider');
+                const targetDate = allRoundDates[parseInt(slider?.value ?? 0)];
                 let val = 0;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
@@ -771,7 +764,8 @@
                 return seasonStats[name][os.key] || 0;
             } else {
                 const cum = cumulativeStreaks[name] || [];
-                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                const slider2 = document.querySelector('.streak-slider');
+                const targetDate = allRoundDates[parseInt(slider2?.value ?? 0)];
                 let lastEntry = null;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
@@ -793,7 +787,8 @@
                 return seasonStats[name][wl.key] || 0;
             } else {
                 const cum = cumulativeStreaks[name] || [];
-                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                const slider3 = document.querySelector('.streak-slider');
+                const targetDate = allRoundDates[parseInt(slider3?.value ?? 0)];
                 let lastEntry = null;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
@@ -809,25 +804,26 @@
             }
         }
 
-       function renderGrid() {
-            //console.log('renderGrid called, mode:', _streakMode, 'sliderVal:', _sliderEl?.value);
-            updateButtons();
-            let html = '';
-            for (const ss of _currentStreakStats) {
-                const seasonTop5 = [..._currentLeaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-                const dynamicTop5 = allPlayers.map(name => ({
-                    name, seasonVal: seasonStats[name][ss.statsKey] || 0,
-                    dynamicVal: getDynVal(name, ss)
-                })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
-                const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss) }))];
-                const seen = new Set();
-                const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
-                unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
-                if (top.length === 0) continue;
+         function renderGrid() {
+             const slider = document.querySelector('.streak-slider');
+             updateButtons();
+             let html = '';
+             for (const ss of _currentStreakStats) {
+                 const seasonTop5 = [..._currentLeaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
+                 const dynamicTop5 = allPlayers.map(name => ({
+                     name, seasonVal: seasonStats[name][ss.statsKey] || 0,
+                     dynamicVal: getDynVal(name, ss)
+                 })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
+                 const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss) }))];
+                 const seen = new Set();
+                 const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
+                 unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
+                 const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
+                 if (top.length === 0) continue;
 
-                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-                _labelEl.textContent = colLabel;
+                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
+                 const labelEl = document.querySelector('.streak-date-label');
+                 if (labelEl) labelEl.textContent = colLabel;
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
                         html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
                 top.forEach((entry, i) => {
@@ -838,25 +834,27 @@
                 });
                 html += `</div>`;
             }
-            _gridEl.innerHTML = html;
+           const gridEl = document.querySelector('.streak-grid');
+            if (gridEl) gridEl.innerHTML = html;
         }
 
         function renderOtherGrid() {
-            updateButtons();
-            let html = '';
-            for (const os of _currentOtherStats) {
-                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-                html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
-         html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
+             const slider = document.querySelector('.streak-slider');
+             updateButtons();
+             let html = '';
+             for (const os of _currentOtherStats) {
+                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
+                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+                 html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
 
-                const allEntries = allPlayers.map(name => ({
-                    name,
-                    seasonVal: seasonStats[name][os.key] || 0,
-                    dynamicVal: getOtherDynVal(name, os)
-                }));
-                allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
-                if (top.length === 0) continue;
+                 const allEntries = allPlayers.map(name => ({
+                     name,
+                     seasonVal: seasonStats[name][os.key] || 0,
+                     dynamicVal: getOtherDynVal(name, os)
+                 }));
+                 allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
+                 const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
+                 if (top.length === 0) continue;
 
                 top.forEach((entry, i) => {
                     const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
@@ -866,16 +864,18 @@
                 });
                 html += `</div>`;
             }
-            _otherGridEl.innerHTML = html;
+            const otherGridEl = document.querySelector('.other-leaders-grid');
+            if (otherGridEl) otherGridEl.innerHTML = html;
         }
 
-        function renderWinLossGrid() {
-            updateButtons();
-            let html = '';
-            for (const wl of _currentWinLossStats) {
-                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-                html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
- html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
+     function renderWinLossGrid() {
+             const slider = document.querySelector('.streak-slider');
+             updateButtons();
+             let html = '';
+             for (const wl of _currentWinLossStats) {
+                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
+                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
+                 html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
 
                 const allEntries = allPlayers.map(name => ({
                     name,
@@ -895,7 +895,8 @@
                 });
                 html += `</div>`;
             }
-            _winLossGridEl.innerHTML = html;
+           const winLossGridEl = document.querySelector('.win-loss-grid');
+            if (winLossGridEl) winLossGridEl.innerHTML = html;
         }
 
         renderGrid();
