@@ -714,10 +714,10 @@
 
         html += `</tbody></table></div>`;
 
-       // Top 5 Streak Leaders
+     // Top 5 Streak Leaders
         const leaders = getStreakLeaders();
         html += `<h3 style="margin:20px 0 10px;">🔥 Streak Leaders</h3>`;
-        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Best streaks per stat. Use the slider below to see how leaders evolved through the season. "Now" shows current ongoing streaks.</p>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Each card shows Season best + dynamic value. Slider traces through the season timeline; "Now" shows what each player is currently on.</p>`;
 
         // Build date slider options
         const dateLabels = allRoundDates.map((d, i) => {
@@ -727,8 +727,8 @@
 
         html += `<div style="margin:10px 0 15px;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <button id="nowBtn" style="background:#0f111a;color:#60a5fa;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Show current running streaks (what they are NOW)">⚡ Now</button>
-                <button id="seasonBtn" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Show season-long best streaks">🏆 Season</button>
+                <button id="nowBtn" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
+                <button id="seasonBtn" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
                 <input type="range" id="streakSlider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:200px;accent-color:#60a5fa;">
                 <select id="streakDateSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;">
                     ${dateLabels}
@@ -737,21 +737,20 @@
             </div>
         </div>`;
 
-       const streakStats = [
-            { key: 'scoreStreak', label: 'Score Streak', desc: 'consecutive holes scoring any point', statsKey: 'longestScoring' },
-            { key: 'drought', label: 'Zero Streak', desc: 'consecutive holes with zero points', statsKey: 'longestZero' },
-            { key: 'foStreak', label: 'FO Streak', desc: 'consecutive par-4/5 first-ons', statsKey: 'longestFO' },
-            { key: 'closestStreak', label: 'Closest Streak', desc: 'consecutive closest-to-pin', statsKey: 'longestClosest' },
-            { key: 'puttStreak', label: 'Putt Streak', desc: 'consecutive putting points', statsKey: 'longestPutt' },
-            { key: 'cleanStreak', label: 'Clean Streak', desc: 'consecutive scores without carry-in bonus', statsKey: 'longestClean' },
-            { key: 'greenieRun', label: 'Greenie Run', desc: 'consecutive par-3 first-ons (skipping non-par-3)', statsKey: 'maxGreenies' },
-            { key: 'threePtStreak', label: '3-Ptr Streak', desc: 'FO + Closest + Putt on same hole', statsKey: 'max3PointHoles' },
+        const streakStats = [
+            { key: 'scoreStreak', label: 'Score Streak', desc: 'consecutive holes scoring any point', statsKey: 'longestScoring', curKey: 'currentScoring' },
+            { key: 'drought', label: 'Zero Streak', desc: 'consecutive holes with zero points', statsKey: 'longestZero', curKey: 'currentZero' },
+            { key: 'foStreak', label: 'FO Streak', desc: 'consecutive par-4/5 first-ons', statsKey: 'longestFO', curKey: 'currentFO' },
+            { key: 'closestStreak', label: 'Closest Streak', desc: 'consecutive closest-to-pin', statsKey: 'longestClosest', curKey: 'currentClosest' },
+            { key: 'puttStreak', label: 'Putt Streak', desc: 'consecutive putting points', statsKey: 'longestPutt', curKey: 'currentPutt' },
+            { key: 'cleanStreak', label: 'Clean Streak', desc: 'consecutive scores without carry-in bonus', statsKey: 'longestClean', curKey: 'currentClean' },
+            { key: 'greenieRun', label: 'Greenie Run', desc: 'consecutive par-3 first-ons', statsKey: 'maxGreenies', curKey: 'currentGreenies' },
+            { key: 'threePtStreak', label: '3-Ptr Streak', desc: 'FO + Closest + Putt on same hole', statsKey: 'max3PointHoles', curKey: 'current3PointHoles' },
         ];
 
-       html += `<div id="streakGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
-       html += `</div>`;
+        html += `<div id="streakGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-      // Slider event listeners
+        // Slider event listeners
         setTimeout(() => {
             const slider = document.getElementById('streakSlider');
             const select = document.getElementById('streakDateSelect');
@@ -775,12 +774,72 @@
                 }
             }
             
+            function getDynamicValue(name, ss, idx) {
+                if (currentMode === 'now') {
+                    // Current running streak from the last hole played
+                    const cur = playerCurrentStreaks[name];
+                    return cur ? (cur[ss.curKey] || 0) : 0;
+                } else if (currentMode === 'season') {
+                    // Season-long best
+                    return seasonStats[name][ss.statsKey] || 0;
+                } else {
+                    // Cumulative best up to selected date
+                    const cum = cumulativeStreaks[name] || [];
+                    let val = 0;
+                    for (let ci = 0; ci <= idx; ci++) {
+                        if (cum[ci] && cum[ci].date <= allRoundDates[idx]) {
+                            val = Math.max(val, cum[ci][ss.statsKey] || 0);
+                        }
+                    }
+                    return val;
+                }
+            }
+
+            function renderStreakGridDynamic() {
+                const grid = document.getElementById('streakGrid');
+                if (!grid) return;
+                
+                let html = '';
+                for (const ss of streakStats) {
+                    // Season top 5
+                    const seasonTop5 = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
+                    // Dynamic top 5 (ranked by dynamic value)
+                    const dynamicTop5 = allPlayers.map(name => ({
+                        name,
+                        seasonVal: seasonStats[name][ss.statsKey] || 0,
+                        dynamicVal: currentMode === 'now' ? (playerCurrentStreaks[name]?.[ss.curKey] || 0) : getDynamicValue(name, ss, parseInt(slider.value))
+                    })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
+                    
+                    // Merge and deduplicate: take top 5 by dynamic value, include season leaders
+                    const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynamicValue(p.name, ss, parseInt(slider.value)) }))];
+                    const seen = new Set();
+                    const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
+                    unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
+                    const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
+                    
+                    if (top.length === 0) continue;
+                    
+                    const colLabel = currentMode === 'now' ? 'Now' : (currentMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                    
+                    html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
+                    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+                    
+                    top.forEach((entry, i) => {
+                        const isLeader = (i === 0 && entry.dynamicVal > 0);
+                        const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                        html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${isLeader ? '★ ' : ''}${entry.name}</span><span style="color:#94a3b8;">${entry.seasonVal}</span><span>${entry.dynamicVal}</span></div>`;
+                    });
+                    html += `</div>`;
+                }
+                grid.innerHTML = html;
+            }
+
             if (nowBtn) {
                 nowBtn.addEventListener('click', () => {
                     currentMode = 'now';
                     updateButtonStyles();
                     label.textContent = 'Now';
-                    renderStreakGrid(streakStats, leaders, 'now');
+                    renderStreakGridDynamic();
                 });
             }
             
@@ -789,7 +848,7 @@
                     currentMode = 'season';
                     updateButtonStyles();
                     label.textContent = 'Season';
-                    renderStreakGrid(streakStats, leaders, 'season');
+                    renderStreakGridDynamic();
                 });
             }
             
@@ -800,7 +859,7 @@
                 select.value = String(idx);
                 const d = new Date(allRoundDates[idx]);
                 label.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                renderStreakGrid(streakStats, leaders, 'date', idx);
+                renderStreakGridDynamic();
             });
             
             select.addEventListener('change', () => {
@@ -810,11 +869,11 @@
                 updateButtonStyles();
                 const d = new Date(allRoundDates[idx]);
                 label.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                renderStreakGrid(streakStats, leaders, 'date', idx);
+                renderStreakGridDynamic();
             });
             
-            // Initialize "Now" view
-            renderStreakGrid(streakStats, leaders, 'now');
+            // Initialize Now view
+            renderStreakGridDynamic();
         }, 100);
 
         // Other Leaders — Season Summary stats
@@ -912,56 +971,7 @@
             winStreak: seasonStats[name].winStreak,
             lossDrought: seasonStats[name].lossDrought,
         }));
-    }
-
-   function renderStreakGrid(streakStats, leaders, mode, dateIdx) {
-        const grid = document.getElementById('streakGrid');
-        if (!grid) return;
-        
-        let html = '';
-        for (const ss of streakStats) {
-            let sorted;
-            if (mode === 'season') {
-                sorted = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-            } else if (mode === 'now') {
-                // Current running streaks (what they are right now)
-                sorted = allPlayers.map(name => {
-                    const cur = playerCurrentStreaks[name] || {};
-                    return { name, [ss.key]: cur.currentScoring ?? 0 };
-                });
-                // Map stats keys to current streak keys
-                const curKeys = { scoreStreak: 'currentScoring', drought: 'currentZero', foStreak: 'currentFO', closestStreak: 'currentClosest', puttStreak: 'currentPutt', cleanStreak: 'currentClean', greenieRun: 'currentGreenies', threePtStreak: 'current3PointHoles' };
-                sorted = allPlayers.map(name => {
-                    const cur = playerCurrentStreaks[name] || {};
-                    return { name, [ss.key]: cur[curKeys[ss.key]] ?? 0 };
-                }).filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-            } else {
-                // Get cumulative values at the selected date
-                sorted = allPlayers.map(name => {
-                    const cum = cumulativeStreaks[name] || [];
-                    let val = 0;
-                    for (let ci = 0; ci <= dateIdx; ci++) {
-                        if (cum[ci] && cum[ci].date <= allRoundDates[dateIdx]) {
-                            val = Math.max(val, cum[ci][ss.statsKey] || 0);
-                        }
-                    }
-                    return { name, [ss.key]: val };
-                }).filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-            }
-            if (sorted.length === 0) continue;
-            
-            // For "now" mode, highlight players with active streaks in a different color
-            const nowHighlight = mode === 'now' ? 'border-left:3px solid #22c55e;' : '';
-            
-            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;${nowHighlight}"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
-            sorted.forEach((entry, i) => {
-                const isNow = mode === 'now';
-                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}${isNow ? ' <span style="color:#22c55e;font-size:10px;">●</span>' : ''}</span><span>${entry[ss.key]}</span></div>`;
-            });
-            html += `</div>`;
-        }
-        grid.innerHTML = html;
-    }
+   }
 
     // ── Player selector ──
     function populatePlayerSelector() {
