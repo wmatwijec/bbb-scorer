@@ -768,7 +768,8 @@
          const dateRounds = roundDatesByRound;
          if (!dateRounds || !dateRounds[roundIdx]) { console.log('early return, dateRounds:', dateRounds, 'roundIdx:', roundIdx); return; }
          const round = dateRounds[roundIdx];
-         const container = document.getElementById('round-card-content');
+    const container = document.getElementById('round-card-content');
+         console.log('container found:', !!container, 'view display:', document.getElementById('round-card-view').style.display, 'card display:', document.querySelector('#round-card-view .card')?.style.display);
          const roundDate = new Date(round.date);
          const dateStr = roundDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
          const startTime = round.groupStartTime || '';
