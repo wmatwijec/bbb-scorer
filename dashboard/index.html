@@ -295,7 +295,7 @@
             // Raw backend holes use firstOn/closest/putt; mapped data uses fo/cl/p
             const hasFO = h.firstOn || h.fo;
             const hasCl = h.closest || h.cl;
-            const hasP = h.p;
+            const hasP = h.p || h.putt;
             const hasGR = h.gr;
             const hasPoints = h.points > 0;
             const scored = h.scored || hasFO || hasCl || hasP || hasGR || hasPoints;
@@ -314,8 +314,9 @@
             if (hasP) { currentPutt++; longestPutt = Math.max(longestPutt, currentPutt); }
             else { currentPutt = 0; }
 
-            // Clean streak: scoring without carry-in (single-point scores)
-            if (scored && h.points === 1) { currentClean++; longestClean = Math.max(longestClean, currentClean); }
+            // Clean streak: scoring without carry-in (single-point scores) — only on mapped data
+            if (h.points !== undefined && scored && h.points === 1) { currentClean++; longestClean = Math.max(longestClean, currentClean); }
+            else if (h.points === undefined) { /* raw backend holes, can't determine clean streak */ }
             else { currentClean = 0; }
 
             // Greenie streak (par-3 FO, skip non-par-3 holes — don't reset)
@@ -686,31 +687,39 @@
             _otherGridEl = otherGrid;
             _winLossGridEl = winLossGrid;
 
-            document.querySelectorAll('.streak-mode-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    _streakMode = btn.dataset.mode;
+            // Use document-level event delegation to survive innerHTML re-renders
+            document.addEventListener('click', (e) => {
+                const modeBtn = e.target.closest('.streak-mode-btn');
+                if (modeBtn && modeBtn.dataset.mode) {
+                    _streakMode = modeBtn.dataset.mode;
                     renderGrid();
                     renderOtherGrid();
                     renderWinLossGrid();
-                });
+                }
             });
 
-            slider.addEventListener('input', () => {
-                _streakMode = 'date';
-                const idx = parseInt(slider.value);
-                select.value = String(idx);
-                renderGrid();
-                renderOtherGrid();
-                renderWinLossGrid();
+            document.addEventListener('input', (e) => {
+                if (e.target.classList.contains('streak-slider')) {
+                    _streakMode = 'date';
+                    const idx = parseInt(e.target.value);
+                    const sel = document.querySelector('.streak-date-select');
+                    if (sel) sel.value = String(idx);
+                    renderGrid();
+                    renderOtherGrid();
+                    renderWinLossGrid();
+                }
             });
 
-            select.addEventListener('change', () => {
-                const idx = parseInt(select.value);
-                slider.value = idx;
-                _streakMode = 'date';
-                renderGrid();
-                renderOtherGrid();
-                renderWinLossGrid();
+            document.addEventListener('change', (e) => {
+                if (e.target.classList.contains('streak-date-select')) {
+                    const idx = parseInt(e.target.value);
+                    const sl = document.querySelector('.streak-slider');
+                    if (sl) sl.value = idx;
+                    _streakMode = 'date';
+                    renderGrid();
+                    renderOtherGrid();
+                    renderWinLossGrid();
+                }
             });
         }
 
@@ -726,12 +735,13 @@
 
         function getDynVal(name, ss) {
             if (ss.special) {
+                // Mox Hole Score: cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
-                        val = Math.max(val, entry[ss.statsKey] || 0);
+                        val = Math.max(val, entry.maxHoleScore || 0);
                     }
                 }
                 return val;
@@ -741,6 +751,7 @@
             } else if (_streakMode === 'season') {
                 return seasonStats[name][ss.statsKey] || 0;
             } else {
+                // Cumulative max streak up to selected date
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
@@ -761,13 +772,14 @@
             } else {
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
-                let val = 0;
+                let lastEntry = null;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
-                        val = Math.max(val, entry[os.key] || 0);
+                        lastEntry = entry;
                     }
                 }
-                return val;
+                if (!lastEntry) return 0;
+                return lastEntry[os.key] || 0;
             }
         }
 
@@ -782,22 +794,23 @@
             } else {
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
-                let val = 0;
+                let lastEntry = null;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
-                        if (wl.sort === 'ratio') {
-                            const pRounds = entry.rounds || 1;
-                            val = Math.max(val, (entry.wins || 0) / pRounds);
-                        } else {
-                            val = Math.max(val, entry[wl.key] || 0);
-                        }
+                        lastEntry = entry;
                     }
                 }
-                return val;
+                if (!lastEntry) return 0;
+                if (wl.sort === 'ratio') {
+                    return (lastEntry.wins || 0) / (lastEntry.rounds || 1);
+                }
+                // For streaks/counts, use the cumulative max stored in the entry
+                return lastEntry[wl.key] || 0;
             }
         }
 
-        function renderGrid() {
+       function renderGrid() {
+            //console.log('renderGrid called, mode:', _streakMode, 'sliderVal:', _sliderEl?.value);
             updateButtons();
             let html = '';
             for (const ss of _currentStreakStats) {
