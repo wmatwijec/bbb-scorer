@@ -390,16 +390,51 @@
                     // Streak season totals
                     longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
                     longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
-                    // Additional season stats
+                   // Additional season stats
                     totalHolesScored: 0, totalCarryIn: 0, maxHoleScore: 0, total3PtrHoles: 0,
+                    // Win/loss stats
+                    wins: 0, losses: 0, winStreak: 0, lossDrought: 0,
                 };
                 playerRoundData[name] = [];
             });
 
-            let roundIndex = 0;
+           let roundIndex = 0;
             for (const round of allRounds) {
                 roundIndex++;
                 const result = computeRoundStats(round);
+
+                // Determine round winners
+                const playerScores = Object.entries(result.playerData)
+                    .map(([name, data]) => ({ name, totalPts: data.totalPts }))
+                    .sort((a, b) => b.totalPts - a.totalPts);
+                const numPlayers = playerScores.length;
+                const isWinner = new Set();
+
+                if (numPlayers === 2) {
+                    if (playerScores[0].totalPts !== playerScores[1].totalPts) {
+                        isWinner.add(playerScores[0].name);
+                    }
+                } else if (numPlayers === 3) {
+                    isWinner.add(playerScores[0].name);
+                    if (playerScores[0].totalPts !== playerScores[1].totalPts) {
+                        // No tie at top, only 1 winner
+                    } else {
+                        // Tie for 1st → 2 winners
+                        isWinner.add(playerScores[1].name);
+                    }
+                } else if (numPlayers === 4) {
+                    isWinner.add(playerScores[0].name);
+                    if (playerScores[0].totalPts === playerScores[1].totalPts) {
+                        // Tie for 1st → 2 winners
+                        isWinner.add(playerScores[1].name);
+                    } else if (playerScores[1].totalPts === playerScores[2].totalPts) {
+                        // Tie for 2nd → neither tied player gets anything, 1st wins, 3rd/4th lose
+                    } else {
+                        // No tie, top 2 win
+                        isWinner.add(playerScores[1].name);
+                    }
+                }
+                // numPlayers < 2: no winner determination
 
                 for (const [name, data] of Object.entries(result.playerData)) {
                     if (!seasonStats[name]) continue;
@@ -432,17 +467,32 @@
                     st.totalCarryIn += data.carryInTotal || 0;
                     st.maxHoleScore = Math.max(st.maxHoleScore, data.maxHole || 0);
                     st.total3PtrHoles += data.threePtrCount || 0;
-                   playerRoundData[name].push({
-                        round: roundIndex,
-                        date: round.date,
-                        course: round.courseName,
-                        total: data.totalPts,
-                        fo: data.foPts,
-                        gr: data.grPts,
-                        cl: data.clPts,
-                        p: data.pPts
+
+             // Win/loss tracking
+                    if (isWinner.has(name)) {
+                        st.wins++;
+                    } else if (numPlayers >= 2) {
+                        st.losses++;
+                    }
+                    playerRoundData[name].push({
+                        round: roundIndex, date: round.date, course: round.courseName,
+                        total: data.totalPts, fo: data.foPts, gr: data.grPts, cl: data.clPts, p: data.pPts,
+                        won: isWinner.has(name)
                     });
                 }
+            }
+
+            // Compute win streak and loss drought per player
+            for (const name of allPlayers) {
+                const st = seasonStats[name];
+                const rounds = playerRoundData[name] || [];
+                let cw = 0, cl = 0, lw = 0, ll = 0;
+                for (const r of rounds) {
+                    if (r.won) { cw++; cl = 0; lw = Math.max(lw, cw); }
+                    else { cw = 0; cl++; ll = Math.max(ll, cl); }
+                }
+                st.winStreak = lw;
+                st.lossDrought = ll;
             }
 
             statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
@@ -618,6 +668,40 @@
         }
         html += `</div>`;
 
+        // Win/Loss Leaders
+        html += `<h3 style="margin:20px 0 10px;">🏆 Win/Loss Leaders</h3>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season win/loss records and streaks across all players.</p>`;
+
+        const winLossStats = [
+            { key: 'wins', label: 'Wins', desc: 'rounds won (% of total points)', sort: 'sum', fmt: v => v },
+            { key: 'winPct', label: 'Win %', desc: 'wins / rounds played', sort: 'ratio', fmt: v => v.toFixed(1) + '%' },
+            { key: 'winStreak', label: 'Win Streak', desc: 'most consecutive wins', sort: 'sum', fmt: v => v },
+            { key: 'lossDrought', label: 'Loss Drought', desc: 'most consecutive losses', sort: 'sum', fmt: v => v },
+        ];
+
+        html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
+        for (const wl of winLossStats) {
+            let sorted;
+            if (wl.sort === 'ratio') {
+                sorted = [...leaders].map(p => ({
+                    name: p.name,
+                    winPct: (seasonStats[p.name].rounds > 0) ? seasonStats[p.name].wins / seasonStats[p.name].rounds : 0
+                })).sort((a, b) => b.winPct - a.winPct).slice(0, 5);
+            } else {
+                sorted = [...leaders].sort((a, b) => (seasonStats[b.name][wl.key] || 0) - (seasonStats[a.name][wl.key] || 0)).slice(0, 5);
+            }
+            sorted = sorted.filter(p => (wl.sort === 'ratio' ? p.winPct : (seasonStats[p.name][wl.key] || 0)) > 0);
+            if (sorted.length === 0) continue;
+            const val = (p) => wl.sort === 'ratio' ? p.winPct : (seasonStats[p.name][wl.key] || 0);
+            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
+            sorted.forEach((entry, i) => {
+                const v = val(entry);
+                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${wl.fmt(v)}</span></div>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`;
+
         container.innerHTML = html;
     }
 
@@ -633,7 +717,7 @@
     }
 
     // ── Streak Leaders ──
-    function getStreakLeaders() {
+   function getStreakLeaders() {
         return allPlayers.map(name => ({
             name,
             scoreStreak: seasonStats[name].longestScoring,
@@ -644,6 +728,9 @@
             cleanStreak: seasonStats[name].longestClean,
             greenieRun: seasonStats[name].maxGreenies,
             threePtStreak: seasonStats[name].max3PointHoles,
+            wins: seasonStats[name].wins,
+            winStreak: seasonStats[name].winStreak,
+            lossDrought: seasonStats[name].lossDrought,
         }));
     }
 
@@ -833,6 +920,22 @@
                     <div class="stat-card">
                         <div class="label">3-Ptr Holes<div class="sub">FO+Closest+Putt same hole</div></div>
                         <div class="value">${st.total3PtrHoles}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Wins<div class="sub">rounds won as % of total points</div></div>
+                        <div class="value">${st.wins}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Losses<div class="sub">rounds lost (all teammates scored higher)</div></div>
+                        <div class="value">${st.losses}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Win Streak<div class="sub">most consecutive wins in a row</div></div>
+                        <div class="value">${st.winStreak}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Loss Drought<div class="sub">most consecutive losses without a win</div></div>
+                        <div class="value">${st.lossDrought}</div>
                     </div>
                 </div>
             </div>
