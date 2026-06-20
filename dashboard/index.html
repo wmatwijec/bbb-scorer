@@ -648,19 +648,23 @@
             return { name, ...st, mean, median: med, foAvg, grAvg, clAvg, pAvg };
         }).sort((a, b) => b.median - a.median);
     }
+   let _streakMode = 'now';
 
-    let _streakMode = 'now';
-    let _sliderEl = null, _selectEl = null, _labelEl = null, _gridEl = null;
-    let _currentLeaders = null, _currentStreakStats = null;
+    let _sliderEl = null, _selectEl = null, _labelEl = null, _gridEl = null, _otherGridEl = null, _winLossGridEl = null;
 
-    function initStreakSlider(leaders, streakStats) {
+    let _currentLeaders = null, _currentStreakStats = null, _currentOtherStats = null, _currentWinLossStats = null;
+    function initStreakSlider(leaders, streakStats, otherStats, winLossStats) {
         _currentLeaders = leaders;
         _currentStreakStats = streakStats;
+        _currentOtherStats = otherStats;
+        _currentWinLossStats = winLossStats;
 
         const slider = document.querySelector('.streak-slider');
         const select = document.querySelector('.streak-date-select');
         const label = document.querySelector('.streak-date-label');
         const grid = document.querySelector('.streak-grid');
+        const otherGrid = document.querySelector('.other-leaders-grid');
+        const winLossGrid = document.querySelector('.winloss-leaders-grid');
         if (!slider || !select || !label || !grid) return;
 
         // Only attach listeners once
@@ -669,11 +673,15 @@
             _selectEl = select;
             _labelEl = label;
             _gridEl = grid;
+            _otherGridEl = otherGrid;
+            _winLossGridEl = winLossGrid;
 
             document.querySelectorAll('.streak-mode-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     _streakMode = btn.dataset.mode;
                     renderGrid();
+                    renderOtherGrid();
+                    renderWinLossGrid();
                 });
             });
 
@@ -682,6 +690,8 @@
                 const idx = parseInt(slider.value);
                 select.value = String(idx);
                 renderGrid();
+                renderOtherGrid();
+                renderWinLossGrid();
             });
 
             select.addEventListener('change', () => {
@@ -689,6 +699,8 @@
                 slider.value = idx;
                 _streakMode = 'date';
                 renderGrid();
+                renderOtherGrid();
+                renderWinLossGrid();
             });
         }
 
@@ -704,7 +716,6 @@
 
         function getDynVal(name, ss) {
             if (ss.special) {
-                // Mox Hole Score: cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
@@ -720,13 +731,56 @@
             } else if (_streakMode === 'season') {
                 return seasonStats[name][ss.statsKey] || 0;
             } else {
-                // Cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
                 const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
                 for (const entry of cum) {
                     if (entry.date <= targetDate) {
                         val = Math.max(val, entry[ss.statsKey] || 0);
+                    }
+                }
+                return val;
+            }
+        }
+
+        function getOtherDynVal(name, os) {
+            if (_streakMode === 'now') {
+                return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][os.key] || 0) : 0;
+            } else if (_streakMode === 'season') {
+                return seasonStats[name][os.key] || 0;
+            } else {
+                const cum = cumulativeStreaks[name] || [];
+                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                let val = 0;
+                for (const entry of cum) {
+                    if (entry.date <= targetDate) {
+                        val = Math.max(val, entry[os.key] || 0);
+                    }
+                }
+                return val;
+            }
+        }
+
+        function getWinLossDynVal(name, wl) {
+            if (_streakMode === 'now') {
+                return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][wl.key] || 0) : 0;
+            } else if (_streakMode === 'season') {
+                if (wl.sort === 'ratio') {
+                    return seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0;
+                }
+                return seasonStats[name][wl.key] || 0;
+            } else {
+                const cum = cumulativeStreaks[name] || [];
+                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
+                let val = 0;
+                for (const entry of cum) {
+                    if (entry.date <= targetDate) {
+                        if (wl.sort === 'ratio') {
+                            const pRounds = entry.rounds || 1;
+                            val = Math.max(val, (entry.wins || 0) / pRounds);
+                        } else {
+                            val = Math.max(val, entry[wl.key] || 0);
+                        }
                     }
                 }
                 return val;
@@ -749,7 +803,7 @@
                 const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
                 if (top.length === 0) continue;
 
-                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
                 _labelEl.textContent = colLabel;
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
                 html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
@@ -764,7 +818,66 @@
             _gridEl.innerHTML = html;
         }
 
+        function renderOtherGrid() {
+            updateButtons();
+            let html = '';
+            for (const os of _currentOtherStats) {
+                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+                html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+
+                const allEntries = allPlayers.map(name => ({
+                    name,
+                    seasonVal: seasonStats[name][os.key] || 0,
+                    dynamicVal: getOtherDynVal(name, os)
+                }));
+                allEntries.sort((a, b) => b.dynamicVal - a.seasonVal);
+                const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
+                if (top.length === 0) continue;
+
+                top.forEach((entry, i) => {
+                    const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
+                    const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                    const label = isLeader ? '★ ' : (i + 1) + '. ';
+                    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#94a3b8;">${entry.seasonVal}</span><span style="width:40px;text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
+                });
+                html += `</div>`;
+            }
+            _otherGridEl.innerHTML = html;
+        }
+
+        function renderWinLossGrid() {
+            updateButtons();
+            let html = '';
+            for (const wl of _currentWinLossStats) {
+                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+                html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
+                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+
+                const allEntries = allPlayers.map(name => ({
+                    name,
+                    seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : (seasonStats[name][wl.key] || 0),
+                    dynamicVal: getWinLossDynVal(name, wl)
+                }));
+                allEntries.sort((a, b) => b.dynamicVal - a.seasonVal);
+                const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
+                if (top.length === 0) continue;
+
+                top.forEach((entry, i) => {
+                    const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
+                    const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                    const label = isLeader ? '★ ' : (i + 1) + '. ';
+                    const fmt = (v) => wl.fmt ? wl.fmt(v) : v;
+                    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#94a3b8;">${fmt(entry.seasonVal)}</span><span style="width:40px;text-align:center;color:#60a5fa;">${fmt(entry.dynamicVal)}</span></div>`;
+                });
+                html += `</div>`;
+            }
+            _winLossGridEl.innerHTML = html;
+        }
+
         renderGrid();
+        renderOtherGrid();
+        renderWinLossGrid();
     }
 
     function renderLeaderboard() {
@@ -854,7 +967,7 @@
         // Build date slider options
         const dateLabels = allRoundDates.map((d, i) => {
             const date = new Date(d);
-            return `<option value="${i}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</option>`;
+            return `<option value="${i}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
 
         html += `<div style="margin:10px 0 15px;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;">
@@ -883,40 +996,22 @@
 
         html += `<div class="streak-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-        // Other Leaders — Season Summary stats
+       // Other Leaders
         html += `<h3 style="margin:20px 0 10px;">📊 Other Leaders</h3>`;
-        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season totals and best single-round achievements across all categories.</p>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season best + dynamic value. Slider traces through the season.</p>`;
 
-const otherStats = [
-            { key: 'totalHolesScored', label: 'Holes Scored', desc: 'total holes with any point', sort: 'sum', fmt: v => v },
-            { key: 'totalCarryIn', label: 'Carry-In Points', desc: 'bonus points from carries', sort: 'sum', fmt: v => v },
-            { key: 'maxHoleScore', label: 'Max Hole Score', desc: 'highest points in one hole', sort: 'max', fmt: v => v },
-            { key: 'total3PtrHoles', label: '3-Ptr Holes', desc: 'FO+Closest+Putt same hole', sort: 'sum', fmt: v => v },
+        const otherStats = [
+            { key: 'totalHolesScored', label: 'Holes Scored', desc: 'total holes with any point', sort: 'sum' },
+            { key: 'totalCarryIn', label: 'Carry-In Points', desc: 'bonus points from carries', sort: 'sum' },
+            { key: 'maxHoleScore', label: 'Max Hole Score', desc: 'highest points in one hole', sort: 'max' },
+            { key: 'total3PtrHoles', label: '3-Ptr Holes', desc: 'FO+Closest+Putt same hole', sort: 'sum' },
         ];
 
-        html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
-        for (const os of otherStats) {
-            let sorted;
-            if (os.sort === 'sum') {
-                sorted = [...leaders].sort((a, b) => (seasonStats[b.name][os.key] || 0) - (seasonStats[a.name][os.key] || 0)).slice(0, 5);
-            } else {
-                sorted = [...leaders].sort((a, b) => (b[os.key] || 0) - (a[os.key] || 0)).slice(0, 5);
-            }
-            sorted = sorted.filter(p => (os.sort === 'sum' ? seasonStats[p.name][os.key] || 0 : p[os.key] || 0) > 0);
-            if (sorted.length === 0) continue;
-            const val = (p) => os.sort === 'sum' ? (seasonStats[p.name][os.key] || 0) : (p[os.key] || 0);
-            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
-            sorted.forEach((entry, i) => {
-                const v = val(entry);
-                html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;"><span style="width:120px;text-align:left;color:#94a3b8;">${i === 0 ? '★ ' : (i + 1) + '. '}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${os.fmt(v)}</span></div>`;
-            });
-            html += `</div>`;
-        }
-        html += `</div>`;
+        html += `<div class="other-leaders-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-        // Win/Loss Leaders
+         // Win/Loss Leaders
         html += `<h3 style="margin:20px 0 10px;">🏆 Win/Loss Leaders</h3>`;
-        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season win/loss records and streaks across all players.</p>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season best + dynamic value. Slider traces through the season.</p>`;
 
         const winLossStats = [
             { key: 'wins', label: 'Wins', desc: 'rounds won (% of total points)', sort: 'sum', fmt: v => v },
@@ -925,31 +1020,10 @@ const otherStats = [
             { key: 'lossDrought', label: 'Loss Streak', desc: 'most consecutive losses', sort: 'sum', fmt: v => v },
         ];
 
-        html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
-        for (const wl of winLossStats) {
-            let sorted;
-            if (wl.sort === 'ratio') {
-                sorted = [...leaders].map(p => ({
-                    name: p.name,
-                    winPct: (seasonStats[p.name].rounds > 0) ? seasonStats[p.name].wins / seasonStats[p.name].rounds : 0
-                })).sort((a, b) => b.winPct - a.winPct).slice(0, 5);
-            } else {
-                sorted = [...leaders].sort((a, b) => (seasonStats[b.name][wl.key] || 0) - (seasonStats[a.name][wl.key] || 0)).slice(0, 5);
-            }
-            sorted = sorted.filter(p => (wl.sort === 'ratio' ? p.winPct : (seasonStats[p.name][wl.key] || 0)) > 0);
-            if (sorted.length === 0) continue;
-            const val = (p) => wl.sort === 'ratio' ? p.winPct : (seasonStats[p.name][wl.key] || 0);
-            html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
-            sorted.forEach((entry, i) => {
-                const v = val(entry);
-                html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;"><span style="width:120px;text-align:left;color:#94a3b8;">${i === 0 ? '★ ' : (i + 1) + '. '}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${wl.fmt(v)}</span></div>`;
-            });
-            html += `</div>`;
-        }
-        html += `</div>`;
+        html += `<div class="winloss-leaders-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-        container.innerHTML = html;
-        initStreakSlider(leaders, streakStats);
+       container.innerHTML = html;
+        initStreakSlider(leaders, streakStats, otherStats, winLossStats);
     }
 
     function sortBy(col) {
