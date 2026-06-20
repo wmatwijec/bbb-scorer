@@ -948,7 +948,11 @@ const otherGridEl = document.querySelector('.other-leaders-grid');
 function renderWinLossGrid() {
                 const slider = document.querySelector('.streak-slider');
                 updateButtons();
-                let html = '';
+       // Remove old sticky bar if re-rendering
+        const oldBar = document.getElementById('stickySliderBar');
+        if (oldBar) oldBar.remove();
+
+        let html = '';
                 const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
                 if (shouldLog) {
                     console.group('renderWinLossGrid |', _streakMode);
@@ -1052,24 +1056,6 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         html += `<h3 style="margin:10px 0 5px;">🏆 Win/Loss Leaders</h3><p style="color:#64748b;font-size:11px;margin:-5px 0 8px;">Season best + dynamic value</p>`;
         html += `<div class="winloss-leaders-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>`;
 
-        // Visible date slider bar between cards and leaderboard
-        html += `<div style="margin:15px 0;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
-                <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
-                <input type="range" class="streak-slider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:200px;accent-color:#60a5fa;">
-                <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;">
-                    ${dateLabels}
-                </select>
-                <span class="streak-date-label" style="font-size:12px;color:#60a5fa;font-weight:bold;min-width:90px;text-align:right;">Now</span>
-                <select class="card-player-count-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;">
-                    <option value="5">5 Players</option>
-                    <option value="10" selected>10 Players</option>
-                    <option value="999">ALL Players</option>
-                </select>
-            </div>
-        </div>`;
-
         // Leaderboard table
         html += `<h3 style="margin:20px 0 10px;">⚔️ All Player Leaderboard</h3>`;
         html += `<div class="card" style="overflow-x:auto;">
@@ -1138,13 +1124,35 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             { key: 'winStreak', label: 'Win Streak', desc: 'most consecutive wins', sort: 'sum', fmt: v => v },
         ];
 
-    container.innerHTML = html;
-          initStreakSlider(leaders, streakStats, otherStats, winLossStats);
-         renderGrid();
-         renderOtherGrid();
-         renderWinLossGrid();
-          highlightPlayer(_selectedPlayer);
-       }
+   container.innerHTML = html;
+
+        // Sticky bottom slider bar
+        const stickyBar = document.createElement('div');
+        stickyBar.id = 'stickySliderBar';
+        stickyBar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1a1d2e;border-top:1px solid #2d3154;padding:10px 16px;z-index:1000;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 -4px 12px rgba(0,0,0,0.4);';
+        stickyBar.innerHTML = `
+            <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
+            <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
+            <input type="range" class="streak-slider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:150px;accent-color:#60a5fa;" title="Date slider">
+            <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;" title="Select date">
+                ${dateLabels}
+            </select>
+            <span class="streak-date-label" style="font-size:12px;color:#60a5fa;font-weight:bold;white-space:nowrap;">Now</span>
+            <select class="card-player-count-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;" title="Players per card">
+                <option value="5">5 Players</option>
+                <option value="10" selected>10 Players</option>
+                <option value="999">ALL Players</option>
+            </select>
+        `;
+        document.body.appendChild(stickyBar);
+        document.body.style.paddingBottom = '60px'; // only sets once, safe to repeat
+
+           initStreakSlider(leaders, streakStats, otherStats, winLossStats);
+          renderGrid();
+          renderOtherGrid();
+          renderWinLossGrid();
+           highlightPlayer(_selectedPlayer);
+        }
 
     function sortBy(col) {
         if (currentSort === col) {
