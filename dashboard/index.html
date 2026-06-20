@@ -519,7 +519,7 @@
             const roundDates = allRounds.map(r => r.date);
             for (const name of allPlayers) {
                 const st = seasonStats[name];
-                let running = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, wins: 0, losses: 0, winStreak: 0, lossDrought: 0 };
+                let running = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, maxHoleScore: 0, wins: 0, losses: 0, winStreak: 0, lossDrought: 0 };
                 // We need per-round hole-level streaks that carry across rounds
                 // Rebuild by iterating holes per round
                 let currentHoleStreaks = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, currentScoring: 0, currentZero: 0, currentFO: 0, currentClosest: 0, currentPutt: 0, currentClean: 0, currentGreenies: 0, current3PointHoles: 0 };
@@ -574,6 +574,13 @@
                     // Update running max
                     for (const key of ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt', 'longestClean', 'maxGreenies', 'max3PointHoles']) {
                         running[key] = Math.max(running[key], roundStreaks[key] || 0);
+                    }
+                    
+                    // Mox Hole Score: max single-hole score this round
+                    const scores = round.scores?.[name];
+                    if (scores) {
+                        const holeMax = scores.reduce((m, h) => Math.max(m, h.points || 0), 0);
+                        running.maxHoleScore = Math.max(running.maxHoleScore, holeMax);
                     }
                     
                     // Win/loss streak (consecutive rounds)
@@ -636,12 +643,47 @@
     }
 
     let _streakMode = 'now';
+    let _sliderEl = null, _selectEl = null, _labelEl = null, _gridEl = null;
+    let _currentLeaders = null, _currentStreakStats = null;
+
     function initStreakSlider(leaders, streakStats) {
+        _currentLeaders = leaders;
+        _currentStreakStats = streakStats;
+
         const slider = document.querySelector('.streak-slider');
         const select = document.querySelector('.streak-date-select');
         const label = document.querySelector('.streak-date-label');
         const grid = document.querySelector('.streak-grid');
         if (!slider || !select || !label || !grid) return;
+
+        // Only attach listeners once
+        if (!_sliderEl) {
+            _sliderEl = slider;
+            _selectEl = select;
+            _labelEl = label;
+            _gridEl = grid;
+
+            document.querySelectorAll('.streak-mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    _streakMode = btn.dataset.mode;
+                    renderGrid();
+                });
+            });
+
+            slider.addEventListener('input', () => {
+                _streakMode = 'date';
+                const idx = parseInt(slider.value);
+                select.value = String(idx);
+                renderGrid();
+            });
+
+            select.addEventListener('change', () => {
+                const idx = parseInt(select.value);
+                slider.value = idx;
+                _streakMode = 'date';
+                renderGrid();
+            });
+        }
 
         function updateButtons() {
             document.querySelectorAll('.streak-mode-btn').forEach(btn => {
@@ -653,13 +695,24 @@
             });
         }
 
-        function getDynVal(name, ss, idx) {
+        function getDynVal(name, ss) {
+            if (ss.special) {
+                // Mox Hole Score: cumulative max of highest single-hole score
+                const cum = cumulativeStreaks[name] || [];
+                const idx = parseInt(_sliderEl.value);
+                let val = 0;
+                for (let ci = 0; ci < cum.length && ci <= idx; ci++) {
+                    val = Math.max(val, cum[ci][ss.statsKey] || 0);
+                }
+                return val;
+            }
             if (_streakMode === 'now') {
                 return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][ss.curKey] || 0) : 0;
             } else if (_streakMode === 'season') {
                 return seasonStats[name][ss.statsKey] || 0;
             } else {
                 const cum = cumulativeStreaks[name] || [];
+                const idx = parseInt(_sliderEl.value);
                 let val = 0;
                 for (let ci = 0; ci < cum.length && ci <= idx; ci++) {
                     val = Math.max(val, cum[ci][ss.statsKey] || 0);
@@ -669,21 +722,23 @@
         }
 
         function renderGrid() {
+            updateButtons();
             let html = '';
-            for (const ss of streakStats) {
-                const seasonTop5 = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
+            for (const ss of _currentStreakStats) {
+                const seasonTop5 = [..._currentLeaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
                 const dynamicTop5 = allPlayers.map(name => ({
                     name, seasonVal: seasonStats[name][ss.statsKey] || 0,
-                    dynamicVal: getDynVal(name, ss, parseInt(slider.value))
+                    dynamicVal: getDynVal(name, ss)
                 })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
-                const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss, parseInt(slider.value)) }))];
+                const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss) }))];
                 const seen = new Set();
                 const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
                 unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
                 const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
                 if (top.length === 0) continue;
 
-                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                _labelEl.textContent = colLabel;
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
                 html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
                 top.forEach((entry, i) => {
@@ -693,31 +748,9 @@
                 });
                 html += `</div>`;
             }
-            grid.innerHTML = html;
+            _gridEl.innerHTML = html;
         }
 
-        document.querySelectorAll('.streak-mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                _streakMode = btn.dataset.mode;
-                updateButtons(); renderGrid();
-            });
-        });
-        slider.addEventListener('input', () => {
-            _streakMode = 'date';
-            updateButtons();
-            const idx = parseInt(slider.value);
-            select.value = String(idx);
-            label.textContent = new Date(allRoundDates[idx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            renderGrid();
-        });
-        select.addEventListener('change', () => {
-            const idx = parseInt(select.value);
-            slider.value = idx;
-            _streakMode = 'date';
-            updateButtons();
-            label.textContent = new Date(allRoundDates[idx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            renderGrid();
-        });
         renderGrid();
     }
 
@@ -832,6 +865,7 @@
             { key: 'cleanStreak', label: 'Clean Streak', desc: 'consecutive scores without carry-in bonus', statsKey: 'longestClean', curKey: 'currentClean' },
             { key: 'greenieRun', label: 'Greenie Run', desc: 'consecutive par-3 first-ons', statsKey: 'maxGreenies', curKey: 'currentGreenies' },
             { key: 'threePtStreak', label: '3-Ptr Streak', desc: 'FO + Closest + Putt on same hole', statsKey: 'max3PointHoles', curKey: 'current3PointHoles' },
+            { key: 'moxHole', label: 'Mox Hole Score', desc: 'highest points scored on one hole', statsKey: 'maxHoleScore', special: true },
         ];
 
         html += `<div class="streak-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
@@ -919,21 +953,22 @@
     }
 
     // ── Streak Leaders ──
-   function getStreakLeaders() {
-        return allPlayers.map(name => ({
-            name,
-            scoreStreak: seasonStats[name].longestScoring,
-            drought: seasonStats[name].longestZero,
-            foStreak: seasonStats[name].longestFO,
-            closestStreak: seasonStats[name].longestClosest,
-            puttStreak: seasonStats[name].longestPutt,
-            cleanStreak: seasonStats[name].longestClean,
-            greenieRun: seasonStats[name].maxGreenies,
-            threePtStreak: seasonStats[name].max3PointHoles,
-            wins: seasonStats[name].wins,
-            winStreak: seasonStats[name].winStreak,
-            lossDrought: seasonStats[name].lossDrought,
-        }));
+  function getStreakLeaders() {
+         return allPlayers.map(name => ({
+             name,
+             scoreStreak: seasonStats[name].longestScoring,
+             drought: seasonStats[name].longestZero,
+             foStreak: seasonStats[name].longestFO,
+             closestStreak: seasonStats[name].longestClosest,
+             puttStreak: seasonStats[name].longestPutt,
+             cleanStreak: seasonStats[name].longestClean,
+             greenieRun: seasonStats[name].maxGreenies,
+             threePtStreak: seasonStats[name].max3PointHoles,
+             moxHole: seasonStats[name].maxHoleScore,
+             wins: seasonStats[name].wins,
+             winStreak: seasonStats[name].winStreak,
+             lossDrought: seasonStats[name].lossDrought,
+         }));
    }
 
     // ── Player selector ──
