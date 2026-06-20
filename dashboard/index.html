@@ -99,6 +99,14 @@
         .status { color: #64748b; font-size: 13px; margin: 20px 0; text-align: center; font-style: italic; }
         .error { color: #f87171; font-style: normal; }
 
+        .player-highlight {
+            background: rgba(96, 165, 250, 0.25) !important;
+            border-radius: 3px;
+            padding: 0 2px;
+            color: #60a5fa !important;
+            font-weight: bold;
+        }
+
         /* ── Category breakdown table ── */
         .cat-table th, .cat-table td { font-size: 12px; padding: 6px 10px; }
         .cat-table th { background: #151726; }
@@ -655,6 +663,7 @@
         }).sort((a, b) => b.median - a.median);
     }
    let _streakMode = 'now';
+    let _selectedPlayer = '';
 
    let _currentLeaders = null, _currentStreakStats = null, _currentOtherStats = null, _currentWinLossStats = null;
     let _listenersAttached = false;
@@ -875,10 +884,11 @@
              }
             if (shouldLog) console.groupEnd();
             const gridEl = document.querySelector('.streak-grid');
-             if (gridEl) gridEl.innerHTML = html;
-            _hasLoggedInitial = true;
-            _prevMode = _streakMode;
-        }
+              if (gridEl) gridEl.innerHTML = html;
+             _hasLoggedInitial = true;
+             _prevMode = _streakMode;
+             highlightPlayer(_selectedPlayer);
+         }
 
 function renderOtherGrid() {
                const slider = document.querySelector('.streak-slider');
@@ -928,6 +938,7 @@ const otherGridEl = document.querySelector('.other-leaders-grid');
              if (shouldLog) console.groupEnd();
              _hasLoggedInitial = true;
              _prevMode = _streakMode;
+             highlightPlayer(_selectedPlayer);
          }
 
 
@@ -977,10 +988,11 @@ function renderWinLossGrid() {
              }
 const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             if (winLossGridEl) winLossGridEl.innerHTML = html;
-            if (shouldLog) console.groupEnd();
-            _hasLoggedInitial = true;
-            _prevMode = _streakMode;
-        }
+           if (shouldLog) console.groupEnd();
+             _hasLoggedInitial = true;
+             _prevMode = _streakMode;
+             highlightPlayer(_selectedPlayer);
+         }
 
     function renderLeaderboard() {
         const lb = getLeaderboardData();
@@ -1136,9 +1148,10 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             </div>
         </div>`;
 
-       container.innerHTML = html;
-        initStreakSlider(leaders, streakStats, otherStats, winLossStats);
-    }
+      container.innerHTML = html;
+         initStreakSlider(leaders, streakStats, otherStats, winLossStats);
+         highlightPlayer(_selectedPlayer);
+     }
 
     function sortBy(col) {
         if (currentSort === col) {
@@ -1183,8 +1196,50 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
     }
 
     function onPlayerChange(player) {
-        if (!player || !seasonStats[player]) return;
+        if (!player || !seasonStats[player]) {
+            _selectedPlayer = '';
+            document.getElementById('leaderboard-container').innerHTML = '';
+            renderLeaderboard();
+            highlightPlayer('');
+            return;
+        }
+        _selectedPlayer = player;
         renderPlayerDetail(player);
+        highlightPlayer(player);
+    }
+
+    function highlightPlayer(playerName) {
+        const container = document.getElementById('leaderboard-container');
+        if (!container) return;
+        // Remove old highlights first
+        container.querySelectorAll('.player-highlight').forEach(el => {
+            el.replaceWith(el.textContent);
+        });
+        // Clean up empty text nodes left behind
+        container.normalize();
+        if (!playerName) return;
+        // Walk text nodes and wrap matches
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+                if (node.parentElement.classList.contains('player-highlight')) return NodeFilter.FILTER_REJECT;
+                if (node.textContent.includes(playerName)) return NodeFilter.FILTER_ACCEPT;
+                return NodeFilter.FILTER_REJECT;
+            }
+        });
+        const nodesToReplace = [];
+        let node;
+        while (node = walker.nextNode()) {
+            nodesToReplace.push(node);
+        }
+        nodesToReplace.forEach(textNode => {
+            const html = textNode.textContent.split(playerName).map((part, i, arr) => {
+                if (i === arr.length - 1) return part;
+                return part + `<span class="player-highlight">${playerName}</span>`;
+            }).join('');
+            const span = document.createElement('span');
+            span.innerHTML = html;
+            textNode.parentNode.replaceChild(span, textNode);
+        });
     }
 
     // ── Player detail view ──
