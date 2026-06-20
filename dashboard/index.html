@@ -427,7 +427,8 @@
            let roundIndex = 0;
             for (const round of allRounds) {
                 roundIndex++;
-                const result = computeRoundStats(round);
+               const result = computeRoundStats(round);
+                round._playerData = result.playerData;
 
                 // Determine round winners
                 const playerScores = Object.entries(result.playerData)
@@ -526,7 +527,7 @@
             const roundDates = allRounds.map(r => r.date);
             for (const name of allPlayers) {
                 const st = seasonStats[name];
-                let running = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, maxHoleScore: 0, wins: 0, losses: 0, winStreak: 0, lossDrought: 0 };
+               let running = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, maxHoleScore: 0, wins: 0, losses: 0, winStreak: 0, lossDrought: 0, rounds: 0, totalHolesScored: 0, totalCarryIn: 0, total3PtrHoles: 0 };
                 // We need per-round hole-level streaks that carry across rounds
                 // Rebuild by iterating holes per round
                 let currentHoleStreaks = { longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0, longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0, currentScoring: 0, currentZero: 0, currentFO: 0, currentClosest: 0, currentPutt: 0, currentClean: 0, currentGreenies: 0, current3PointHoles: 0 };
@@ -583,7 +584,7 @@
                         running[key] = Math.max(running[key], roundStreaks[key] || 0);
                     }
                     
-                    // Mox Hole Score: max single-hole score this round
+                   // Mox Hole Score: max single-hole score this round
                     const holeScores = round.scores?.[name];
                     if (holeScores) {
                         const holeMax = holeScores.reduce((m, h) => Math.max(m, h.points || 0), 0);
@@ -603,6 +604,15 @@
                     
                     if (isWinner.has(name)) { currentWinStreak++; currentLossStreak = 0; running.winStreak = Math.max(running.winStreak, currentWinStreak); }
                     else { currentWinStreak = 0; currentLossStreak++; running.lossDrought = Math.max(running.lossDrought, currentLossStreak); }
+                    
+                    // Accumulate Other Leaders fields (sum, not max) and win/loss counts
+                    const pd = round._playerData?.[name];
+                    running.rounds++;
+                    running.totalHolesScored += pd?.holesScored || 0;
+                    running.totalCarryIn += pd?.carryInTotal || 0;
+                    running.total3PtrHoles += pd?.threePtrCount || 0;
+                    running.wins += isWinner.has(name) ? 1 : 0;
+                    running.losses += !isWinner.has(name) && n > 1 ? 1 : 0;
                     
                     cumulativeStreaks[name].push({
                         date: round.date,
@@ -806,7 +816,7 @@
                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
                 _labelEl.textContent = colLabel;
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
-                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+                        html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
                 top.forEach((entry, i) => {
                     const isLeader = (i === 0 && entry.dynamicVal > 0);
                     const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
@@ -824,14 +834,14 @@
             for (const os of _currentOtherStats) {
                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
-                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+         html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
 
                 const allEntries = allPlayers.map(name => ({
                     name,
                     seasonVal: seasonStats[name][os.key] || 0,
                     dynamicVal: getOtherDynVal(name, os)
                 }));
-                allEntries.sort((a, b) => b.dynamicVal - a.seasonVal);
+                allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
                 const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
                 if (top.length === 0) continue;
 
@@ -852,14 +862,14 @@
             for (const wl of _currentWinLossStats) {
                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(_sliderEl.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
-                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+ html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season Best</span><span>${colLabel}</span></div>`;
 
                 const allEntries = allPlayers.map(name => ({
                     name,
                     seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : (seasonStats[name][wl.key] || 0),
                     dynamicVal: getWinLossDynVal(name, wl)
                 }));
-                allEntries.sort((a, b) => b.dynamicVal - a.seasonVal);
+                allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
                 const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
                 if (top.length === 0) continue;
 
