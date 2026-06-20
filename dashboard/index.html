@@ -547,8 +547,6 @@
                     const roundStreaks = computeStreaksFromHoles(scores, {
                         longestScoring: currentHoleStreaks.longestScoring,
                         currentScoring: currentHoleStreaks.currentScoring,
-                        longestZero: currentHoleStreaks.longestZero,
-                        currentZero: currentHoleStreaks.currentZero,
                         longestFO: currentHoleStreaks.longestFO,
                         currentFO: currentHoleStreaks.currentFO,
                         longestClosest: currentHoleStreaks.longestClosest,
@@ -564,7 +562,6 @@
                     });
                     
                     currentHoleStreaks.currentScoring = roundStreaks.currentScoring;
-                    currentHoleStreaks.currentZero = roundStreaks.currentZero;
                     currentHoleStreaks.currentFO = roundStreaks.currentFO;
                     currentHoleStreaks.currentClosest = roundStreaks.currentClosest;
                     currentHoleStreaks.currentPutt = roundStreaks.currentPutt;
@@ -572,13 +569,13 @@
                     currentHoleStreaks.currentGreenies = roundStreaks.currentGreenies;
                     currentHoleStreaks.current3PointHoles = roundStreaks.current3PointHoles;
                     currentHoleStreaks.longestScoring = roundStreaks.longestScoring;
-                    currentHoleStreaks.longestZero = roundStreaks.longestZero;
                     currentHoleStreaks.longestFO = roundStreaks.longestFO;
                     currentHoleStreaks.longestClosest = roundStreaks.longestClosest;
                     currentHoleStreaks.longestPutt = roundStreaks.longestPutt;
                     currentHoleStreaks.longestClean = roundStreaks.longestClean;
                     currentHoleStreaks.maxGreenies = roundStreaks.maxGreenies;
                     currentHoleStreaks.max3PointHoles = roundStreaks.max3PointHoles;
+                    // Zero Streak NOT carried across rounds (caps at 18)
                     
                     // Update running max
                     for (const key of ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt', 'longestClean', 'maxGreenies', 'max3PointHoles']) {
@@ -813,33 +810,44 @@
                   console.group('renderGrid |', _streakMode);
                   console.log('sliderVal:', slider?.value, 'statsCount:', _currentStreakStats?.length);
               }
-             for (const ss of _currentStreakStats) {
-                 const seasonTop5 = [..._currentLeaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-                 const dynamicTop5 = allPlayers.map(name => ({
-                     name, seasonVal: seasonStats[name][ss.statsKey] || 0,
-                     dynamicVal: getDynVal(name, ss)
-                 })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
-                 const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss) }))];
-                 const seen = new Set();
-                 const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
-                 unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                 const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
-                  if (top.length === 0) continue;
-              if (shouldLog) console.log(`  "${ss.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+    for (const ss of _currentStreakStats) {
+                  const allPlayersData = allPlayers.map(name => ({
+                      name,
+                      seasonVal: ss.special ? seasonStats[name].maxHoleScore : seasonStats[name][ss.statsKey] || 0,
+                      dynamicVal: getDynVal(name, ss)
+                  }));
+                  const seasonTop5 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 5);
+                  const currentTop5 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 5);
+                  if (seasonTop5.length === 0 && currentTop5.length === 0) continue;
+                  if (shouldLog) console.log(`${ss.label}: seasonTop=`, seasonTop5.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop5.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
+                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                   const labelEl = document.querySelector('.streak-date-label');
                   if (labelEl) labelEl.textContent = colLabel;
-                 html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
-                 html += `<div style="display:grid;grid-template-columns:100px 40px 40px;gap:0 8px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span style="text-align:left;">Name</span><span style="text-align:center;">${colLabel}</span><span style="text-align:center;">Season</span></div>`;
-                 top.forEach((entry, i) => {
-                     const isLeader = (i === 0 && entry.dynamicVal > 0);
-                     const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                     const label = isLeader ? '★ ' : (i + 1) + '. ';
-                     html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${entry.dynamicVal}</span><span style="width:40px;text-align:center;color:#94a3b8;">${entry.seasonVal}</span></div>`;
-                 });
-html += `</div>`;
-            }
+                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
+                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                  // All-Time column
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
+                  seasonTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
+                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.seasonVal}</span></div>`;
+                  });
+                  if (seasonTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  // Current column
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
+                  currentTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
+                  });
+                  if (currentTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  html += `</div></div>`;
+             }
             if (shouldLog) console.groupEnd();
             const gridEl = document.querySelector('.streak-grid');
              if (gridEl) gridEl.innerHTML = html;
@@ -847,38 +855,49 @@ html += `</div>`;
             _prevMode = _streakMode;
         }
 
-         function renderOtherGrid() {
-              const slider = document.querySelector('.streak-slider');
-              updateButtons();
-              let html = '';
-             const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
-              if (shouldLog) {
-                  console.group('renderOtherGrid |', _streakMode);
-                  console.log('sliderVal:', slider?.value, 'statsCount:', _currentOtherStats?.length);
-              }
-             for (const os of _currentOtherStats) {
-         const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
-                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
-                  html += `<div style="display:grid;grid-template-columns:100px 40px 40px;gap:0 8px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span style="text-align:left;">Name</span><span style="text-align:center;">${colLabel}</span><span style="text-align:center;">Season</span></div>`;
-
-                  const allEntries = allPlayers.map(name => ({
+function renderOtherGrid() {
+               const slider = document.querySelector('.streak-slider');
+               updateButtons();
+               let html = '';
+               const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
+               if (shouldLog) {
+                   console.group('renderOtherGrid |', _streakMode);
+                   console.log('sliderVal:', slider?.value, 'statsCount:', _currentOtherStats?.length);
+               }
+              for (const os of _currentOtherStats) {
+                  const allPlayersData = allPlayers.map(name => ({
                       name,
                       seasonVal: seasonStats[name][os.key] || 0,
                       dynamicVal: getOtherDynVal(name, os)
                   }));
-                  allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
-               const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
-                  if (top.length === 0) continue;
-                   if (shouldLog) console.log(`  "${os.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+                  const seasonTop5 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 5);
+                  const currentTop5 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 5);
+                  if (seasonTop5.length === 0 && currentTop5.length === 0) continue;
+                  if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop5.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop5.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                  top.forEach((entry, i) => {
-                     const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
-                     const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                     const label = isLeader ? '★ ' : (i + 1) + '. ';
-                     html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${entry.dynamicVal}</span><span style="width:40px;text-align:center;color:#94a3b8;">${entry.seasonVal}</span></div>`;
-                 });
-                html += `</div>`;
-            }
+                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
+                  seasonTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
+                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.seasonVal}</span></div>`;
+                  });
+                  if (seasonTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
+                  currentTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
+                  });
+                  if (currentTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  html += `</div></div>`;
+             }
 const otherGridEl = document.querySelector('.other-leaders-grid');
              if (otherGridEl) otherGridEl.innerHTML = html;
              if (shouldLog) console.groupEnd();
@@ -888,38 +907,49 @@ const otherGridEl = document.querySelector('.other-leaders-grid');
 
 
 function renderWinLossGrid() {
-               const slider = document.querySelector('.streak-slider');
-               updateButtons();
-               let html = '';
-               const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
-               if (shouldLog) {
-                   console.group('renderWinLossGrid |', _streakMode);
-                   console.log('sliderVal:', slider?.value, 'statsCount:', _currentWinLossStats?.length);
-               }
-             for (const wl of _currentWinLossStats) {
-const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Season');
+                const slider = document.querySelector('.streak-slider');
+                updateButtons();
+                let html = '';
+                const shouldLog = !_hasLoggedInitial || _streakMode !== _prevMode;
+                if (shouldLog) {
+                    console.group('renderWinLossGrid |', _streakMode);
+                    console.log('sliderVal:', slider?.value, 'statsCount:', _currentWinLossStats?.length);
+                }
+              for (const wl of _currentWinLossStats) {
+                  const fmt = (v) => wl.fmt ? wl.fmt(v) : v;
+                  const allPlayersData = allPlayers.map(name => ({
+                      name,
+                      seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : seasonStats[name][wl.key] || 0,
+                      dynamicVal: getWinLossDynVal(name, wl)
+                  }));
+                  const seasonTop5 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 5);
+                  const currentTop5 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 5);
+                  if (seasonTop5.length === 0 && currentTop5.length === 0) continue;
+                  if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop5.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop5.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
+
+                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
-                  html += `<div style="display:grid;grid-template-columns:100px 40px 40px;gap:0 8px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span style="text-align:left;">Name</span><span style="text-align:center;">${colLabel}</span><span style="text-align:center;">Season</span></div>`;
-
-                 const allEntries = allPlayers.map(name => ({
-                     name,
-                     seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : (seasonStats[name][wl.key] || 0),
-                     dynamicVal: getWinLossDynVal(name, wl)
-                 }));
-                 allEntries.sort((a, b) => b.dynamicVal - a.dynamicVal);
-             const top = allEntries.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).slice(0, 5);
-                  if (top.length === 0) continue;
-                   if (shouldLog) console.log(`  "${wl.label}":`, top.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
-
-                  top.forEach((entry, i) => {
-                      const isLeader = (i === 0 && entry.dynamicVal >= entry.seasonVal && entry.dynamicVal > 0);
+                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
+                  seasonTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                      const label = isLeader ? '★ ' : (i + 1) + '. ';
-                      const fmt = (v) => wl.fmt ? wl.fmt(v) : v;
-                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${fmt(entry.dynamicVal)}</span><span style="width:40px;text-align:center;color:#94a3b8;">${fmt(entry.seasonVal)}</span></div>`;
-                 });
-                html += `</div>`;
-            }
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.seasonVal)}</span></div>`;
+                  });
+                  if (seasonTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  html += `<div>`;
+                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
+                  currentTop5.forEach((entry, i) => {
+                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.dynamicVal)}</span></div>`;
+                  });
+                  if (currentTop5.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                  html += `</div>`;
+                  html += `</div></div>`;
+             }
 const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             if (winLossGridEl) winLossGridEl.innerHTML = html;
             if (shouldLog) console.groupEnd();
