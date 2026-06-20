@@ -697,12 +697,14 @@
 
         function getDynVal(name, ss) {
             if (ss.special) {
-                // Mox Hole Score: cumulative max of highest single-hole score
+                // Mox Hole Score: cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
-                const idx = parseInt(_sliderEl.value);
+                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
-                for (let ci = 0; ci < cum.length && ci <= idx; ci++) {
-                    val = Math.max(val, cum[ci][ss.statsKey] || 0);
+                for (const entry of cum) {
+                    if (entry.date <= targetDate) {
+                        val = Math.max(val, entry[ss.statsKey] || 0);
+                    }
                 }
                 return val;
             }
@@ -711,11 +713,14 @@
             } else if (_streakMode === 'season') {
                 return seasonStats[name][ss.statsKey] || 0;
             } else {
+                // Cumulative max up to selected date
                 const cum = cumulativeStreaks[name] || [];
-                const idx = parseInt(_sliderEl.value);
+                const targetDate = allRoundDates[parseInt(_sliderEl.value)];
                 let val = 0;
-                for (let ci = 0; ci < cum.length && ci <= idx; ci++) {
-                    val = Math.max(val, cum[ci][ss.statsKey] || 0);
+                for (const entry of cum) {
+                    if (entry.date <= targetDate) {
+                        val = Math.max(val, entry[ss.statsKey] || 0);
+                    }
                 }
                 return val;
             }
@@ -744,7 +749,8 @@
                 top.forEach((entry, i) => {
                     const isLeader = (i === 0 && entry.dynamicVal > 0);
                     const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${isLeader ? '★ ' : ''}${entry.name}</span><span style="color:#94a3b8;">${entry.seasonVal}</span><span>${entry.dynamicVal}</span></div>`;
+                    const label = isLeader ? '★ ' : (i + 1) + '. ';
+                    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span style="width:100px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="width:40px;text-align:center;color:#94a3b8;">${entry.seasonVal}</span><span style="width:40px;text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
                 });
                 html += `</div>`;
             }
@@ -874,7 +880,7 @@
         html += `<h3 style="margin:20px 0 10px;">📊 Other Leaders</h3>`;
         html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season totals and best single-round achievements across all categories.</p>`;
 
-        const otherStats = [
+const otherStats = [
             { key: 'totalHolesScored', label: 'Holes Scored', desc: 'total holes with any point', sort: 'sum', fmt: v => v },
             { key: 'totalCarryIn', label: 'Carry-In Points', desc: 'bonus points from carries', sort: 'sum', fmt: v => v },
             { key: 'maxHoleScore', label: 'Max Hole Score', desc: 'highest points in one hole', sort: 'max', fmt: v => v },
@@ -895,7 +901,7 @@
             html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
             sorted.forEach((entry, i) => {
                 const v = val(entry);
-                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${os.fmt(v)}</span></div>`;
+                html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;"><span style="width:120px;text-align:left;color:#94a3b8;">${i === 0 ? '★ ' : (i + 1) + '. '}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${os.fmt(v)}</span></div>`;
             });
             html += `</div>`;
         }
@@ -905,12 +911,12 @@
         html += `<h3 style="margin:20px 0 10px;">🏆 Win/Loss Leaders</h3>`;
         html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season win/loss records and streaks across all players.</p>`;
 
- const winLossStats = [
-             { key: 'wins', label: 'Wins', desc: 'rounds won (% of total points)', sort: 'sum', fmt: v => v },
-             { key: 'winPct', label: 'Win %', desc: 'wins / rounds played', sort: 'ratio', fmt: v => (v * 100).toFixed(1) + '%' },
-             { key: 'winStreak', label: 'Win Streak', desc: 'most consecutive wins', sort: 'sum', fmt: v => v },
-             { key: 'lossDrought', label: 'Loss Streak', desc: 'most consecutive losses', sort: 'sum', fmt: v => v },
-         ];
+        const winLossStats = [
+            { key: 'wins', label: 'Wins', desc: 'rounds won (% of total points)', sort: 'sum', fmt: v => v },
+            { key: 'winPct', label: 'Win %', desc: 'wins / rounds played', sort: 'ratio', fmt: v => (v * 100).toFixed(1) + '%' },
+            { key: 'winStreak', label: 'Win Streak', desc: 'most consecutive wins', sort: 'sum', fmt: v => v },
+            { key: 'lossDrought', label: 'Loss Streak', desc: 'most consecutive losses', sort: 'sum', fmt: v => v },
+        ];
 
         html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
         for (const wl of winLossStats) {
@@ -929,7 +935,7 @@
             html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
             sorted.forEach((entry, i) => {
                 const v = val(entry);
-                html += `<div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;${i === 0 ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${i === 0 ? '★ ' : (i + 1) + '.'} ${entry.name}</span><span>${wl.fmt(v)}</span></div>`;
+                html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;"><span style="width:120px;text-align:left;color:#94a3b8;">${i === 0 ? '★ ' : (i + 1) + '. '}${entry.name}</span><span style="width:40px;text-align:center;color:#60a5fa;">${wl.fmt(v)}</span></div>`;
             });
             html += `</div>`;
         }
