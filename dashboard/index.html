@@ -548,7 +548,7 @@
         // Top 5 Streak Leaders
         const leaders = getStreakLeaders();
         html += `<h3 style="margin:20px 0 10px;">🔥 Streak Leaders</h3>`;
-        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Season-long streaks across all rounds. Drought = consecutive holes scoring zero; FO = par-4/5 first-ons; Closest = consecutive closest-to-pin; Putt = consecutive putting points; Greenie = consecutive par-3 first-ons.</p>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Best single-round streaks per stat. Drought = consecutive holes with zero; FO = par-4/5 first-ons; Closest = consecutive closest-to-pin; Putt = consecutive putting points; Clean = consecutive scores without carry-in; Greenie = consecutive par-3 first-ons; 3-Ptr = FO+Closest+Putt same hole.</p>`;
 
         const streakStats = [
             { key: 'scoreStreak', label: 'Score Streak', desc: 'consecutive holes scoring any point' },
@@ -556,10 +556,12 @@
             { key: 'foStreak', label: 'FO Streak', desc: 'consecutive par-4/5 first-ons' },
             { key: 'closestStreak', label: 'Closest Streak', desc: 'consecutive closest-to-pin' },
             { key: 'puttStreak', label: 'Putt Streak', desc: 'consecutive putting points' },
+            { key: 'cleanStreak', label: 'Clean Streak', desc: 'consecutive scores without carry-in bonus' },
             { key: 'greenieRun', label: 'Greenie Run', desc: 'consecutive par-3 first-ons' },
+            { key: 'threePtStreak', label: '3-Ptr Streak', desc: 'FO + Closest + Putt on same hole' },
         ];
 
-        html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">`;
+       html += `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">`;
         for (const ss of streakStats) {
             const sorted = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
             if (sorted.length === 0) continue;
@@ -594,7 +596,9 @@
             foStreak: seasonStats[name].longestFO,
             closestStreak: seasonStats[name].longestClosest,
             puttStreak: seasonStats[name].longestPutt,
+            cleanStreak: seasonStats[name].longestClean,
             greenieRun: seasonStats[name].maxGreenies,
+            threePtStreak: seasonStats[name].max3PointHoles,
         }));
     }
 
