@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBB Season Stats</title>
+    <title>BBB Stats</title>
   
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -123,7 +123,7 @@
 </head>
 <body>
     <div class="top-bar">
-        <h1>⛳ BBB Season Stats</h1>
+        <h1>⛳ BBB Stats</h1>
         <div class="actions">
             <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
@@ -135,6 +135,12 @@
 
     <!-- ── Leaderboard View ── -->
     <div id="leaderboard-view" class="view">
+        <div class="player-selector">
+            <label for="playerSelectLB"><strong>Highlight Player:</strong></label>
+            <select id="playerSelectLB" onchange="onPlayerHighlight(this.value)">
+                <option value="">-- None --</option>
+            </select>
+        </div>
         <div id="leaderboard-container"></div>
     </div>
 
@@ -1187,24 +1193,29 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
     function populatePlayerSelector() {
         const select = document.getElementById('playerSelect');
         select.innerHTML = '<option value="">-- Select Player --</option>';
+        const highlightSelect = document.getElementById('playerSelectLB');
+        highlightSelect.innerHTML = '<option value="">-- None --</option>';
         allPlayers.forEach(name => {
             const opt = document.createElement('option');
             opt.value = name;
             opt.textContent = name;
-            select.appendChild(opt);
+            select.appendChild(opt.cloneNode(true));
+            highlightSelect.appendChild(opt.cloneNode(true));
         });
     }
 
     function onPlayerChange(player) {
         if (!player || !seasonStats[player]) {
-            _selectedPlayer = '';
             document.getElementById('leaderboard-container').innerHTML = '';
             renderLeaderboard();
             highlightPlayer('');
             return;
         }
-        _selectedPlayer = player;
         renderPlayerDetail(player);
+    }
+
+    function onPlayerHighlight(player) {
+        _selectedPlayer = player;
         highlightPlayer(player);
     }
 
