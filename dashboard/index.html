@@ -746,9 +746,10 @@
         if (p) parts.push('P');
         return parts.join('');
     }
-    function renderRoundCard() {
+   function renderRoundCard() {
         populateRoundDateDropdown();
-        populateRoundSelect('0');
+        const lastIdx = document.getElementById('roundDateSelect').value;
+        populateRoundSelect(lastIdx);
         document.getElementById('roundDateSelect').onchange = function() { populateRoundSelect(this.value); };
         document.getElementById('roundSelect').onchange = function() { renderScorecard(parseInt(this.value)); };
         renderScorecard(0);
