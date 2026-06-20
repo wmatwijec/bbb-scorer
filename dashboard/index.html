@@ -693,7 +693,8 @@
     }
 
     // ── View switching ──
-   function showView(view) {
+    function showView(view) {
+         console.log('showView called with:', view);
          document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
          document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
          document.getElementById('round-card-view').style.display = view === 'roundCard' ? '' : 'none';
@@ -701,7 +702,7 @@
          document.getElementById('btn-player').className = `btn btn-nav${view === 'player' ? ' active' : ''}`;
          document.getElementById('btn-round').className = `btn btn-nav${view === 'roundCard' ? ' active' : ''}`;
          if (view === 'leaderboard') renderLeaderboard();
-         if (view === 'roundCard') renderRoundCard();
+         if (view === 'roundCard') { console.log('about to call renderRoundCard, allRounds:', allRounds.length); renderRoundCard(); }
      }
 
    // ── Round Card ──
