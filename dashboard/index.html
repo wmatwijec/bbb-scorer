@@ -801,7 +801,8 @@
 
         function getOtherDynVal(name, os) {
             if (_streakMode === 'now') {
-                return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][os.key] || 0) : 0;
+                // These are cumulative stats, not live counters — show season best
+                return seasonStats[name][os.key] || 0;
             } else if (_streakMode === 'season') {
                 return seasonStats[name][os.key] || 0;
             } else {
@@ -821,7 +822,11 @@
 
         function getWinLossDynVal(name, wl) {
             if (_streakMode === 'now') {
-                return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][wl.key] || 0) : 0;
+                // These are cumulative stats, not live counters — show season best
+                if (wl.sort === 'ratio') {
+                    return seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0;
+                }
+                return seasonStats[name][wl.key] || 0;
             } else if (_streakMode === 'season') {
                 if (wl.sort === 'ratio') {
                     return seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0;
@@ -916,12 +921,12 @@ function renderOtherGrid() {
                       seasonVal: seasonStats[name][os.key] || 0,
                       dynamicVal: getOtherDynVal(name, os)
                   }));
-                  const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
-                  const currentTop10 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
-                  if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
-                  if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
+                 const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
+                   const currentTop10 = allPlayersData.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
+                   if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
+                   if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
                   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
                   html += `<div>`;
@@ -969,12 +974,12 @@ function renderWinLossGrid() {
                       seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : seasonStats[name][wl.key] || 0,
                       dynamicVal: getWinLossDynVal(name, wl)
                   }));
-                  const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
-                  const currentTop10 = allPlayersData.filter(e => e.dynamicVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
-                  if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
-                  if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
+              const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, 10);
+                   const currentTop10 = allPlayersData.filter(e => e.dynamicVal > 0 || e.seasonVal > 0).sort((a, b) => b.dynamicVal - a.dynamicVal).slice(0, 10);
+                   if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
+                   if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
 
-                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
                   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
                   html += `<div>`;
