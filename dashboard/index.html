@@ -536,8 +536,8 @@
                 cumulativeStreaks[name] = [];
                 for (let ri = 0; ri < allRounds.length; ri++) {
                     const round = allRounds[ri];
-                    const pData = round._cachedTotals?.[name];
-                    if (pData === undefined) continue;
+                    const cachedTotals = round._cachedTotals?.[name];
+                     if (cachedTotals === undefined) continue;
                     
                     // Get this player's hole scores
                     const scores = round.scores?.[name];
@@ -577,16 +577,16 @@
                     currentHoleStreaks.max3PointHoles = roundStreaks.max3PointHoles;
                     // Zero Streak NOT carried across rounds (caps at 18)
                     
-                    // Update running max
-                    for (const key of ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt', 'longestClean', 'maxGreenies', 'max3PointHoles']) {
-                        running[key] = Math.max(running[key], roundStreaks[key] || 0);
+                  // Update running max — use per-round streaks from _playerData (same source as seasonStats) for consistency
+                    const pData = round._playerData?.[name];
+                    if (pData) {
+                        if (pData.streaks) {
+                            for (const key of ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt', 'longestClean', 'maxGreenies', 'max3PointHoles']) {
+                                running[key] = Math.max(running[key], pData.streaks[key] || 0);
+                            }
+                        }
+                        running.maxHoleScore = Math.max(running.maxHoleScore, pData.maxHole || 0);
                     }
-                    
-                   // Max Hole Score: max single-hole score this round
-                     const pd = round._playerData?.[name];
-                     if (pd) {
-                         running.maxHoleScore = Math.max(running.maxHoleScore, pd.maxHole || 0);
-                     }
                     
                     // Win/loss streak (consecutive rounds)
                     const playerScores = Object.entries(round._cachedTotals || {})
