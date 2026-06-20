@@ -635,6 +635,92 @@
         }).sort((a, b) => b.median - a.median);
     }
 
+    let _streakMode = 'now';
+    function initStreakSlider(leaders, streakStats) {
+        const slider = document.querySelector('.streak-slider');
+        const select = document.querySelector('.streak-date-select');
+        const label = document.querySelector('.streak-date-label');
+        const grid = document.querySelector('.streak-grid');
+        if (!slider || !select || !label || !grid) return;
+
+        function updateButtons() {
+            document.querySelectorAll('.streak-mode-btn').forEach(btn => {
+                if (btn.dataset.mode === _streakMode) {
+                    btn.style.background = '#0f111a'; btn.style.color = '#60a5fa'; btn.style.borderColor = '#60a5fa';
+                } else {
+                    btn.style.background = '#1a1d2e'; btn.style.color = '#94a3b8'; btn.style.borderColor = '#2d3154';
+                }
+            });
+        }
+
+        function getDynVal(name, ss, idx) {
+            if (_streakMode === 'now') {
+                return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][ss.curKey] || 0) : 0;
+            } else if (_streakMode === 'season') {
+                return seasonStats[name][ss.statsKey] || 0;
+            } else {
+                const cum = cumulativeStreaks[name] || [];
+                let val = 0;
+                for (let ci = 0; ci < cum.length && ci <= idx; ci++) {
+                    val = Math.max(val, cum[ci][ss.statsKey] || 0);
+                }
+                return val;
+            }
+        }
+
+        function renderGrid() {
+            let html = '';
+            for (const ss of streakStats) {
+                const seasonTop5 = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
+                const dynamicTop5 = allPlayers.map(name => ({
+                    name, seasonVal: seasonStats[name][ss.statsKey] || 0,
+                    dynamicVal: getDynVal(name, ss, parseInt(slider.value))
+                })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
+                const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynVal(p.name, ss, parseInt(slider.value)) }))];
+                const seen = new Set();
+                const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
+                unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
+                const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
+                if (top.length === 0) continue;
+
+                const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
+                html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
+                top.forEach((entry, i) => {
+                    const isLeader = (i === 0 && entry.dynamicVal > 0);
+                    const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${isLeader ? '★ ' : ''}${entry.name}</span><span style="color:#94a3b8;">${entry.seasonVal}</span><span>${entry.dynamicVal}</span></div>`;
+                });
+                html += `</div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        document.querySelectorAll('.streak-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                _streakMode = btn.dataset.mode;
+                updateButtons(); renderGrid();
+            });
+        });
+        slider.addEventListener('input', () => {
+            _streakMode = 'date';
+            updateButtons();
+            const idx = parseInt(slider.value);
+            select.value = String(idx);
+            label.textContent = new Date(allRoundDates[idx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            renderGrid();
+        });
+        select.addEventListener('change', () => {
+            const idx = parseInt(select.value);
+            slider.value = idx;
+            _streakMode = 'date';
+            updateButtons();
+            label.textContent = new Date(allRoundDates[idx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            renderGrid();
+        });
+        renderGrid();
+    }
+
     function renderLeaderboard() {
         const lb = getLeaderboardData();
         const container = document.getElementById('leaderboard-container');
@@ -717,7 +803,7 @@
      // Top 5 Streak Leaders
         const leaders = getStreakLeaders();
         html += `<h3 style="margin:20px 0 10px;">🔥 Streak Leaders</h3>`;
-        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Each card shows Season best + dynamic value. Slider traces through the season timeline; "Now" shows what each player is currently on.</p>`;
+        html += `<p style="color:#64748b;font-size:12px;margin:-5px 0 12px;">Each card shows Season best + dynamic value. Slider traces through the season; "Now" shows what each player is currently on.</p>`;
 
         // Build date slider options
         const dateLabels = allRoundDates.map((d, i) => {
@@ -727,13 +813,13 @@
 
         html += `<div style="margin:10px 0 15px;background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <button id="nowBtn" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
-                <button id="seasonBtn" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
-                <input type="range" id="streakSlider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:200px;accent-color:#60a5fa;">
-                <select id="streakDateSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;">
+                <button class="streak-mode-btn" data-mode="now" style="background:#0f111a;color:#60a5fa;border:1px solid #60a5fa;border-radius:4px;padding:4px 10px;font-size:12px;font-weight:bold;cursor:pointer;" title="Current running streaks">⚡ Now</button>
+                <button class="streak-mode-btn" data-mode="season" style="background:#1a1d2e;color:#94a3b8;border:1px solid #2d3154;border-radius:4px;padding:4px 10px;font-size:12px;cursor:pointer;" title="Season-long best streaks">🏆 Season</button>
+                <input type="range" class="streak-slider" min="0" max="${allRoundDates.length - 1}" value="${allRoundDates.length - 1}" style="flex:1;min-width:200px;accent-color:#60a5fa;">
+                <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;">
                     ${dateLabels}
                 </select>
-                <span id="streakDateLabel" style="font-size:12px;color:#60a5fa;font-weight:bold;min-width:90px;text-align:right;">Now</span>
+                <span class="streak-date-label" style="font-size:12px;color:#60a5fa;font-weight:bold;min-width:90px;text-align:right;">Now</span>
             </div>
         </div>`;
 
@@ -748,133 +834,10 @@
             { key: 'threePtStreak', label: '3-Ptr Streak', desc: 'FO + Closest + Putt on same hole', statsKey: 'max3PointHoles', curKey: 'current3PointHoles' },
         ];
 
-        html += `<div id="streakGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
+        html += `<div class="streak-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div>`;
 
-        // Slider event listeners
-        setTimeout(() => {
-            const slider = document.getElementById('streakSlider');
-            const select = document.getElementById('streakDateSelect');
-            const label = document.getElementById('streakDateLabel');
-            const nowBtn = document.getElementById('nowBtn');
-            const seasonBtn = document.getElementById('seasonBtn');
-            let currentMode = 'now';
-            
-            function updateButtonStyles() {
-                if (nowBtn && seasonBtn) {
-                    if (currentMode === 'now') {
-                        nowBtn.style.background = '#0f111a'; nowBtn.style.color = '#60a5fa'; nowBtn.style.borderColor = '#60a5fa';
-                        seasonBtn.style.background = '#1a1d2e'; seasonBtn.style.color = '#94a3b8'; seasonBtn.style.borderColor = '#2d3154';
-                    } else if (currentMode === 'season') {
-                        seasonBtn.style.background = '#0f111a'; seasonBtn.style.color = '#60a5fa'; seasonBtn.style.borderColor = '#60a5fa';
-                        nowBtn.style.background = '#1a1d2e'; nowBtn.style.color = '#94a3b8'; nowBtn.style.borderColor = '#2d3154';
-                    } else {
-                        nowBtn.style.background = '#1a1d2e'; nowBtn.style.color = '#94a3b8'; nowBtn.style.borderColor = '#2d3154';
-                        seasonBtn.style.background = '#1a1d2e'; seasonBtn.style.color = '#94a3b8'; seasonBtn.style.borderColor = '#2d3154';
-                    }
-                }
-            }
-            
-            function getDynamicValue(name, ss, idx) {
-                if (currentMode === 'now') {
-                    // Current running streak from the last hole played
-                    const cur = playerCurrentStreaks[name];
-                    return cur ? (cur[ss.curKey] || 0) : 0;
-                } else if (currentMode === 'season') {
-                    // Season-long best
-                    return seasonStats[name][ss.statsKey] || 0;
-                } else {
-                    // Cumulative best up to selected date
-                    const cum = cumulativeStreaks[name] || [];
-                    let val = 0;
-                    for (let ci = 0; ci <= idx; ci++) {
-                        if (cum[ci] && cum[ci].date <= allRoundDates[idx]) {
-                            val = Math.max(val, cum[ci][ss.statsKey] || 0);
-                        }
-                    }
-                    return val;
-                }
-            }
-
-            function renderStreakGridDynamic() {
-                const grid = document.getElementById('streakGrid');
-                if (!grid) return;
-                
-                let html = '';
-                for (const ss of streakStats) {
-                    // Season top 5
-                    const seasonTop5 = [...leaders].filter(p => p[ss.key] > 0).sort((a, b) => b[ss.key] - a[ss.key]).slice(0, 5);
-                    // Dynamic top 5 (ranked by dynamic value)
-                    const dynamicTop5 = allPlayers.map(name => ({
-                        name,
-                        seasonVal: seasonStats[name][ss.statsKey] || 0,
-                        dynamicVal: currentMode === 'now' ? (playerCurrentStreaks[name]?.[ss.curKey] || 0) : getDynamicValue(name, ss, parseInt(slider.value))
-                    })).filter(p => p.dynamicVal > 0 || p.seasonVal > 0);
-                    
-                    // Merge and deduplicate: take top 5 by dynamic value, include season leaders
-                    const allEntries = [...dynamicTop5, ...seasonTop5.map(p => ({ name: p.name, seasonVal: seasonStats[p.name][ss.statsKey] || 0, dynamicVal: getDynamicValue(p.name, ss, parseInt(slider.value)) }))];
-                    const seen = new Set();
-                    const unique = allEntries.filter(e => { if (!seen.has(e.name)) { seen.add(e.name); return true; } return false; });
-                    unique.sort((a, b) => b.dynamicVal - a.dynamicVal);
-                    const top = unique.slice(0, 5).filter(e => e.dynamicVal > 0 || e.seasonVal > 0);
-                    
-                    if (top.length === 0) continue;
-                    
-                    const colLabel = currentMode === 'now' ? 'Now' : (currentMode === 'season' ? 'Season' : new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                    
-                    html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
-                    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;font-size:11px;color:#64748b;margin-bottom:4px;border-bottom:1px solid #2d3154;padding-bottom:2px;"><span>Season</span><span>${colLabel}</span></div>`;
-                    
-                    top.forEach((entry, i) => {
-                        const isLeader = (i === 0 && entry.dynamicVal > 0);
-                        const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                        html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;${rowBg}${isLeader ? 'color:#fbbf24;font-weight:bold;' : 'color:#e2e8f0;'}"><span>${isLeader ? '★ ' : ''}${entry.name}</span><span style="color:#94a3b8;">${entry.seasonVal}</span><span>${entry.dynamicVal}</span></div>`;
-                    });
-                    html += `</div>`;
-                }
-                grid.innerHTML = html;
-            }
-
-            if (nowBtn) {
-                nowBtn.addEventListener('click', () => {
-                    currentMode = 'now';
-                    updateButtonStyles();
-                    label.textContent = 'Now';
-                    renderStreakGridDynamic();
-                });
-            }
-            
-            if (seasonBtn) {
-                seasonBtn.addEventListener('click', () => {
-                    currentMode = 'season';
-                    updateButtonStyles();
-                    label.textContent = 'Season';
-                    renderStreakGridDynamic();
-                });
-            }
-            
-            slider.addEventListener('input', () => {
-                currentMode = 'date';
-                updateButtonStyles();
-                const idx = parseInt(slider.value);
-                select.value = String(idx);
-                const d = new Date(allRoundDates[idx]);
-                label.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                renderStreakGridDynamic();
-            });
-            
-            select.addEventListener('change', () => {
-                const idx = parseInt(select.value);
-                slider.value = idx;
-                currentMode = 'date';
-                updateButtonStyles();
-                const d = new Date(allRoundDates[idx]);
-                label.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                renderStreakGridDynamic();
-            });
-            
-            // Initialize Now view
-            renderStreakGridDynamic();
-        }, 100);
+        // Init streak slider (called after each renderLeaderboard)
+        initStreakSlider(leaders, streakStats);
 
         // Other Leaders — Season Summary stats
         html += `<h3 style="margin:20px 0 10px;">📊 Other Leaders</h3>`;
