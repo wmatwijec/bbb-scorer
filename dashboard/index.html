@@ -126,8 +126,9 @@
     <div class="top-bar">
         <h1>⛳ BBB Stats</h1>
         <div class="actions">
-            <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
+           <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
+            <button class="btn btn-nav" id="btn-round" onclick="showView('roundCard')">Round Card</button>
             <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
                 Highlight:
                 <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
@@ -150,7 +151,7 @@
     </div>
 
     <!-- ── Player Detail View ── -->
-    <div id="player-view" class="view" style="display:none;">
+  <div id="player-view" class="view" style="display:none;">
         <div class="player-selector">
             <label for="playerSelect"><strong>Select Player:</strong></label>
             <select id="playerSelect" onchange="onPlayerChange(this.value)">
@@ -160,12 +161,29 @@
         <div id="player-detail"></div>
     </div>
 
+    <!-- ── Round Card View ── -->
+    <div id="round-card-view" class="view" style="display:none;">
+        <div class="card" style="padding:15px;">
+            <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:15px;">
+                <div>
+                    <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
+                    <select id="roundDateSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 10px;font-size:13px;min-width:160px;"></select>
+                </div>
+                <div>
+                    <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:3px;">Round</label>
+                    <select id="roundSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 10px;font-size:13px;min-width:300px;"></select>
+                </div>
+            </div>
+            <div id="round-card-content"></div>
+        </div>
+    </div>
+
     <script>
     const BACKEND = 'https://pwa-players-backend.onrender.com';
     const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
     const PLAYER_COLORS = ['#0d6efd','#198754','#dc3545','#ffc107','#6f42c1','#fd7e14','#20c997','#6610f2','#d63384','#0dcaf0'];
 
-    let allRounds = [];
+   let allRounds = [];
     let allPlayers = [];
     let seasonStats = {};
     let playerRoundData = {};
@@ -174,6 +192,7 @@
     let playerCurrentStreaks = {};
     let currentSort = 'median_desc';
     let sortState = {};
+    let coursePars = {};
 
     // ── Median helper ──
     function median(arr) {
@@ -217,8 +236,8 @@
     }
 
     function computeRoundStats(round) {
-        const pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18
-            ? round.pars : DEFAULT_PARS;
+        let pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18
+            ? round.pars : (coursePars[round.courseName] || DEFAULT_PARS);
         const holeScores = {};
         for (let idx = 0; idx < 18; idx++) holeScores[idx] = {};
 
@@ -232,7 +251,8 @@
 
         (round.players || []).forEach(p => {
             if (!p?.name || p.name.toLowerCase().includes('guest')) return;
-            let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0;
+          let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0;
+            const holeDetails = [];
             const holeScoresPerPlayer = [];
 
             for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
@@ -272,10 +292,11 @@
                 clPts += roundCL;
                 pPts += roundP;
 
-                holeScoresPerPlayer.push({
+               holeDetails.push({
                     points: roundTotal, scored: hasAny ? 1 : 0,
                     fo: foRaw, gr: grRaw, cl: clRaw, p: pRaw, threePt: (s.firstOn && s.closest && s.putt) ? 1 : 0
                 });
+                holeScoresPerPlayer.push(holeDetails[holeDetails.length - 1]);
             }
 
             // Compute streaks for this round
@@ -289,10 +310,11 @@
                 threePtrCount += h.threePt || 0;
             });
 
-            result.playerData[p.name] = {
+           result.playerData[p.name] = {
                 totalPts, foPts, grPts, clPts, pPts,
                 numHoles: holeSequence.length, streaks,
-                holesScored, carryInTotal, maxHole, threePtrCount
+                holesScored, carryInTotal, maxHole, threePtrCount,
+                holeDetails
             };
         });
 
@@ -403,9 +425,29 @@
                 validRounds.push(round);
             }
 
-            allRounds = validRounds.sort((a, b) => new Date(a.date) - new Date(b.date));
+         allRounds = validRounds.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-           // Collect unique players (non-guest, non-excluded)
+            // Load course pars from CSV
+            try {
+                const coursesRes = await fetch(`${BACKEND}/courses`);
+                if (coursesRes.ok) {
+                    const coursesCSV = await coursesRes.text();
+                    coursesCSV.trim().split('\n').forEach(line => {
+                        const cols = line.split(',');
+                        const name = cols[0]?.trim();
+                        if (name && cols.length >= 20) {
+                            const pars = [];
+                            for (let i = 1; i <= 18; i++) {
+                                const par = parseInt(cols[i]);
+                                if (!isNaN(par)) pars.push(par);
+                            }
+                            if (pars.length === 18) coursePars[name] = pars;
+                        }
+                    });
+                }
+            } catch(e) { console.warn('Could not load course pars:', e); }
+
+            // Collect unique players (non-guest, non-excluded)
             const excludedPlayers = new Set(['Doug', 'Ryan']);
             const playerSet = new Set();
             allRounds.forEach(r => {
@@ -651,12 +693,199 @@
     }
 
     // ── View switching ──
-    function showView(view) {
-        document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
-        document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
-        document.getElementById('btn-leaderboard').className = `btn btn-nav${view === 'leaderboard' ? ' active' : ''}`;
-        document.getElementById('btn-player').className = `btn btn-nav${view === 'player' ? ' active' : ''}`;
-        if (view === 'leaderboard') renderLeaderboard();
+   function showView(view) {
+         document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
+         document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
+         document.getElementById('round-card-view').style.display = view === 'roundCard' ? '' : 'none';
+         document.getElementById('btn-leaderboard').className = `btn btn-nav${view === 'leaderboard' ? ' active' : ''}`;
+         document.getElementById('btn-player').className = `btn btn-nav${view === 'player' ? ' active' : ''}`;
+         document.getElementById('btn-round').className = `btn btn-nav${view === 'roundCard' ? ' active' : ''}`;
+         if (view === 'leaderboard') renderLeaderboard();
+         if (view === 'roundCard') renderRoundCard();
+     }
+
+   // ── Round Card ──
+    let roundDatesByDate = [];
+    let roundDatesByRound = [];
+    function populateRoundDateDropdown() {
+        const dateSet = new Set();
+        allRounds.forEach(r => dateSet.add(r.date));
+        roundDatesByDate = Array.from(dateSet).sort();
+        const sel = document.getElementById('roundDateSelect');
+        sel.innerHTML = roundDatesByDate.map((d, i) => {
+            const date = new Date(d);
+            return `<option value="${i}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
+        }).join('');
+        // Default to last date
+        sel.value = String(roundDatesByDate.length - 1);
+    }
+    function populateRoundSelect(dateIdx) {
+        const date = roundDatesByDate[parseInt(dateIdx)];
+        const dateRounds = allRounds.filter(r => {
+            const d = new Date(r.date);
+            const s = d.toISOString().slice(0, 10);
+            return s === date;
+        });
+        roundDatesByRound = dateRounds;
+        const sel = document.getElementById('roundSelect');
+        sel.innerHTML = dateRounds.map((r, i) => {
+            const startTime = r.groupStartTime || '';
+            const timeStr = startTime ? ` — ${startTime}` : '';
+            const players = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name).join(', ');
+            return `<option value="${i}">Round ${i + 1} — ${r.courseName || 'Unknown'}${timeStr}<br><span style="color:#64748b;font-size:11px;">${players}</span></option>`;
+        }).join('');
+        sel.value = '0';
+    }
+    function getScoringCode(fo, gr, cl, p) {
+        if (!fo && !gr && !cl && !p) return '-';
+        const parts = [];
+        if (fo) parts.push('F');
+        if (gr) parts.push('G');
+        if (cl) parts.push('C');
+        if (p) parts.push('P');
+        return parts.join('');
+    }
+    function renderRoundCard() {
+        populateRoundDateDropdown();
+        populateRoundSelect('0');
+        document.getElementById('roundDateSelect').onchange = function() { populateRoundSelect(this.value); };
+        document.getElementById('roundSelect').onchange = function() { renderScorecard(parseInt(this.value)); };
+        renderScorecard(0);
+    }
+    function renderScorecard(roundIdx) {
+        const dateRounds = roundDatesByRound;
+        if (!dateRounds || !dateRounds[roundIdx]) return;
+        const round = dateRounds[roundIdx];
+        const container = document.getElementById('round-card-content');
+        const roundDate = new Date(round.date);
+        const dateStr = roundDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        const startTime = round.groupStartTime || '';
+        const course = round.courseName || 'Unknown';
+        const pars = coursePars[course] || DEFAULT_PARS;
+        const players = (round.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+        const holeSequence = buildHoleSequence(round);
+
+        let html = `<div style="margin-bottom:10px;">
+            <h3 style="margin:0 0 3px;font-size:16px;">${course}</h3>
+            <span style="color:#64748b;font-size:12px;">${dateStr}${startTime ? ' — ' + startTime : ''}</span>
+            <span style="color:#64748b;font-size:12px;margin-left:10px;">Players: ${players.join(', ')}</span>
+        </div>`;
+
+        // Build hole-by-hole table
+        const frontNines = [1,2,3,4,5,6,7,8,9];
+        const backNines = [10,11,12,13,14,15,16,17,18];
+
+        // Get pars for each hole position (1-18)
+        const holePars = [];
+        for (let h = 1; h <= 18; h++) {
+            const hidx = h - 1;
+            holePars[hidx] = pars[hidx] || 4;
+        }
+
+        // Get player holeDetails from _playerData
+        const playerDetails = {};
+        players.forEach(name => {
+            playerDetails[name] = (round._playerData && round._playerData[name] && round._playerData[name].holeDetails)
+                ? round._playerData[name].holeDetails
+                : [];
+        });
+
+        // Build table rows
+        html += `<div style="overflow-x:auto;">`;
+        html += `<table style="border-collapse:collapse;width:100%;min-width:600px;">`;
+
+        // Header row: Hole numbers
+        html += `<thead><tr>`;
+        html += `<th style="padding:6px 8px;text-align:left;color:#64748b;font-size:11px;background:#151726;min-width:80px;border-bottom:2px solid #2d3154;">Player</th>`;
+        frontNines.forEach(h => {
+            html += `<th style="padding:6px 4px;text-align:center;color:#64748b;font-size:11px;background:#151726;border-bottom:2px solid #2d3154;min-width:40px;">${h}</th>`;
+        });
+        html += `<th style="padding:6px 4px;text-align:center;color:#2d3154;background:#151726;border-bottom:2px solid #2d3154;width:20px;">│</th>`;
+        backNines.forEach(h => {
+            html += `<th style="padding:6px 4px;text-align:center;color:#64748b;font-size:11px;background:#151726;border-bottom:2px solid #2d3154;min-width:40px;">${h}</th>`;
+        });
+        html += `<th style="padding:6px 8px;text-align:center;color:#64748b;font-size:11px;background:#151726;border-bottom:2px solid #2d3154;min-width:40px;font-weight:bold;">T</th>`;
+        html += `</tr></thead>`;
+
+        // Par row
+        html += `<tr style="border-bottom:1px solid #2d3154;">`;
+        html += `<td style="padding:4px 8px;color:#64748b;font-size:12px;font-weight:bold;background:#1a1d2e;">Par</td>`;
+        for (let h = 1; h <= 18; h++) {
+            html += `<td style="padding:4px;text-align:center;color:#64748b;font-size:12px;background:#1a1d2e;">${holePars[h-1]}</td>`;
+        }
+        html += `<td style="padding:4px;text-align:center;color:#2d3154;background:#1a1d2e;">│</td>`;
+        for (let h = 10; h <= 18; h++) {
+            html += `<td style="padding:4px;text-align:center;color:#64748b;font-size:12px;background:#1a1d2e;">${holePars[h-1]}</td>`;
+        }
+        html += `<td style="padding:4px;text-align:center;color:#64748b;font-size:12px;background:#1a1d2e;">${holePars.reduce((a,b) => a+b, 0)}</td>`;
+        html += `</tr>`;
+
+        // Player rows
+        players.forEach((name, pIdx) => {
+            const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
+            const isHighlighted = name === _selectedPlayer;
+            const bgColor = isHighlighted ? 'var(--hl-bg)' : ((pIdx % 2 === 0) ? '' : 'background:#0f111a;');
+            const detail = playerDetails[name] || [];
+            const totalPts = detail.reduce((s, h) => s + h.points, 0);
+
+            html += `<tr style="border-bottom:1px solid #2d3154;${bgColor}">`;
+            html += `<td style="padding:6px 8px;font-size:13px;font-weight:bold;color:${color};${isHighlighted ? 'background:var(--hl-bg);' : ''}">${name}</td>`;
+
+            // Front nine
+            frontNines.forEach(h => {
+                const hidx = h - 1;
+                const hd = detail[hidx] || {};
+                const code = getScoringCode(hd.fo || 0, hd.gr || 0, hd.cl || 0, hd.p || 0);
+                const pts = hd.points || 0;
+                html += `<td style="padding:4px;text-align:center;font-size:12px;background:${isHighlighted ? 'var(--hl-bg)' : ''};">
+                    <div style="font-weight:bold;color:${color};font-size:11px;">${code}</div>
+                    <div style="color:#94a3b8;font-size:10px;">${pts || '—'}</div>
+                </td>`;
+            });
+
+            html += `<td style="padding:4px;text-align:center;color:#2d3154;background:${isHighlighted ? 'var(--hl-bg)' : ''};">│</td>`;
+
+            // Back nine
+            backNines.forEach(h => {
+                const hidx = h - 1;
+                const hd = detail[hidx] || {};
+                const code = getScoringCode(hd.fo || 0, hd.gr || 0, hd.cl || 0, hd.p || 0);
+                const pts = hd.points || 0;
+                html += `<td style="padding:4px;text-align:center;font-size:12px;background:${isHighlighted ? 'var(--hl-bg)' : ''};">
+                    <div style="font-weight:bold;color:${color};font-size:11px;">${code}</div>
+                    <div style="color:#94a3b8;font-size:10px;">${pts || '—'}</div>
+                </td>`;
+            });
+
+            html += `<td style="padding:4px 8px;text-align:center;font-size:13px;font-weight:bold;color:${color};background:${isHighlighted ? 'var(--hl-bg)' : ''};">${totalPts}</td>`;
+            html += `</tr>`;
+        });
+
+        html += `</table></div>`;
+
+        // Out/In/Total summary
+        html += `<div style="margin-top:10px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+        players.forEach((name, pIdx) => {
+            const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
+            const detail = playerDetails[name] || [];
+            const out9 = detail.slice(0, 9).reduce((s, h) => s + h.points, 0);
+            const in9 = detail.slice(9, 18).reduce((s, h) => s + h.points, 0);
+            const total = out9 + in9;
+
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #2d3154;">
+                <span style="font-weight:bold;color:${color};font-size:13px;">${name}</span>
+                <span style="color:#94a3b8;font-size:12px;">
+                    Out: <strong style="color:#e2e8f0;">${out9}</strong>
+                    &nbsp;│&nbsp;
+                    In: <strong style="color:#e2e8f0;">${in9}</strong>
+                    &nbsp;│&nbsp;
+                    Total: <strong style="color:${color};font-size:14px;">${total}</strong>
+                </span>
+            </div>`;
+        });
+        html += `</div>`;
+
+        container.innerHTML = html;
     }
 
     // ── Leaderboard rendering ──
