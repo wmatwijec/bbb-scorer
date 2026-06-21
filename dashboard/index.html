@@ -805,10 +805,10 @@ playerDetails[name] = (round._playerData && round._playerData[name] && round._pl
                   : [];
          });
          if (round._playerData) {
-             Object.entries(round._playerData).forEach(([k,v]) => console.log(`  _playerData[${k}]: numHoles=${v?.numHoles} hdLen=${v?.holeDetails?.length}`));
+             Object.entries(round._playerData).forEach(([k,v]) => console.log(`  _playerData[${k}]: numHoles=` + v?.numHoles + ' hdLen=' + v?.holeDetails?.length));
          }
          if (round.scores) {
-             Object.entries(round.scores).forEach(([k,v]) => console.log(`  scores[${k}]: len=${Array.isArray(v) ? v.length : 'no'}`));
+             Object.entries(round.scores).forEach(([k,v]) => console.log(`  scores[${k}]: len=` + (Array.isArray(v) ? v.length : 'no')));
          }
 
          // Build table: Player | H1..H9 | | | H10..H18 | Total = 21 columns
