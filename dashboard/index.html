@@ -428,7 +428,17 @@
                 validRounds.push(round);
             }
 
-         allRounds = validRounds.sort((a, b) => new Date(a.date) - new Date(b.date));
+         // Deduplicate by matchId — keep the latest version of each round
+          const latestByMatchId = new Map();
+          for (const round of validRounds) {
+              const mid = round.matchId;
+              if (!mid) continue;
+              const existing = latestByMatchId.get(mid);
+              if (!existing || new Date(round.date) > new Date(existing.date)) {
+                  latestByMatchId.set(mid, round);
+              }
+          }
+          allRounds = Array.from(latestByMatchId.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Load course pars from CSV
             try {
