@@ -203,9 +203,11 @@
     }
 
     // ── Scoring: sequence-aware carry-in (from Summarizer.html) ──
-    function buildHoleSequence(round) {
+ function buildHoleSequence(round) {
         const finished = round.finishedHoles || [];
         if (finished.length === 18) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
+        const hasFullScores = round.scores && Object.values(round.scores).every(arr => Array.isArray(arr) && arr.length === 18);
+        if (hasFullScores) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
         return finished.slice().sort((a, b) => a - b);
     }
 
@@ -719,9 +721,9 @@
         roundDatesByDate = Array.from(dateMap.values()).sort();
         console.log('RoundCard dates:', roundDatesByDate.length, 'last:', roundDatesByDate[roundDatesByDate.length-1]);
         const sel = document.getElementById('roundDateSelect');
-        sel.innerHTML = roundDatesByDate.map((d, i) => {
+       sel.innerHTML = roundDatesByDate.map((d, i) => {
             const dateKey = d.slice(0, 10);
-            const date = new Date(dateKey);
+            const date = new Date(dateKey + 'T12:00:00');
             return `<option value="${i}" data-date="${dateKey}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
         // Default to last date
@@ -772,8 +774,9 @@
          const round = dateRounds[roundIdx];
     const container = document.getElementById('round-card-content');
          console.log('container found:', !!container, 'view display:', document.getElementById('round-card-view').style.display, 'card display:', document.querySelector('#round-card-view .card')?.style.display);
-         const roundDate = new Date(round.date);
-         const dateStr = roundDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const dateKey = round.date.slice(0, 10);
+          const roundDate = new Date(dateKey + 'T12:00:00');
+          const dateStr = roundDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
          const startTime = round.groupStartTime || '';
          const course = round.courseName || 'Unknown';
           const pars = coursePars[course] || DEFAULT_PARS;
