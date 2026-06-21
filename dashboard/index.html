@@ -799,10 +799,12 @@
          // Get player holeDetails from _playerData
          const playerDetails = {};
          players.forEach(name => {
-             playerDetails[name] = (round._playerData && round._playerData[name] && round._playerData[name].holeDetails)
-                 ? round._playerData[name].holeDetails
-                 : [];
+playerDetails[name] = (round._playerData && round._playerData[name] && round._playerData[name].holeDetails)
+                  ? round._playerData[name].holeDetails
+                  : [];
          });
+         console.log('round _playerData:', round._playerData ? Object.fromEntries(Object.entries(round._playerData).map(([k,v]) => [k, {numHoles: v?.numHoles, hdLen: v?.holeDetails?.length}])) : null);
+         console.log('round.scores keys:', round.scores ? Object.keys(round.scores) : null, 'lengths:', round.scores ? Object.fromEntries(Object.entries(round.scores).map(([k,v]) => [k, Array.isArray(v) ? v.length : 'no'])) : null);
 
          // Build table: Player | H1..H9 | | | H10..H18 | Total = 21 columns
          html += `<div style="overflow-x:auto;">`;
