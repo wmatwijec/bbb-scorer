@@ -961,91 +961,144 @@
           });
           html += `</div>`;
 
-          // Extended table: CarryIn row (group) + Cumulative total per player
-          // Compute per-hole carry-in net for group
-          const carryNetPerHole = [];
-          let carryState = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-          for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
-              const holeNumber = holeSequence[seqIdx];
-              const idx = holeNumber - 1;
-              const scores = holeScoresMap[idx] || {};
-              const par = pars[idx] || 4;
-              const isPar3 = par === 3;
-              const anyFO = Object.values(scores).some(s => s.firstOn);
-              const anyCL = Object.values(scores).some(s => s.closest);
-              const anyP = Object.values(scores).some(s => s.putt);
+        // Extended table: Carry row + Net Carry row per player + Total reconciliation
+           // Track carry state per category across the round
+           const carryLabels = { firstOn: 'FO', greenie: 'GR', closest: 'CL', putt: 'P' };
+           let carryState = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+           const carryHoleLabels = []; // Which carry was established on which hole
+           for (let seqIdx = 0; seqIdx < holeSequence.length; seqIdx++) {
+               const holeNumber = holeSequence[seqIdx];
+               const idx = holeNumber - 1;
+               const scores = holeScoresMap[idx] || {};
+               const par = pars[idx] || 4;
+               const isPar3 = par === 3;
+               const anyFO = Object.values(scores).some(s => s.firstOn);
+               const anyCL = Object.values(scores).some(s => s.closest);
+               const anyP = Object.values(scores).some(s => s.putt);
 
-              let net = 0;
-              // First-on / Greenie
-              const oldGR = isPar3 ? carryState.greenie : carryState.firstOn;
-              if (anyFO) {
-                  // Someone scored — they used oldGR carry
-                  // Net = carryAfter - carryBefore = 0 - oldGR = -oldGR
-                  // But they also reset carry to 0 (next hole starts fresh)
-                  net = net - oldGR;
-              } else {
-                  net = net + 1; // carry established
-              }
-              const newGR = isPar3 ? carryState.greenie : carryState.firstOn;
-              if (isPar3) { carryState.greenie = anyFO ? 0 : (carryState.greenie + 1); }
-              else { carryState.firstOn = anyFO ? 0 : (carryState.firstOn + 1); }
+               const labels = [];
+               // FO/GR: if no one got first on, carry is established
+               if (isPar3) {
+                   if (!anyFO) { labels.push('GR'); carryState.greenie++; }
+                   else { carryState.greenie = 0; }
+               } else {
+                   if (!anyFO) { labels.push('FO'); carryState.firstOn++; }
+                   else { carryState.firstOn = 0; }
+               }
+               if (!anyCL) { labels.push('CL'); carryState.closest++; }
+               else { carryState.closest = 0; }
+               if (!anyP) { labels.push('P'); carryState.putt++; }
+               else { carryState.putt = 0; }
 
-              // Closest
-              const oldCL = carryState.closest;
-              if (anyCL) { net = net - oldCL; }
-              else { net = net + 1; }
-              carryState.closest = anyCL ? 0 : (carryState.closest + 1);
+               carryHoleLabels.push({ hole: holeNumber, labels });
+           }
 
-              // Putt
-              const oldP = carryState.putt;
-              if (anyP) { net = net - oldP; }
-              else { net = net + 1; }
-              carryState.putt = anyP ? 0 : (carryState.putt + 1);
+           // Carry row: show carry type label in the hole column where it was established
+           html += `<tr style="border-bottom:1px solid #2d3154;">`;
+           html += `<td style="padding:4px 8px;font-size:11px;font-weight:bold;color:#e0a850;background:#1a1d2e;">Carry</td>`;
+           for (let h = 1; h <= 9; h++) {
+               const cl = carryHoleLabels[h-1]?.labels || [];
+               html += `<td style="padding:4px;text-align:center;font-size:11px;background:#1a1d2e;color:#e0a850;font-weight:bold;">${cl.join('')}</td>`;
+           }
+           html += `<td style="padding:4px;text-align:center;color:#2d3154;background:#1a1d2e;font-size:10px;">│</td>`;
+           for (let h = 10; h <= 18; h++) {
+               const cl = carryHoleLabels[h-1]?.labels || [];
+               html += `<td style="padding:4px;text-align:center;font-size:11px;background:#1a1d2e;color:#e0a850;font-weight:bold;">${cl.join('')}</td>`;
+           }
+           // Total column: show remaining carries
+           const remaining = `FO:${carryState.firstOn} CL:${carryState.closest} P:${carryState.putt} GR:${carryState.greenie}`;
+           html += `<td style="padding:4px 8px;text-align:center;font-size:10px;font-weight:bold;color:#e0a850;background:#1a1d2e;">${remaining}</td>`;
+           html += `</tr>`;
 
-              carryNetPerHole.push(net);
-          }
+           // Net Carry row: running count of each carry type
+           let runningCarry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
+           html += `<tr style="border-bottom:1px solid #2d3154;">`;
+           html += `<td style="padding:4px 8px;font-size:11px;font-weight:bold;color:#7c3aed;background:#1a1d2e;">Net Carry</td>`;
+           for (let h = 1; h <= 9; h++) {
+               const cl = carryHoleLabels[h-1];
+               // Update running carry
+               cl.labels.forEach(label => {
+                   if (label === 'FO') runningCarry.firstOn++;
+                   if (label === 'GR') runningCarry.greenie++;
+                   if (label === 'CL') runningCarry.closest++;
+                   if (label === 'P') runningCarry.putt++;
+               });
+               // Check if anyone scored on this hole to consume carries
+               const scores = holeScoresMap[h-1] || {};
+               const par = pars[h-1] || 4;
+               const isPar3 = par === 3;
+               const anyFO = Object.values(scores).some(s => s.firstOn);
+               const anyCL = Object.values(scores).some(s => s.closest);
+               const anyP = Object.values(scores).some(s => s.putt);
+               if (isPar3 && anyFO) runningCarry.greenie = 0;
+               if (!isPar3 && anyFO) runningCarry.firstOn = 0;
+               if (anyCL) runningCarry.closest = 0;
+               if (anyP) runningCarry.putt = 0;
 
-          // Carry-in row (shared by all players — group state)
-          html += `<tr style="border-bottom:1px solid #2d3154;">`;
-          html += `<td style="padding:4px 8px;font-size:11px;font-weight:bold;color:#8b5cf6;background:#1a1d2e;">CarryIn</td>`;
-          for (let h = 1; h <= 9; h++) {
-              const net = carryNetPerHole[h-1];
-              html += `<td style="padding:4px;text-align:center;font-size:11px;background:#1a1d2e;color:#8b5cf6;">${net !== 0 ? net : ''}</td>`;
-          }
-          html += `<td style="padding:4px;text-align:center;color:#2d3154;background:#1a1d2e;font-size:10px;">│</td>`;
-          for (let h = 10; h <= 18; h++) {
-              const net = carryNetPerHole[h-1];
-              html += `<td style="padding:4px;text-align:center;font-size:11px;background:#1a1d2e;color:#8b5cf6;">${net !== 0 ? net : ''}</td>`;
-          }
-          const carryEnd = carryNetPerHole.reduce((s, n) => s + n, 0);
-          html += `<td style="padding:4px 8px;text-align:center;font-size:12px;font-weight:bold;color:#8b5cf6;background:#1a1d2e;">${carryEnd}</td>`;
-          html += `</tr>`;
+               const parts = [];
+               if (runningCarry.firstOn > 0) parts.push(runningCarry.firstOn + 'FO');
+               if (runningCarry.greenie > 0) parts.push(runningCarry.greenie + 'GR');
+               if (runningCarry.closest > 0) parts.push(runningCarry.closest + 'CL');
+               if (runningCarry.putt > 0) parts.push(runningCarry.putt + 'P');
+               html += `<td style="padding:4px;text-align:center;font-size:10px;background:#1a1d2e;color:#7c3aed;">${parts.join(' ')}</td>`;
+           }
+           html += `<td style="padding:4px;text-align:center;color:#2d3154;background:#1a1d2e;font-size:10px;">│</td>`;
+           for (let h = 10; h <= 18; h++) {
+               const cl = carryHoleLabels[h-1];
+               cl.labels.forEach(label => {
+                   if (label === 'FO') runningCarry.firstOn++;
+                   if (label === 'GR') runningCarry.greenie++;
+                   if (label === 'CL') runningCarry.closest++;
+                   if (label === 'P') runningCarry.putt++;
+               });
+               const scores = holeScoresMap[h-1] || {};
+               const par = pars[h-1] || 4;
+               const isPar3 = par === 3;
+               const anyFO = Object.values(scores).some(s => s.firstOn);
+               const anyCL = Object.values(scores).some(s => s.closest);
+               const anyP = Object.values(scores).some(s => s.putt);
+               if (isPar3 && anyFO) runningCarry.greenie = 0;
+               if (!isPar3 && anyFO) runningCarry.firstOn = 0;
+               if (anyCL) runningCarry.closest = 0;
+               if (anyP) runningCarry.putt = 0;
 
-          // Cumulative total row per player
-          players.forEach((name, pIdx) => {
-              const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
-              const detail = playerDetails[name] || [];
-              const isHighlighted = name === _selectedPlayer;
-              let cumTotal = 0;
-              const cumValues = [];
-              for (let h = 0; h < 18; h++) {
-                  cumTotal += detail[h]?.points || 0;
-                  cumValues.push(cumTotal);
-              }
-              html += `<tr style="border-bottom:1px solid #2d3154;">`;
-              html += `<td style="padding:4px 8px;font-size:11px;font-weight:bold;color:#f59e0b;background:#1a1d2e;">${name} Cum</td>`;
-              for (let h = 1; h <= 9; h++) {
-                  html += `<td style="padding:4px;text-align:center;font-size:11px;background:${isHighlighted ? 'var(--hl-bg)' : ''};color:#f59e0b;">${cumValues[h-1]}</td>`;
-              }
-              html += `<td style="padding:4px;text-align:center;color:#2d3154;background:${isHighlighted ? 'var(--hl-bg)' : ''};font-size:10px;">│</td>`;
-              for (let h = 10; h <= 18; h++) {
-                  html += `<td style="padding:4px;text-align:center;font-size:11px;background:${isHighlighted ? 'var(--hl-bg)' : ''};color:#f59e0b;">${cumValues[h-1]}</td>`;
-              }
-              html += `<td style="padding:4px 8px;text-align:center;font-size:12px;font-weight:bold;color:#f59e0b;background:${isHighlighted ? 'var(--hl-bg)' : ''};">${cumValues[17]}</td>`;
-              html += `</tr>`;
-          });
+               const parts = [];
+               if (runningCarry.firstOn > 0) parts.push(runningCarry.firstOn + 'FO');
+               if (runningCarry.greenie > 0) parts.push(runningCarry.greenie + 'GR');
+               if (runningCarry.closest > 0) parts.push(runningCarry.closest + 'CL');
+               if (runningCarry.putt > 0) parts.push(runningCarry.putt + 'P');
+               html += `<td style="padding:4px;text-align:center;font-size:10px;background:#1a1d2e;color:#7c3aed;">${parts.join(' ')}</td>`;
+           }
+           const openCarries = `FO:${runningCarry.firstOn} CL:${runningCarry.closest} P:${runningCarry.putt} GR:${runningCarry.greenie}`;
+           html += `<td style="padding:4px 8px;text-align:center;font-size:10px;font-weight:bold;color:#7c3aed;background:#1a1d2e;">${openCarries}</td>`;
+           html += `</tr>`;
 
-          html += `</table></div>`;
+           html += `</table></div>`;
+
+           // Total reconciliation
+           let grandTotal = 0;
+           players.forEach(name => {
+               const pd = (round._playerData && round._playerData[name]) || {};
+               grandTotal += (pd.foPts || 0) + (pd.grPts || 0) + (pd.clPts || 0) + (pd.pPts || 0);
+           });
+           const expectedTotal = players.length * 6;
+           const diff = grandTotal + (runningCarry.firstOn + runningCarry.greenie + runningCarry.closest + runningCarry.putt) - expectedTotal;
+           const reconcileOk = Math.abs(diff) < 0.01;
+
+           let openCarryStr = '';
+           if (runningCarry.firstOn > 0) openCarryStr += runningCarry.firstOn + 'FO ';
+           if (runningCarry.greenie > 0) openCarryStr += runningCarry.greenie + 'GR ';
+           if (runningCarry.closest > 0) openCarryStr += runningCarry.closest + 'CL ';
+           if (runningCarry.putt > 0) openCarryStr += runningCarry.putt + 'P ';
+           if (!openCarryStr) openCarryStr = 'none';
+
+           html += `<div style="margin-top:10px;padding:10px;background:${reconcileOk ? '#0f111a' : '#1c1517'};border:1px solid ${reconcileOk ? '#2d3154' : '#7f1d1d'};border-radius:6px;">
+               <div style="color:#64748b;font-size:11px;">
+                   <strong>Reconciliation:</strong> ${grandTotal} pts + ${runningCarry.firstOn + runningCarry.greenie + runningCarry.closest + runningCarry.putt} open carries = ${grandTotal + runningCarry.firstOn + runningCarry.greenie + runningCarry.closest + runningCarry.putt} &nbsp;│&nbsp; Expected: ${expectedTotal} (${players.length} × 6)
+               </div>
+               <div style="color:#94a3b8;font-size:11px;margin-top:2px;">Open carries: ${openCarryStr}</div>
+               <div style="color:${reconcileOk ? '#34d399' : '#f87171'};font-size:11px;margin-top:2px;font-weight:bold;">${reconcileOk ? '✓ Totals reconcile' : '⚠ Off by ' + diff}</div>
+           </div>`;
 
        container.innerHTML = html;
          console.log('renderScorecard done, html length:', html.length, 'content text length:', container.textContent.length);
