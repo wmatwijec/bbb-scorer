@@ -1325,38 +1325,51 @@ return sum;
 
 function precomputeAllTotals() {
   players.forEach(p => {
-let total = 0;
-p._cachedHoleTotals = {};
+ let total = 0;
+ let foPts = 0, grPts = 0, clPts = 0, pPts = 0;
+ p._cachedHoleTotals = {};
 
-for (let idx = 0; idx < HOLES; idx++) {
-  const holeNumber = idx + 1;
-  if (!p.scores[idx]) continue;
+ for (let idx = 0; idx < HOLES; idx++) {
+   const holeNumber = idx + 1;
+   if (!p.scores[idx]) continue;
 
-  const s = p.scores[idx] || {};
-  const carryIn = getCarryInForHole(holeNumber);
-  const par = courses[currentCourse].pars[idx];
-  const isPar3 = par === 3;
+   const s = p.scores[idx] || {};
+   const carryIn = getCarryInForHole(holeNumber);
+   const par = courses[currentCourse].pars[idx];
+   const isPar3 = par === 3;
 
-  let holePoints = 0;
+   let holePoints = 0;
+   let holeFoPts = 0, holeGrPts = 0, holeClPts = 0, holePPts = 0;
 
-  // Base points
-  if (s.firstOn) holePoints += 1;
-  if (s.closest) holePoints += 1;
-  if (s.putt) holePoints += 1;
+   // Base points + carry-in for FO/GR
+   if (s.firstOn) {
+     holeFoPts = 1;
+     holeGrPts = isPar3 ? 1 : 0;
+   }
+   if (s.closest) holeClPts = 1;
+   if (s.putt) holePPts = 1;
 
-  // Carry-in
-    if (s.firstOn) {
-      holePoints += isPar3 ? carryIn.greenie : carryIn.firstOn;
-    }
-    if (s.closest) holePoints += carryIn.closest;
-    if (s.putt) holePoints += carryIn.putt;
-  
-  p._cachedHoleTotals[idx] = holePoints;
-  total += holePoints;
-}
+   // Carry-in
+     if (s.firstOn) {
+       const ciAdd = isPar3 ? carryIn.greenie : carryIn.firstOn;
+       holeFoPts += ciAdd;
+       holeGrPts += isPar3 ? ciAdd : 0;
+     }
+     if (s.closest) holeClPts += carryIn.closest;
+     if (s.putt) holePPts += carryIn.putt;
+   
+   holePoints = holeFoPts + holeGrPts + holeClPts + holePPts;
+   p._cachedHoleTotals[idx] = holePoints;
+   total += holePoints;
+   foPts += holeFoPts;
+   grPts += holeGrPts;
+   clPts += holeClPts;
+   pPts += holePPts;
+ }
 
-p._cachedTotal = total;
-  });
+ p._cachedTotal = total;
+ p._categoryTotals = { total, fo: foPts, gr: grPts, cl: clPts, p: pPts };
+   });
 }
 
 function updateHole() {
@@ -1849,9 +1862,9 @@ scores: players.reduce((acc, p, i) => {
   return acc;
 }, {}),
 _cachedTotals: players.reduce((acc, p) => {
-  acc[p.name] = p._cachedTotal || 0;
-  return acc;
-}, {})
+    acc[p.name] = p._categoryTotals || { total: p._cachedTotal || 0, fo: 0, gr: 0, cl: 0, p: 0 };
+    return acc;
+  }, {})
   };
 
   // 1. Save locally (instant)

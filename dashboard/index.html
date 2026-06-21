@@ -129,6 +129,7 @@
            <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
             <button class="btn btn-nav" id="btn-round" onclick="showView('roundCard')">Round Card</button>
+             <button class="btn btn-nav" id="btn-weekly" onclick="showView('weekly')">Week in Review</button>
             <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
                 Highlight:
                 <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
@@ -182,6 +183,20 @@
         </div>
     </div>
 
+    <!-- ── Week in Review View ── -->
+    <div id="weekly-view" class="view" style="display:none;">
+        <div class="card" style="padding:15px;">
+            <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:15px;">
+                <div>
+                    <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:3px;">Week</label>
+                    <select id="weekSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 10px;font-size:13px;"></select>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="renderWeekInReview()">Refresh</button>
+            </div>
+        </div>
+        <div id="weekly-content"></div>
+    </div>
+
     <script>
     const BACKEND = 'https://pwa-players-backend.onrender.com';
     const DEFAULT_PARS = [4,5,3,4,3,4,4,4,3,5,4,3,4,3,4,4,5,4];
@@ -204,6 +219,22 @@
         const s = [...arr].sort((a, b) => a - b);
         const mid = Math.floor(s.length / 2);
         return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+    }
+
+    // ── Cached totals compatibility: old format (number) vs new format (object) ──
+    function getPointTotal(cachedTotals, playerName) {
+        const val = cachedTotals?.[playerName];
+        if (val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        return val.total || 0;
+    }
+
+    function getCategoryTotals(cachedTotals, playerName) {
+        const val = cachedTotals?.[playerName];
+        if (val === undefined) return null;
+        if (typeof val === 'object') return val;
+        // Old format: return null (can't break down old data into categories)
+        return null;
     }
 
     // ── Scoring: sequence-aware carry-in (from Summarizer.html) ──
@@ -425,8 +456,8 @@
                 const roundDate = new Date(round.date);
                 if (roundDate < cutoffDate) continue;
 
-                const totalPoints = Object.values(round._cachedTotals || {})
-                    .reduce((sum, score) => sum + (score || 0), 0);
+                const totalPoints = Object.keys(round._cachedTotals || {})
+                    .reduce((sum, name) => sum + getPointTotal(round._cachedTotals, name), 0);
                 if (totalPoints < 40) continue;
 
                 validRounds.push(round);
@@ -623,7 +654,9 @@
                 for (let ri = 0; ri < allRounds.length; ri++) {
                     const round = allRounds[ri];
                     const cachedTotals = round._cachedTotals?.[name];
-                     if (cachedTotals === undefined) continue;
+                    if (cachedTotals === undefined) continue;
+                    // Normalize to number for backward compat
+                    const cachedTotalVal = typeof cachedTotals === 'number' ? cachedTotals : (cachedTotals.total || 0);
                     
                     // Get this player's hole scores
                     const scores = round.scores?.[name];
@@ -676,7 +709,7 @@
                     
                     // Win/loss streak (consecutive rounds)
                     const playerScores = Object.entries(round._cachedTotals || {})
-                        .map(([n, pts]) => ({ name: n, totalPts: pts }))
+                        .map(([n, val]) => ({ name: n, totalPts: getPointTotal(round._cachedTotals, n) }))
                         .filter(x => !x.name.toLowerCase().includes('guest') && !excludedPlayers.has(x.name))
                         .sort((a, b) => b.totalPts - a.totalPts);
                     const n = playerScores.length;
@@ -723,11 +756,14 @@
          document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
          document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
          document.getElementById('round-card-view').style.display = view === 'roundCard' ? '' : 'none';
+         document.getElementById('weekly-view').style.display = view === 'weekly' ? '' : 'none';
          document.getElementById('btn-leaderboard').className = `btn btn-nav${view === 'leaderboard' ? ' active' : ''}`;
          document.getElementById('btn-player').className = `btn btn-nav${view === 'player' ? ' active' : ''}`;
          document.getElementById('btn-round').className = `btn btn-nav${view === 'roundCard' ? ' active' : ''}`;
+         document.getElementById('btn-weekly').className = `btn btn-nav${view === 'weekly' ? ' active' : ''}`;
          if (view === 'leaderboard') renderLeaderboard();
          if (view === 'roundCard') { console.log('about to call renderRoundCard, allRounds:', allRounds.length); renderRoundCard(); }
+         if (view === 'weekly') initWeeklyView();
      }
 
    // ── Round Card ──
@@ -1924,6 +1960,446 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
 
         document.getElementById('player-detail').innerHTML = html;
     }
+
+    // ── Week in Review ────────────────────────────────────────────────────
+
+    const GOLF_JOKES = [
+"Why did the golfer bring two pairs of pants? In case he got a hole in one.",
+"What do you call a fake golfer? A put-ter.",
+"Why can't the golfer play hide and seek? Because good players are easy to caddie.",
+"Why did the golfer wear two pairs of socks? He wanted to be sure of a tie.",
+"What's a golfer's favorite candy? M&M's — because every hole has two.",
+"Why do golfers never get lost? They always have a good bunkering sense.",
+"What do you call a golfer who tells the truth? A honest Abe — wait, that's not golf. A golf-ty liar.",
+"Why did the golfer get fired from the bank? He kept taking too many divots.",
+"What's the difference between a golf ball and a rich person? I can see my golf ball.",
+"Why don't golfers like to fast food? They can't wait to get to the 19th hole.",
+"What do you call a golfer who plays in the rain? Wet.",
+"Why did the golfer quit his job? He was tired of being so darned putzed.",
+"What's a golfer's least favorite letter? U, because they're always trying to avoid the water hazard.",
+"Why did the golfer bring an extra sock? In case he got a hole in one.",
+"How do golfers make ice? They go outside and wait for the rain to freeze.",
+"What's the golfer's favorite exercise? A hole in one.",
+"Why do golfers love high school so much? Because of all the hole-in-one projects.",
+"What did the golfer say when he got a hole in one? 'Well, I guess that's one way to finish the hole.'",
+"Why did the golfer get arrested? For driving on the green.",
+"What do you call a golfer who never misses? A liar.",
+"Why did the golfer bring string to the course? So he could tie up the competition.",
+"What's the golfer's favorite kind of music? Par-ty tunes!",
+"Why don't golfers ever get lost? They always follow the fairway of the light.",
+"What did the caddy say to the golfer who lost his ball? I'm sure he's not in the water — he's in the water... wait.",
+"Why did the golfer bring a ladder to the course? He heard the stakes were high.",
+"What do you call a golfer who can't hit the ball? A par-mer.",
+"Why did the golfer bring a pencil to the course? In case he needed to draw a lie.",
+"How do you organize a space golf tournament? You planet.",
+"Why did the golfer get kicked out of the restaurant? He kept asking for a side of bunker fries.",
+"What do you get when you cross a golfer with an elephant? A really big swing.",
+"Why did the golfer become a teacher? He wanted to make a fairway of a difference.",
+"What's a golfer's favorite dessert? Par-feet.",
+"Why don't golfers ever play poker? They always fold on the river.",
+"What do you call a golfer who flies his own plane? A single-handed player.",
+"Why did the golfer bring a broom to the course? To sweep the greens.",
+"What's the difference between a good golfer and a great golfer? About 30 putts.",
+"Why did the golfer get a job at the bakery? He was great at rolling bunkers.",
+"What do you call a golfer who plays on a boat? A caddy-wack.",
+"Why do golfers love to garden? They have a green thumb.",
+"What did the golfer say after losing his ball? 'I guess that's a penalty stroke and a heartache.'",
+"Why did the golfer bring a flashlight to the course? He wanted to see his way to the 19th hole.",
+"What's a golfer's favorite type of dog? A lab-rador — for retrieving those drives.",
+"Why did the golfer win the race? He knew how to take a fairway.",
+"What do you call a golfer who never loses? A saint — because nobody's perfect.",
+"Why did the golfer get a ticket? He parked in the rough.",
+"What's a golfer's favorite dance? The putt-ter strut.",
+"Why did the golfer bring a book to the course? He wanted to read between the bunkers.",
+"What do you call a golfer who's also a musician? A tee-jay.",
+"Why don't golfers like to swim? They're afraid of the water hazard.",
+"What's the golfer's favorite holiday? Golf-oween.",
+"Why did the golfer bring a net to the course? To catch those errant drives.",
+"What do you call a golfer who plays with a spoon? A par-mer.",
+"Why did the golfer become a detective? He was good at finding lost balls.",
+"What's a golfer's favorite movie genre? Par-odies.",
+"Why did the golfer get promoted? He always hit the right notes — I mean, the right fairways.",
+"What do you call a golfer who tells bad jokes? A pun-ter.",
+"Why did the golfer bring a camera to the course? To capture those birdie moments.",
+"What's a golfer's favorite subject in school? Par-ithmetic.",
+"Why did the golfer get a library card? He loved checking out the bunkers.",
+"What do you call a golfer who's also a chef? A grill-master — for those post-round steaks.",
+"Why did the golfer bring a towel to the course? In case he needed to wipe away the tears of defeat.",
+"What's a golfer's favorite animal? A par-rots — because they can talk about their scores.",
+"Why did the golfer become a writer? He was good at putting together a good story.",
+"What do you call a golfer who never swears? A saint — because golf doesn't require it.",
+"Why did the golfer bring a map to the course? He wanted to navigate the fairways.",
+"What's a golfer's favorite season? Golf- Autumn.",
+"Why did the golfer get a job at the zoo? He was great with the animals — especially the parrots.",
+"What do you call a golfer who plays at night? A night-tee player.",
+"Why did the golfer become a firefighter? He knew how to put out the fires on the green.",
+"What's a golfer's favorite type of pizza? Par-mesan and herb.",
+"Why did the golfer bring a chair to the course? He wanted a seat at the 19th hole.",
+"What do you call a golfer who's also a pilot? A wingman on the fairway.",
+"Why did the golfer get a driver's license? He needed to get to the course faster.",
+"What's a golfer's favorite part of the day? The first tee — where it all begins.",
+"Why did the golfer bring a pen to the course? To keep score — and sign autographs.",
+"What do you call a golfer who's also a doctor? A tee-therapist.",
+"Why did the golfer become a philosopher? He spent a lot of time thinking about the meaning of par.",
+"What's a golfer's favorite type of bread? Rolls — because they roll with the punches.",
+"Why did the golfer bring a backpack to the course? He wanted to carry his own clubs — and snacks.",
+"What do you call a golfer who's also a lawyer? A fairway attorney.",
+"Why did the golfer get a Nobel prize? He was a par- Excellence in golf.",
+"What's a golfer's favorite type of music? Rock — because it goes bump in the bunker.",
+"Why did the golfer bring a clock to the course? To watch the time — and the score.",
+"What do you call a golfer who's also an artist? A paint-er of fairways.",
+"Why did the golfer become a scientist? He liked to experiment with his swing.",
+"What's a golfer's favorite type of math? Par-calculus.",
+"Why did the golfer bring a telescope to the course? To see the green from a mile away.",
+"What do you call a golfer who's also a teacher? A tee-cher.",
+"Why did the golfer get a standing ovation? He hit a hole-in-one — the crowd went wild.",
+"What's a golfer's favorite type of weather? Par-fectly cloudy with a chance of birdies.",
+"Why did the golfer bring a compass to the course? To find his way to the 19th hole.",
+"What do you call a golfer who's also a baker? A bun-ker specialist.",
+"Why did the golfer become a chef? He knew how to put together a good round.",
+"What's a golfer's favorite type of soup? Par-soup.",
+"Why did the golfer bring a ruler to the course? To measure his putts.",
+"What do you call a golfer who's also a musician? A tee-keyboard player.",
+"Why did the golfer get a job at the gym? He wanted to work on his swing — and his abs.",
+"What's a golfer's favorite type of sport? Golf — obviously.",
+"Why did the golfer bring a shovel to the course? In case he needed to dig out of a bunker.",
+"What do you call a golfer who's also a pilot? A fairway flyer.",
+"Why did the golfer become an engineer? He liked building better swings.",
+"What's a golfer's favorite type of tree? An oak — because it stands tall on the fairway.",
+"Why did the golfer bring a mirror to the course? To check his form — and his confidence.",
+"What do you call a golfer who's also a nurse? A tee-urse who puts patients on the green.",
+"Why did the golfer get a medal? For his outstanding performance — on the green.",
+"What's a golfer's favorite type of flower? A rose — because it smells as sweet as a birdie.",
+];
+
+const OPENING_LINES = [
+"Another week, another batch of golfing heroics!",
+"Well what a week it was at the links!",
+"If you thought golf was just walking and hitting a ball, this week proved you wrong!",
+"The courses were hot this week, and the players brought the fire!",
+"Another week on the greens and the BBB action was absolutely electric!",
+"What a week it has been for the BBB crew — the courses were on fire!",
+];
+
+const ALL_TIME_BEST = [
+["Craig", 29, "Bridge", "3/26"],
+["Tony", 26, "Unknown", "Unknown"],
+["Eric", 26, "Unknown", "Unknown"],
+["Bob", 26, "Unknown", "Unknown"],
+["Marty", 25, "Unknown", "Unknown"],
+["Jeff", 25, "Unknown", "Unknown"],
+["Bill", 24, "Unknown", "Unknown"],
+["Walt", 24, "Unknown", "Unknown"],
+["Nels", 20, "Unknown", "Unknown"],
+];
+
+function getWeekKey(year, weekNum) {
+    return `${year}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function getISOWeekNumber(d) {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    return 1 + Math.round(((date - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+}
+
+function getISOYear(d) {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    return date.getFullYear();
+}
+
+function getWeekRange(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const weekday = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((weekday + 6) % 7));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { monday, sunday };
+}
+
+function formatDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDateFull(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getJokeForWeek(weekNum) {
+    const idx = weekNum % GOLF_JOKES.length;
+    return GOLF_JOKES[idx];
+}
+
+function selectRoundComment(roundStats) {
+    const playerItems = Object.entries(roundStats.playerData);
+    if (!playerItems.length || playerItems.length < 2) return null;
+    
+    const sortedPlayers = playerItems.sort((a, b) => b[1].total - a[1].total);
+    const [winnerName, winner] = sortedPlayers[0];
+    const [runnerUpName, runnerUp] = sortedPlayers[1];
+    const course = roundStats.courseName || '';
+    const margin = winner.total - runnerUp.total;
+    
+    // High carry-in percentage
+    if (winner.carryInTotal > winner.total * 0.25 && winner.total > 0) {
+        const ciDetails = [];
+        winner.holeDetails.forEach(hd => {
+            const ci = (hd.ci_fo || 0) + (hd.ci_gr || 0) + (hd.ci_cl || 0) + (hd.ci_p || 0);
+            if (ci > 0) ciDetails.push([hd.hole, ci]);
+        });
+        ciDetails.sort((a, b) => b[1] - a[1]);
+        const [biggestHole, biggestCarry] = ciDetails[0];
+        const basePts = winner.fo + winner.gr + winner.cl + winner.p - winner.carryInTotal;
+        return `${winnerName}'s round was powered by carry-in — they banked ${winner.carryInTotal} carry-in points, including a massive ${biggestCarry} on hole ${biggestHole}. Their ${Math.max(basePts, 0)} base points were solid, but those bonus points were the difference between a good round and a legendary one.`;
+    }
+    
+    // Dominant win
+    if (margin >= 10) {
+        return `${winnerName} put on a clinic with ${winner.total} points, outscoring ${runnerUpName} by ${margin} points. They won ${winner.fo} first-ons, ${winner.cl} closests, and ${winner.p} putts — a complete round from tee to green.`;
+    }
+    
+    // Close finish
+    if (margin <= 1 && winner.total > 0) {
+        const pl = margin > 1 ? 's' : '';
+        return `A thriller at ${course}! ${winnerName} edged ${runnerUpName} by just ${margin} point${pl} with ${winner.total} to ${runnerUp.total}. Both players had ${winner.holesScored} holes scored — this one came down to the final putt.`;
+    }
+    
+    // Blank round
+    if (winner.total === 0) {
+        return `'Twas a blank round at ${course} — nobody managed to score a single point. Sometimes the golf course just says no.`;
+    }
+    
+    // Clean card
+    if (winner.holesScored >= 15) {
+        return `${winnerName} scored on ${winner.holesScored} of 18 holes with only ${winner.threePtrCount} three-strike holes. Three-strike holes are rare (only ${winner.threePtrPct}% of all holes), and ${winnerName} had ${winner.threePtrCount} of them!`;
+    }
+    
+    // Putt heavy
+    if (winner.p > winner.total * 0.4 && winner.p >= 6) {
+        const puCi = winner.holeDetails.filter(hd => hd.p > 0).reduce((s, hd) => s + (hd.ci_p || 0), 0);
+        return `${winnerName}'s putting was on another level — ${winner.p} of their ${winner.total} points came from putts, including ${puCi} points from putt carry-in. They had ${winner.p} putts all round, setting up pressure on the competition... get it?`;
+    }
+    
+    // FO heavy
+    if ((winner.fo + winner.gr) > winner.total * 0.4 && (winner.fo + winner.gr) >= 6) {
+        const foCi = winner.holeDetails.filter(hd => hd.fo + hd.gr > 0).reduce((s, hd) => s + (hd.ci_fo || 0) + (hd.ci_gr || 0), 0);
+        return `The driving game was real for ${winnerName} — ${winner.fo + winner.gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${winner.fo + winner.gr} times out of ${winner.holeDetails.length} holes played, setting up the short game all round.`;
+    }
+    
+    // All around
+    return `A solid all-around round from ${winnerName} at ${course} — ${winner.total} points with ${winner.holesScored} holes scored. They picked up points all over: ${winner.fo} first-ons, ${winner.cl} closests, and ${winner.p} putts. A well-rounded performance.`;
+}
+
+function initWeeklyView() {
+    const sel = document.getElementById('weekSelect');
+    if (sel.options.length > 0) return; // already populated
+    
+    // Build week list from round dates (most recent first)
+    const weekSet = new Set();
+    allRounds.forEach(r => {
+        const dateStr = r.date.slice(0, 10);
+        const year = getISOYear(dateStr);
+        const week = getISOWeekNumber(dateStr);
+        weekSet.add(getWeekKey(year, week));
+    });
+    
+    const weeks = Array.from(weekSet).sort().reverse();
+    sel.innerHTML = weeks.map(w => `<option value="${w}">${w}</option>`).join('');
+    sel.value = weeks[0] || '';
+    renderWeekInReview();
+}
+
+function renderWeekInReview() {
+    const sel = document.getElementById('weekSelect');
+    const weekKey = sel.value;
+    if (!weekKey) return;
+    
+    const [yearStr, wStr] = weekKey.split('-W');
+    const year = parseInt(yearStr);
+    const weekNum = parseInt(wStr);
+    
+    // Find the Monday of that ISO week
+    const jan4 = new Date(year, 0, 4);
+    const startOfWeek1 = new Date(jan4);
+    startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() + 6) % 7 + 1);
+    const monday = new Date(startOfWeek1);
+    monday.setDate(startOfWeek1.getDate() + (weekNum - 1) * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const container = document.getElementById('weekly-content');
+    
+    // Filter rounds for this week
+    const weekRounds = allRounds.filter(r => {
+        const rd = new Date(r.date.slice(0, 10) + 'T12:00:00');
+        return rd >= monday && rd <= sunday;
+    });
+    
+    // Compute stats
+    const courses = new Set(weekRounds.map(r => r.courseName));
+    const weekBest = {};
+    const weekDates = new Set();
+    
+    weekRounds.forEach(r => {
+        weekDates.add(r.date.slice(0, 10));
+        Object.entries(r._playerData || {}).forEach(([name, data]) => {
+            if (!weekBest[name] || data.total > weekBest[name].total) {
+                weekBest[name] = data;
+                weekBest[name]._date = r.date;
+                weekBest[name]._course = r.courseName;
+            }
+        });
+    });
+    
+    // Opening
+    const openingIdx = (weekNum + Math.floor(year / 100)) % OPENING_LINES.length;
+    const openingLine = OPENING_LINES[openingIdx];
+    
+    let html = `<div style="margin-bottom:10px;">
+        <h2 style="color:#60a5fa;margin-bottom:4px;">BBB WEEK IN REVIEW — ${weekKey}</h2>
+        <span style="color:#64748b;font-size:13px;">${formatDateFull(monday)} – ${formatDateFull(sunday)}</span>
+    </div>`;
+    
+    // The Word on the Course
+    html += `<div class="card">
+        <h3>THE WORD ON THE COURSE</h3>
+        <div style="color:#94a3b8;line-height:1.6;">${openingLine}<br>`;
+    html += `${weekRounds.length} completed round${weekRounds.length !== 1 ? 's' : ''} across ${courses.size} course${courses.size !== 1 ? 'es' : ''}: ${Array.from(courses).sort().join(', ')}.<br>`;
+    
+    const topPlayer = Object.entries(weekBest).sort((a, b) => b[1].total - a[1].total)[0];
+    if (topPlayer) {
+        html += `${topPlayer[0]} led the way with ${topPlayer[1].total} points.`;
+    }
+    html += `</div></div>`;
+    
+    // Round-by-Round
+    html += `<h3>ROUND-BY-ROUND RECAP</h3><div class="card" style="padding:15px;">`;
+    
+    const sortedWeekRounds = [...weekRounds].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    sortedWeekRounds.forEach(r => {
+        const dateStr = r.date.slice(0, 10);
+        const rd = new Date(dateStr + 'T12:00:00');
+        const dayName = rd.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const course = r.courseName || 'Unknown';
+        
+        // Scoreboard
+        const playerScores = Object.entries(r._playerData || {}).sort((a, b) => b[1].total - a[1].total);
+        const scoreStr = playerScores.map(([name, data]) => `${name} ${data.total}`).join(' | ');
+        
+        // Round comment
+        const roundStats = {
+            playerData: r._playerData || {},
+            courseName: course
+        };
+        const comment = selectRoundComment(roundStats);
+        
+        html += `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #2d3154;">
+            <div style="color:#60a5fa;font-size:13px;font-weight:600;margin-bottom:4px;">${dayName} — ${course}</div>
+            <div style="color:#e2e8f0;font-size:13px;margin-bottom:6px;">${scoreStr}</div>`;
+        if (comment) {
+            html += `<div style="color:#94a3b8;font-size:13px;line-height:1.5;font-style:italic;">"${comment}"</div>`;
+        }
+        html += `</div>`;
+    });
+    
+    html += `</div>`;
+    
+    // Records Watch
+    html += `<h3>RECORDS WATCH</h3><div class="card" style="padding:15px;">`;
+    
+    html += `<div style="margin-bottom:12px;"><strong style="color:#94a3b8;">All-Time Best Single Rounds:</strong><br>`;
+    ALL_TIME_BEST.slice(0, 5).forEach(([name, pts]) => {
+        html += `<span style="display:inline-block;min-width:80px;color:#e2e8f0;">${name.padEnd(8)} ${pts} pts</span><br>`;
+    });
+    html += `</div>`;
+    
+    // Contenders
+    const contenders = Object.entries(weekBest)
+        .sort((a, b) => b[1].total - a[1].total)
+        .filter(([name, data]) => {
+            const record = ALL_TIME_BEST.find(r => r[0] === name);
+            if (!record) return false;
+            return record[1] - data.total <= 5 && data.total > 0;
+        });
+    
+    if (contenders.length > 0) {
+        html += `<div><strong style="color:#94a3b8;">This Week's Contenders:</strong><br>`;
+        contenders.forEach(([name, data]) => {
+            const record = ALL_TIME_BEST.find(r => r[0] === name);
+            if (!record) return;
+            html += `<span style="display:inline-block;min-width:80px;color:#e2e8f0;">${name} ${data.total} pts</span> — close to the big leagues!<br>`;
+        });
+        html += `</div>`;
+    }
+    
+    html += `</div>`;
+    
+    // Individual Record Chase
+    html += `<h3>INDIVIDUAL RECORD CHASE</h3><div class="card" style="padding:15px;">`;
+    
+    const sortedByName = Object.entries(weekBest).sort((a, b) => b[1].total - a[1].total);
+    sortedByName.forEach(([name, data]) => {
+        if (data.total === 0) return;
+        const record = ALL_TIME_BEST.find(r => r[0] === name);
+        if (record) {
+            const diff = record[1] - data.total;
+            if (diff <= 5) {
+                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. Had a ${data.total} this week. ${diff} away!</div>`;
+            } else {
+                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. This week: ${data.total}. Room to grow.</div>`;
+            }
+        } else {
+            html += `<div style="color:#e2e8f0;font-size:13px;">${name}: First time on the radar with ${data.total}.</div>`;
+        }
+    });
+    
+    html += `</div>`;
+    
+    // Streak Tracker
+    html += `<h3>STREAK TRACKER</h3><div class="card" style="padding:15px;">`;
+    
+    const streaks = ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt'];
+    const labels = { longestScoring: 'Longest Scoring', longestZero: 'Longest Zero', longestFO: 'Longest FO', longestClosest: 'Longest Closest', longestPutt: 'Longest Putt' };
+    
+    const allStreaks = {};
+    streaks.forEach(sk => {
+        allStreaks[sk] = { name: '', value: 0 };
+    });
+    
+    sortedWeekRounds.forEach(r => {
+        Object.entries(r._playerData || {}).forEach(([name, data]) => {
+            if (!data.streaks) return;
+            streaks.forEach(sk => {
+                if (data.streaks[sk] > allStreaks[sk].value) {
+                    allStreaks[sk] = { name, value: data.streaks[sk] };
+                }
+            });
+        });
+    });
+    
+    Object.entries(allStreaks).forEach(([sk, info]) => {
+        if (info.value > 0) {
+            html += `<div style="color:#e2e8f0;font-size:13px;"><span style="display:inline-block;min-width:160px;">${labels[sk]}</span> <span style="color:#60a5fa;">${info.name}</span> ${info.value} holes</div>`;
+        }
+    });
+    
+    html += `</div>`;
+    
+    // Jokes
+    const joke = getJokeForWeek(weekNum);
+    html += `<div class="card"><h3>BILL'S GOLF JOKES</h3><div style="color:#94a3b8;font-size:13px;line-height:1.6;">${joke}</div></div>`;
+    
+    // Footer
+    html += `<div style="text-align:center;color:#475569;font-size:11px;margin-top:16px;">${weekKey} | Generated from bbb-scorer data</div>`;
+    
+    container.innerHTML = html;
+}
 
     // ── Init ──
     loadData();
