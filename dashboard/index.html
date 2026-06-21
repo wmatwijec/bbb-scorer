@@ -1107,12 +1107,96 @@
           if ((lastRunning.putt || 0) > 0) openCarryStr += lastRunning.putt + 'P ';
           if (!openCarryStr) openCarryStr = 'none';
           html += `<div style="margin-top:10px;padding:10px;background:${reconcileOk ? '#0f111a' : '#1c1517'};border:1px solid ${reconcileOk ? '#2d3154' : '#7f1d1d'};border-radius:6px;">
-              <div style="color:#64748b;font-size:11px;">
-                  <strong>Reconciliation:</strong> ${grandTotal} pts + ${openCarryCount} open carries = ${grandTotal + openCarryCount} &nbsp;│&nbsp; Expected: 54
-              </div>
-              <div style="color:#94a3b8;font-size:11px;margin-top:2px;">Open carries: ${openCarryStr}</div>
-              <div style="color:${reconcileOk ? '#34d399' : '#f87171'};font-size:11px;margin-top:2px;font-weight:bold;">${reconcileOk ? '✓ Totals reconcile' : '⚠ Off by ' + diff}</div>
-          </div>`;
+               <div style="color:#64748b;font-size:11px;">
+                   <strong>Reconciliation:</strong> ${grandTotal} pts + ${openCarryCount} open carries = ${grandTotal + openCarryCount} &nbsp;│&nbsp; Expected: 54
+               </div>
+               <div style="color:#94a3b8;font-size:11px;margin-top:2px;">Open carries: ${openCarryStr}</div>
+               <div style="color:${reconcileOk ? '#34d399' : '#f87171'};font-size:11px;margin-top:2px;font-weight:bold;">${reconcileOk ? '✓ Totals reconcile' : '⚠ Off by ' + diff}</div>
+           </div>`;
+
+           // ── Dot Plots: This Round vs All Rounds ──
+           html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+           html += `<div style="color:#94a3b8;font-size:12px;font-weight:bold;margin-bottom:8px;">Performance This Round vs All Rounds</div>`;
+           html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">Faint dots = all rounds. Bright dot = this round. Green = above median, Red = below median.</div>`;
+
+           const categories = [
+               { key: 'fo', label: 'FO', values: [] },
+               { key: 'gr', label: 'GR', values: [] },
+               { key: 'cl', label: 'CL', values: [] },
+               { key: 'p', label: 'P', values: [] },
+               { key: 'total', label: 'Total', values: [] }
+           ];
+
+           const curRound = filteredRounds[roundIdx];
+            const curPlayerData = curRound && curRound._playerData;
+
+            players.forEach(name => {
+                const st = seasonStats[name];
+                if (!st) return;
+                const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
+
+                // Get this round's values from _playerData (computed by computeRoundStats)
+                let thisRoundVals = { fo: 0, gr: 0, cl: 0, p: 0, total: 0 };
+                if (curPlayerData && curPlayerData[name]) {
+                    const pd = curPlayerData[name];
+                    thisRoundVals = { fo: pd.foPts || 0, gr: pd.grPts || 0, cl: pd.clPts || 0, p: pd.pPts || 0, total: pd.totalPts || 0 };
+                }
+
+                // Collect all-round values for this player
+                categories[0].values = st.foPerRound.slice();
+                categories[1].values = st.grPerRound.slice();
+                categories[2].values = st.clPerRound.slice();
+                categories[3].values = st.pPerRound.slice();
+                categories[4].values = st.pointsPerRound.slice();
+
+                // Compute medians
+                const medians = categories.map(c => median(c.values));
+
+                // Determine global min/max for x-axis scaling
+                let globalMin = Infinity, globalMax = -Infinity;
+                categories.forEach(c => {
+                    c.values.forEach(v => {
+                        if (v < globalMin) globalMin = v;
+                        if (v > globalMax) globalMax = v;
+                    });
+                    if (thisRoundVals[c.key] < globalMin) globalMin = thisRoundVals[c.key];
+                    if (thisRoundVals[c.key] > globalMax) globalMax = thisRoundVals[c.key];
+                });
+                if (globalMin === Infinity) globalMin = 0;
+                const range = globalMax - globalMin || 1;
+                const dotMin = 10;
+                const dotMax = 100;
+                const toX = v => dotMin + ((v - globalMin) / range) * (dotMax - dotMin);
+
+                categories.forEach(c => {
+                    html += `<div style="margin-bottom:6px;">`;
+                    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">`;
+                    html += `<span style="color:${color};font-size:12px;font-weight:bold;min-width:30px;">${c.label}</span>`;
+                    html += `<span style="color:#64748b;font-size:10px;">Med: ${Math.round(medians[categories.indexOf(c)] * 10) / 10}</span>`;
+                    html += `</div>`;
+                    html += `<div style="position:relative;height:18px;background:#0f111a;border-radius:3px;padding:2px 5px;">`;
+
+                    // This round dot
+                    const thisVal = thisRoundVals[c.key];
+                    const medVal = medians[categories.indexOf(c)];
+                    const dotColor = thisVal > medVal ? '#22c55e' : (thisVal < medVal ? '#ef4444' : '#94a3b8');
+                    const thisX = toX(thisVal);
+                    html += `<div style="position:absolute;left:${thisX}%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:${dotColor};box-shadow:0 0 6px ${dotColor}80;z-index:2;"></div>`;
+
+                    // All rounds dots (faint)
+                    const vals = c.values;
+                    vals.forEach(v => {
+                        const x = toX(v);
+                        html += `<div style="position:absolute;left:${x}%;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#334155;opacity:0.3;"></div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div>`;
+            });
+
+           html += `</div>`;
 
         container.innerHTML = html;
          console.log('renderScorecard done, html length:', html.length, 'content text length:', container.textContent.length);
