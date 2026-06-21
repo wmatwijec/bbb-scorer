@@ -625,6 +625,7 @@ let courses = [];
 let roundHistory = [];
 let finishedHoles = new Set();
 let inRound = false;
+let currentMatchId = null;
 let els = {};
 let waltShadowPhone = null;
 let holeSequence = [];
@@ -816,6 +817,7 @@ function startRoundWithHole(startHole) {
   });
 
   inRound = true;
+  currentMatchId = `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
 
   hideAll();
   const gameScreen = document.getElementById('game');
@@ -1829,19 +1831,20 @@ els.leaderboard.parentElement.appendChild(carryDiv);
   }
 
 function resetRound() {
-localStorage.removeItem('bbb');
-inRound = false;
-players = [];
-currentCourse = null;
-currentHole = 1;
-finishedHoles.clear();
+ localStorage.removeItem('bbb');
+ inRound = false;
+ currentMatchId = null;
+ players = [];
+ currentCourse = null;
+ currentHole = 1;
+ finishedHoles.clear();
   }
 
 async function saveRoundEverywhere() {
   if (!inRound) return;
 
   const roundData = {
-matchId: `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`,
+  matchId: currentMatchId,
 date: new Date().toISOString(),
 courseName: currentCourse !== null ? courses[currentCourse]?.name || 'Unknown' : null,
 players: players.map(p => ({ name: p.name, phone: p.phone })),
