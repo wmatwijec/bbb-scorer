@@ -249,6 +249,7 @@
         });
 
         const holeSequence = buildHoleSequence(round);
+        console.log('computeRoundStats course:', round.courseName, 'holeSequence:', holeSequence, 'scores keys:', Object.keys(round.scores || {}));
         const result = { playerData: {} };
 
         (round.players || []).forEach(p => {
