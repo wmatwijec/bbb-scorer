@@ -1025,6 +1025,7 @@
           players.forEach((name, pIdx) => {
               const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
               const detail = playerDetails[name] || [];
+              const isHighlighted = name === _selectedPlayer;
               let cumTotal = 0;
               const cumValues = [];
               for (let h = 0; h < 18; h++) {
