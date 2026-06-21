@@ -899,26 +899,75 @@ playerDetails[name] = (round._playerData && round._playerData[name] && round._pl
          html += `</table></div>`;
 
          // Out/In/Total summary
-         html += `<div style="margin-top:10px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
-         players.forEach((name, pIdx) => {
-             const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
-             const detail = playerDetails[name] || [];
-             const out9 = detail.slice(0, 9).reduce((s, h) => s + h.points, 0);
-             const in9 = detail.slice(9, 18).reduce((s, h) => s + h.points, 0);
-             const total = out9 + in9;
+          html += `<div style="margin-top:10px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+          players.forEach((name, pIdx) => {
+              const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
+              const detail = playerDetails[name] || [];
+              const out9 = detail.slice(0, 9).reduce((s, h) => s + h.points, 0);
+              const in9 = detail.slice(9, 18).reduce((s, h) => s + h.points, 0);
+              const total = out9 + in9;
 
-             html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #2d3154;">
-                 <span style="font-weight:bold;color:${color};font-size:13px;">${name}</span>
-                 <span style="color:#94a3b8;font-size:12px;">
-                     Out: <strong style="color:#e2e8f0;">${out9}</strong>
-                     &nbsp;│&nbsp;
-                     In: <strong style="color:#e2e8f0;">${in9}</strong>
-                     &nbsp;│&nbsp;
-                     Total: <strong style="color:${color};font-size:14px;">${total}</strong>
-                 </span>
-             </div>`;
-         });
-         html += `</div>`;
+              html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #2d3154;">
+                  <span style="font-weight:bold;color:${color};font-size:13px;">${name}</span>
+                  <span style="color:#94a3b8;font-size:12px;">
+                      Out: <strong style="color:#e2e8f0;">${out9}</strong>
+                      &nbsp;│&nbsp;
+                      In: <strong style="color:#e2e8f0;">${in9}</strong>
+                      &nbsp;│&nbsp;
+                      Total: <strong style="color:${color};font-size:14px;">${total}</strong>
+                  </span>
+              </div>`;
+          });
+          html += `</div>`;
+
+          // Category breakdown + carry-in reconciliation
+          html += `<div style="margin-top:10px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+          html += `<div style="color:#64748b;font-size:11px;font-weight:bold;margin-bottom:8px;">POINTS BREAKDOWN & CARRY-IN</div>`;
+          const expectedTotal = players.length * 6;
+          players.forEach((name, pIdx) => {
+              const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
+              const detail = playerDetails[name] || [];
+              const pd = (round._playerData && round._playerData[name]) || {};
+              const foPts = pd.foPts || 0;
+              const grPts = pd.grPts || 0;
+              const clPts = pd.clPts || 0;
+              const pPts = pd.pPts || 0;
+              const computedTotal = foPts + grPts + clPts + pPts;
+              const carryInTotal = pd.carryInTotal || 0;
+              const cachedTotal = (round._cachedTotals && round._cachedTotals[name]) || computedTotal;
+              const mismatch = computedTotal !== cachedTotal;
+
+              html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #2d3154;">
+                  <span style="font-weight:bold;color:${color};font-size:13px;">${name}</span>
+                  <span style="color:#94a3b8;font-size:11px;">
+                      FO:<strong style="color:#e2e8f0;"> ${foPts}</strong>
+                      &nbsp; GR:<strong style="color:#e2e8f0;"> ${grPts}</strong>
+                      &nbsp; CL:<strong style="color:#e2e8f0;"> ${clPts}</strong>
+                      &nbsp; P:<strong style="color:#e2e8f0;"> ${pPts}</strong>
+                      &nbsp; = <strong style="color:${color};font-size:12px;">${computedTotal}</strong>
+                      &nbsp;(carryIn: ${carryInTotal})
+                      ${mismatch ? ` &nbsp;<span style="color:#f87171;">⚠ cached: ${cachedTotal}</span>` : ''}
+                  </span>
+              </div>`;
+          });
+
+          // Check if total across all players = 54
+          let grandTotal = 0;
+          players.forEach((name, pIdx) => {
+              const pd = (round._playerData && round._playerData[name]) || {};
+              grandTotal += (pd.foPts || 0) + (pd.grPts || 0) + (pd.clPts || 0) + (pd.pPts || 0);
+          });
+          const grandCarryIn = players.reduce((s, name) => {
+              const pd = (round._playerData && round._playerData[name]) || {};
+              return s + (pd.carryInTotal || 0);
+          }, 0);
+          const totalMismatch = grandTotal !== expectedTotal;
+
+          html += `<div style="margin-top:8px;padding:8px;background:${totalMismatch ? '#1c1517' : '#0f111a'};border:1px solid ${totalMismatch ? '#7f1d1d' : '#2d3154'};border-radius:6px;">
+              <div style="color:#64748b;font-size:11px;">Expected total: ${players.length} × 6 = ${expectedTotal} &nbsp;│&nbsp; Computed: ${grandTotal} &nbsp;│&nbsp; Total carry-in: ${grandCarryIn}</div>
+              ${totalMismatch ? `<div style="color:#f87171;font-size:11px;margin-top:3px;">⚠ Off by ${grandTotal - expectedTotal}: ${grandTotal > expectedTotal ? 'Extra carry-in points detected' : 'Missing carry-in points — some carries may not have applied'}</div>` : '<div style="color:#34d399;font-size:11px;margin-top:3px;">✓ Totals reconcile</div>'}
+          </div>`;
+          html += `</div>`;
 
        container.innerHTML = html;
          console.log('renderScorecard done, html length:', html.length, 'content text length:', container.textContent.length);
