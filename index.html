@@ -1314,18 +1314,10 @@ return carry;
 
 function getRunningTotal(player) {
 let sum = 0;
-if (finishedHoles.size === HOLES && currentHole <= HOLES) {
-  // Wrapped around: sum ALL finished holes
-  for (let h = 1; h <= HOLES; h++) {
-    if (finishedHoles.has(h)) {
-      sum += player._cachedHoleTotals?.[h - 1] || 0;
-    }
-  }
-} else {
-  for (let h = 1; h <= currentHole; h++) {
-    if (finishedHoles.has(h)) {
-      sum += player._cachedHoleTotals?.[h - 1] || 0;
-    }
+for (let h = 1; h <= HOLES; h++) {
+  const idx = h - 1;
+  if (player.scores[idx]) {
+    sum += player._cachedHoleTotals?.[idx] || 0;
   }
 }
 return sum;
@@ -1338,7 +1330,7 @@ p._cachedHoleTotals = {};
 
 for (let idx = 0; idx < HOLES; idx++) {
   const holeNumber = idx + 1;
-  if (!finishedHoles.has(holeNumber)) continue;
+  if (!p.scores[idx]) continue;
 
   const s = p.scores[idx] || {};
   const carryIn = getCarryInForHole(holeNumber);
