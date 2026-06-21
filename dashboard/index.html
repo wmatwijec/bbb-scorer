@@ -166,6 +166,10 @@
         <div class="card" style="padding:15px;">
             <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:15px;">
                 <div>
+                    <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:3px;">Player</label>
+                    <select id="roundPlayerSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 10px;font-size:13px;min-width:160px;"></select>
+                </div>
+                <div>
                     <label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
                     <select id="roundDateSelect" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 10px;font-size:13px;min-width:160px;"></select>
                 </div>
@@ -727,11 +731,26 @@
      }
 
    // ── Round Card ──
-    let roundDatesByDate = [];
-    let roundDatesByRound = [];
-  function populateRoundDateDropdown() {
+     let roundDatesByDate = [];
+     let roundDatesByRound = [];
+     let filteredRounds = [];
+     const ALL_PLAYERS_VALUE = '__all__';
+   function populateRoundPlayerDropdown() {
+        const sel = document.getElementById('roundPlayerSelect');
+        sel.innerHTML = `<option value="${ALL_PLAYERS_VALUE}">All Players</option>` +
+            allPlayers.map(p => `<option value="${p}">${p}</option>`).join('');
+        sel.value = ALL_PLAYERS_VALUE;
+    }
+   function populateRoundDateDropdown() {
+        const playerFilter = document.getElementById('roundPlayerSelect').value;
+        const filtered = playerFilter === ALL_PLAYERS_VALUE
+            ? allRounds
+            : allRounds.filter(r => {
+                const playerNames = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+                return playerNames.includes(playerFilter);
+            });
         const dateMap = new Map();
-        allRounds.forEach(r => {
+        filtered.forEach(r => {
             const dateKey = r.date.slice(0, 10);
             if (!dateMap.has(dateKey)) dateMap.set(dateKey, r.date);
         });
@@ -744,22 +763,29 @@
             return `<option value="${i}" data-date="${dateKey}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
         // Default to last date
-        sel.value = String(roundDatesByDate.length - 1);
+        if (roundDatesByDate.length > 0) sel.value = String(roundDatesByDate.length - 1);
+        else sel.value = '0';
     }
     function populateRoundSelect(dateIdx) {
+        const playerFilter = document.getElementById('roundPlayerSelect').value;
         const opt = document.getElementById('roundDateSelect').options[parseInt(dateIdx)];
         const dateKey = opt ? opt.dataset.date : '';
-        console.log('RoundCard populateRoundSelect:', dateIdx, 'dateKey:', dateKey);
-        const dateRounds = allRounds.filter(r => r.date.slice(0, 10) === dateKey);
-        console.log('RoundCard found rounds:', dateRounds.length, dateRounds.map(r => r.date.slice(0,10)));
-        roundDatesByRound = dateRounds;
+        let roundsForDate = allRounds.filter(r => r.date.slice(0, 10) === dateKey);
+        if (playerFilter !== ALL_PLAYERS_VALUE) {
+            roundsForDate = roundsForDate.filter(r => {
+                const playerNames = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+                return playerNames.includes(playerFilter);
+            });
+        }
+        console.log('RoundCard populateRoundSelect:', dateIdx, 'dateKey:', dateKey, 'playerFilter:', playerFilter, 'rounds:', roundsForDate.length);
+        filteredRounds = roundsForDate;
        const sel = document.getElementById('roundSelect');
-        if (dateRounds.length === 0) {
+        if (roundsForDate.length === 0) {
             sel.innerHTML = `<option value="">No valid rounds</option>`;
             sel.value = '';
             return;
         }
-        sel.innerHTML = dateRounds.map((r, i) => {
+        sel.innerHTML = roundsForDate.map((r, i) => {
             const startTime = r.groupStartTime || '';
             const timeStr = startTime ? ` — ${startTime}` : '';
             const players = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name).join(', ');
@@ -777,16 +803,18 @@
         return parts.join('');
     }
    function renderRoundCard() {
+        populateRoundPlayerDropdown();
         populateRoundDateDropdown();
         const lastIdx = document.getElementById('roundDateSelect').value;
         populateRoundSelect(lastIdx);
-         document.getElementById('roundDateSelect').onchange = function() { populateRoundSelect(this.value); renderScorecard(0); };
+         document.getElementById('roundPlayerSelect').onchange = function() { populateRoundDateDropdown(); populateRoundSelect(document.getElementById('roundDateSelect').value); renderScorecard(0); };
+        document.getElementById('roundDateSelect').onchange = function() { populateRoundSelect(this.value); renderScorecard(0); };
         document.getElementById('roundSelect').onchange = function() { renderScorecard(parseInt(this.value)); };
         renderScorecard(0);
     }
-  function renderScorecard(roundIdx) {
-         console.log('renderScorecard called with:', roundIdx, 'roundDatesByRound:', roundDatesByRound?.length);
-         const dateRounds = roundDatesByRound;
+ function renderScorecard(roundIdx) {
+          console.log('renderScorecard called with:', roundIdx, 'filteredRounds:', filteredRounds?.length);
+          const dateRounds = filteredRounds;
          if (!dateRounds || !dateRounds[roundIdx]) { console.log('early return, dateRounds:', dateRounds, 'roundIdx:', roundIdx); return; }
          const round = dateRounds[roundIdx];
     const container = document.getElementById('round-card-content');
