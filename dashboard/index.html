@@ -1096,7 +1096,7 @@
                const pd = (round._playerData && round._playerData[name]) || {};
                grandTotal += (pd.foPts || 0) + (pd.grPts || 0) + (pd.clPts || 0) + (pd.pPts || 0);
            });
-           const expectedTotal = players.length * 6;
+           const expectedTotal = players.length * 18;
            const lastRunning = sequenceHoleState[sequenceHoleState.length - 1]?.running || {};
            const openCarryCount = (lastRunning.firstOn || 0) + (lastRunning.greenie || 0) + (lastRunning.closest || 0) + (lastRunning.putt || 0);
            const diff = grandTotal + openCarryCount - expectedTotal;
