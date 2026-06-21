@@ -1033,8 +1033,8 @@
               if ((rc.putt || 0) > 0) parts.push(rc.putt + 'P');
               html += `<td style="padding:4px;text-align:center;font-size:10px;background:#1a1d2e;color:#7c3aed;">${parts.join(' ')}</td>`;
           }
-          const lastRunning = sequenceHoleState[sequenceHoleState.length - 1]?.running || {};
-          html += `<td style="padding:4px 8px;text-align:center;font-size:10px;font-weight:bold;color:#7c3aed;background:#1a1d2e;">FO:${lastRunning.firstOn||0} CL:${lastRunning.closest||0} P:${lastRunning.putt||0} GR:${lastRunning.greenie||0}</td>`;
+          const netLast = sequenceHoleState[sequenceHoleState.length - 1]?.running || {};
+           html += `<td style="padding:4px 8px;text-align:center;font-size:10px;font-weight:bold;color:#7c3aed;background:#1a1d2e;">FO:${netLast.firstOn||0} CL:${netLast.closest||0} P:${netLast.putt||0} GR:${netLast.greenie||0}</td>`;
           html += `</tr>`;
 
           html += `</table></div>`;
