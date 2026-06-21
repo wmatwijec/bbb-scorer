@@ -1114,89 +1114,103 @@
                <div style="color:${reconcileOk ? '#34d399' : '#f87171'};font-size:11px;margin-top:2px;font-weight:bold;">${reconcileOk ? '✓ Totals reconcile' : '⚠ Off by ' + diff}</div>
            </div>`;
 
-           // ── Dot Plots: This Round vs All Rounds ──
-           html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
-           html += `<div style="color:#94a3b8;font-size:12px;font-weight:bold;margin-bottom:8px;">Performance This Round vs All Rounds</div>`;
-           html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">Faint dots = all rounds. Bright dot = this round. Green = above median, Red = below median.</div>`;
+           // ── Dot Plots: Histogram This Round vs All Rounds ──
+            html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+            html += `<div style="color:#94a3b8;font-size:12px;font-weight:bold;margin-bottom:4px;">Performance This Round vs All Rounds</div>`;
+            html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">Stacked dots show frequency of each score across all rounds. Bright dot = current round value. Green = above median, Red = below median.</div>`;
 
-           const categories = [
-               { key: 'fo', label: 'FO', values: [] },
-               { key: 'gr', label: 'GR', values: [] },
-               { key: 'cl', label: 'CL', values: [] },
-               { key: 'p', label: 'P', values: [] },
-               { key: 'total', label: 'Total', values: [] }
-           ];
+            const categories = [
+                { key: 'fo', label: 'FO', valuesArr: [], thisVal: 0 },
+                { key: 'gr', label: 'GR', valuesArr: [], thisVal: 0 },
+                { key: 'cl', label: 'CL', valuesArr: [], thisVal: 0 },
+                { key: 'p', label: 'P', valuesArr: [], thisVal: 0 },
+                { key: 'total', label: 'Total', valuesArr: [], thisVal: 0 }
+            ];
 
-           const curRound = filteredRounds[roundIdx];
+            const curRound = filteredRounds[roundIdx];
             const curPlayerData = curRound && curRound._playerData;
+
+            // Precompute this round values per player
+            const thisRoundValsMap = {};
+            players.forEach(name => {
+                thisRoundValsMap[name] = { fo: 0, gr: 0, cl: 0, p: 0, total: 0 };
+                if (curPlayerData && curPlayerData[name]) {
+                    const pd = curPlayerData[name];
+                    thisRoundValsMap[name] = { fo: pd.foPts || 0, gr: pd.grPts || 0, cl: pd.clPts || 0, p: pd.pPts || 0, total: pd.totalPts || 0 };
+                }
+            });
 
             players.forEach(name => {
                 const st = seasonStats[name];
                 if (!st) return;
                 const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
 
-                // Get this round's values from _playerData (computed by computeRoundStats)
-                let thisRoundVals = { fo: 0, gr: 0, cl: 0, p: 0, total: 0 };
-                if (curPlayerData && curPlayerData[name]) {
-                    const pd = curPlayerData[name];
-                    thisRoundVals = { fo: pd.foPts || 0, gr: pd.grPts || 0, cl: pd.clPts || 0, p: pd.pPts || 0, total: pd.totalPts || 0 };
-                }
+                // Build histogram arrays for this player
+                categories[0].valuesArr = st.foPerRound.slice();
+                categories[1].valuesArr = st.grPerRound.slice();
+                categories[2].valuesArr = st.clPerRound.slice();
+                categories[3].valuesArr = st.pPerRound.slice();
+                categories[4].valuesArr = st.pointsPerRound.slice();
 
-                // Collect all-round values for this player
-                categories[0].values = st.foPerRound.slice();
-                categories[1].values = st.grPerRound.slice();
-                categories[2].values = st.clPerRound.slice();
-                categories[3].values = st.pPerRound.slice();
-                categories[4].values = st.pointsPerRound.slice();
+                // Current round values
+                const tv = thisRoundValsMap[name];
+                categories[0].thisVal = tv.fo;
+                categories[1].thisVal = tv.gr;
+                categories[2].thisVal = tv.cl;
+                categories[3].thisVal = tv.p;
+                categories[4].thisVal = tv.total;
 
-                // Compute medians
-                const medians = categories.map(c => median(c.values));
+                // Compute medians for highlighting
+                const medians = categories.map(c => median(c.valuesArr));
 
-                // Determine global min/max for x-axis scaling
-                let globalMin = Infinity, globalMax = -Infinity;
-                categories.forEach(c => {
-                    c.values.forEach(v => {
-                        if (v < globalMin) globalMin = v;
-                        if (v > globalMax) globalMax = v;
+                // Build per-category histogram: count of each value 0..18
+                const maxBins = 19;
+                html += `<div style="margin-bottom:10px;">`;
+                html += `<div style="color:${color};font-size:12px;font-weight:bold;margin-bottom:4px;">${name}</div>`;
+
+                categories.forEach((cat, ci) => {
+                    const counts = new Array(maxBins).fill(0);
+                    cat.valuesArr.forEach(v => {
+                        const idx = Math.max(0, Math.min(maxBins - 1, Math.round(v)));
+                        counts[idx]++;
                     });
-                    if (thisRoundVals[c.key] < globalMin) globalMin = thisRoundVals[c.key];
-                    if (thisRoundVals[c.key] > globalMax) globalMax = thisRoundVals[c.key];
-                });
-                if (globalMin === Infinity) globalMin = 0;
-                const range = globalMax - globalMin || 1;
-                const dotMin = 10;
-                const dotMax = 100;
-                const toX = v => dotMin + ((v - globalMin) / range) * (dotMax - dotMin);
+                    const medVal = medians[ci];
+                    const thisV = cat.thisVal;
+                    const dotColor = thisV > medVal ? '#22c55e' : (thisV < medVal ? '#ef4444' : '#94a3b8');
 
-                categories.forEach(c => {
-                    html += `<div style="margin-bottom:6px;">`;
-                    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">`;
-                    html += `<span style="color:${color};font-size:12px;font-weight:bold;min-width:30px;">${c.label}</span>`;
-                    html += `<span style="color:#64748b;font-size:10px;">Med: ${Math.round(medians[categories.indexOf(c)] * 10) / 10}</span>`;
+                    html += `<div style="display:flex;align-items:flex-end;gap:1px;margin-bottom:2px;">`;
+                    // Category label
+                    html += `<span style="color:${color};font-size:10px;font-weight:bold;min-width:24px;text-align:right;margin-right:4px;padding-bottom:1px;">${cat.label}</span>`;
+
+                    for (let v = 0; v < maxBins; v++) {
+                        const count = counts[v];
+                        // Stack dots vertically for this value
+                        let dotsHtml = '';
+                        for (let d = 0; d < Math.min(count, 8); d++) {
+                            const isThisRound = (v === thisV && d === count - 1);
+                            if (isThisRound) {
+                                dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};box-shadow:0 0 4px ${dotColor}80;flex-shrink:0;"></div>`;
+                            } else {
+                                dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.3;flex-shrink:0;"></div>`;
+                            }
+                        }
+                        if (count > 8) {
+                            dotsHtml += `<div style="width:10px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#64748b;flex-shrink:0;">+${count - 8}</div>`;
+                        }
+                        // Height of this column (in dot rows)
+                        const colHeight = Math.min(count, 8) + (count > 8 ? 1 : 0);
+                        html += `<div style="display:flex;flex-direction:column-reverse;align-items:center;padding:0 1px;height:${Math.max(colHeight * 12, 12)}px;">`;
+                        html += dotsHtml;
+                        html += `</div>`;
+                    }
+
                     html += `</div>`;
-                    html += `<div style="position:relative;height:18px;background:#0f111a;border-radius:3px;padding:2px 5px;">`;
-
-                    // This round dot
-                    const thisVal = thisRoundVals[c.key];
-                    const medVal = medians[categories.indexOf(c)];
-                    const dotColor = thisVal > medVal ? '#22c55e' : (thisVal < medVal ? '#ef4444' : '#94a3b8');
-                    const thisX = toX(thisVal);
-                    html += `<div style="position:absolute;left:${thisX}%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:${dotColor};box-shadow:0 0 6px ${dotColor}80;z-index:2;"></div>`;
-
-                    // All rounds dots (faint)
-                    const vals = c.values;
-                    vals.forEach(v => {
-                        const x = toX(v);
-                        html += `<div style="position:absolute;left:${x}%;top:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:#334155;opacity:0.3;"></div>`;
-                    });
-
-                    html += `</div></div>`;
                 });
 
                 html += `</div>`;
             });
 
-           html += `</div>`;
+            html += `</div>`;
 
         container.innerHTML = html;
          console.log('renderScorecard done, html length:', html.length, 'content text length:', container.textContent.length);
