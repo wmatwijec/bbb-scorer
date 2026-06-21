@@ -1115,9 +1115,9 @@
            </div>`;
 
            // ── Dot Plots: Histogram This Round vs All Rounds ──
-            html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
+            html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;overflow-x:auto;">`;
             html += `<div style="color:#94a3b8;font-size:12px;font-weight:bold;margin-bottom:4px;">Performance This Round vs All Rounds</div>`;
-            html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">One row per player. Each mini-histogram shows score distribution across all rounds. Bright dot = current round. Green = above median, Red = below.</div>`;
+            html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">One row per player. Each mini-histogram (FO, GR, CL, P, Total) shows score distribution across all rounds. Bright dot = current round. Green = above median, Red = below.</div>`;
 
             const categories = [
                 { key: 'fo', label: 'FO' },
@@ -1145,76 +1145,116 @@
             players.forEach(name => {
                 const st = seasonStats[name];
                 if (!st) return;
-                const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
                 playerHistData[name] = {};
                 const thisV = thisRoundValsMap[name];
-                const medians = {};
                 categories.forEach(cat => {
                     const valuesArr = cat.key === 'total' ? st.pointsPerRound : st[cat.key + 'PerRound'];
                     if (!valuesArr) return;
-                    medians[cat.key] = median(valuesArr);
+                    const medVal = median(valuesArr);
                     // Build histogram: count of each value 0..18
                     const hist = new Array(19).fill(0);
                     valuesArr.forEach(v => {
                         const idx = Math.max(0, Math.min(18, Math.round(v)));
                         hist[idx]++;
                     });
-                    playerHistData[name][cat.key] = { hist, thisVal: thisV[cat.key], median: medians[cat.key] };
+                    // Find max count for y-axis scaling
+                    const maxCount = Math.max(...hist);
+                    playerHistData[name][cat.key] = { hist, thisVal: thisV[cat.key], median: medVal, maxCount };
                 });
             });
+
+            // Y-axis: find global max count across all players/categories for consistent height
+            let globalMaxCount = 1;
+            players.forEach(name => {
+                if (!playerHistData[name]) return;
+                categories.forEach(cat => {
+                    const hd = playerHistData[name][cat.key];
+                    if (hd && hd.maxCount > globalMaxCount) globalMaxCount = hd.maxCount;
+                });
+            });
+            const maxDotsVisible = Math.min(globalMaxCount, 10);
 
             // Render one row per player
             players.forEach(name => {
                 if (!playerHistData[name]) return;
                 const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
 
-                html += `<div style="margin-bottom:10px;">`;
-                html += `<div style="color:${color};font-size:12px;font-weight:bold;margin-bottom:3px;">${name}</div>`;
+                html += `<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #2d3154;">`;
+                html += `<div style="color:${color};font-size:12px;font-weight:bold;margin-bottom:4px;">${name}</div>`;
 
-                categories.forEach((cat, ci) => {
+                // 5 mini-histograms side by side
+                html += `<div style="display:flex;gap:12px;overflow-x:auto;">`;
+
+                categories.forEach(cat => {
                     const hd = playerHistData[name][cat.key];
                     if (!hd) return;
-                    const { hist, thisVal, median: medVal } = hd;
+                    const { hist, thisVal, median: medVal, maxCount } = hd;
                     const dotColor = thisVal > medVal ? '#22c55e' : (thisVal < medVal ? '#ef4444' : '#94a3b8');
+                    const catHeight = maxDotsVisible * 12; // fixed height for all mini-hists
 
-                    html += `<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px;">`;
-                    // Category label
-                    html += `<span style="color:#94a3b8;font-size:10px;font-weight:bold;min-width:18px;text-align:right;">${cat.label}</span>`;
-                    // Histogram: 19 columns (0..18)
+                    html += `<div style="display:flex;flex-direction:column;">`;
+                    // Category label + median
+                    html += `<div style="color:${color};font-size:10px;font-weight:bold;margin-bottom:2px;text-align:center;">${cat.label}</div>`;
+                    html += `<div style="color:#64748b;font-size:8px;margin-bottom:2px;text-align:center;">Med:${Math.round(medVal*10)/10}</div>`;
+
+                    // Histogram area with y-axis
+                    html += `<div style="display:flex;align-items:flex-end;">`;
+
+                    // Y-axis label column
+                    html += `<div style="display:flex;flex-direction:column-reverse;align-items:center;padding-right:3px;justify-content:space-between;height:${catHeight + 14}px;">`;
+                    for (let y = maxDotsVisible; y >= 0; y--) {
+                        html += `<span style="color:#64748b;font-size:7px;line-height:1;">${y === 0 ? '' : y}</span>`;
+                    }
+                    html += `</div>`;
+
+                    // Column area (19 x-axis values 0..18)
                     html += `<div style="display:flex;align-items:flex-end;gap:1px;">`;
+                    // X-axis label row (0-18)
+                    html += `<div style="display:flex;flex-direction:column;">`;
+
                     for (let v = 0; v <= 18; v++) {
                         const count = hist[v];
-                        const maxDots = Math.min(count, 8);
-                        const colHeight = maxDots + (count > 8 ? 1 : 0);
+                        const colDotCount = Math.min(count, maxDotsVisible);
+                        const colHeight = colDotCount * 12;
 
+                        // Dot column
                         let dotsHtml = '';
-                        for (let d = 0; d < maxDots; d++) {
-                            const isTop = (d === maxDots - 1);
+                        for (let d = 0; d < colDotCount; d++) {
+                            const isTop = (d === colDotCount - 1);
                             const isThisRound = (v === thisVal && count === 1);
                             if (isThisRound) {
                                 dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};box-shadow:0 0 4px ${dotColor}80;flex-shrink:0;"></div>`;
-                            } else if (count === 1) {
-                                // Single dot but not this round's value — shouldn't happen but safe fallback
-                                dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.3;flex-shrink:0;"></div>`;
-                            } else if (isTop && v === thisVal) {
-                                // Top dot at the current round value
+                            } else if (count <= maxDotsVisible && isTop && v === thisVal) {
                                 dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};box-shadow:0 0 4px ${dotColor}80;flex-shrink:0;"></div>`;
                             } else {
                                 dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.3;flex-shrink:0;"></div>`;
                             }
                         }
-                        if (count > 8) {
-                            dotsHtml += `<div style="width:10px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#64748b;flex-shrink:0;">+${count - 8}</div>`;
+                        if (count > maxDotsVisible) {
+                            dotsHtml += `<div style="width:10px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#64748b;flex-shrink:0;">+${count - maxDotsVisible}</div>`;
                         }
 
-                        html += `<div style="display:flex;flex-direction:column-reverse;align-items:center;padding:0 1px;height:${Math.max(colHeight * 12, 12)}px;">`;
+                        html += `<div style="display:flex;flex-direction:column-reverse;align-items:center;padding:0 1px;height:${Math.max(colHeight, 12)}px;">`;
                         html += dotsHtml;
                         html += `</div>`;
                     }
+
+                    // X-axis labels (0-18)
+                    html += `</div>`;
+                    html += `<div style="display:flex;gap:1px;padding-top:2px;">`;
+                    for (let v = 0; v <= 18; v++) {
+                        if (v % 3 === 0 || v === 18) {
+                            html += `<span style="color:#64748b;font-size:7px;min-width:12px;text-align:center;">${v}</span>`;
+                        } else {
+                            html += `<span style="min-width:12px;"></span>`;
+                        }
+                    }
+                    html += `</div>`;
+
                     html += `</div></div>`;
                 });
 
-                html += `</div>`;
+                html += `</div></div>`;
             });
 
             html += `</div>`;
