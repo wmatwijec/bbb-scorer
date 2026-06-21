@@ -1067,7 +1067,7 @@
               const pd = (round._playerData && round._playerData[name]) || {};
               grandTotal += (pd.foPts || 0) + (pd.grPts || 0) + (pd.clPts || 0) + (pd.pPts || 0);
           });
-          const expectedTotal = players.length * 18;
+          const expectedTotal = 54;
           const lastRunning = sequenceHoleState[sequenceHoleState.length - 1]?.running || {};
           const openCarryCount = (lastRunning.firstOn || 0) + (lastRunning.greenie || 0) + (lastRunning.closest || 0) + (lastRunning.putt || 0);
           const diff = grandTotal + openCarryCount - expectedTotal;
@@ -1080,7 +1080,7 @@
           if (!openCarryStr) openCarryStr = 'none';
           html += `<div style="margin-top:10px;padding:10px;background:${reconcileOk ? '#0f111a' : '#1c1517'};border:1px solid ${reconcileOk ? '#2d3154' : '#7f1d1d'};border-radius:6px;">
               <div style="color:#64748b;font-size:11px;">
-                  <strong>Reconciliation:</strong> ${grandTotal} pts + ${openCarryCount} open carries = ${grandTotal + openCarryCount} &nbsp;│&nbsp; Expected: ${expectedTotal} (${players.length} × 18)
+                  <strong>Reconciliation:</strong> ${grandTotal} pts + ${openCarryCount} open carries = ${grandTotal + openCarryCount} &nbsp;│&nbsp; Expected: 54
               </div>
               <div style="color:#94a3b8;font-size:11px;margin-top:2px;">Open carries: ${openCarryStr}</div>
               <div style="color:${reconcileOk ? '#34d399' : '#f87171'};font-size:11px;margin-top:2px;font-weight:bold;">${reconcileOk ? '✓ Totals reconcile' : '⚠ Off by ' + diff}</div>
