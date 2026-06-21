@@ -1207,10 +1207,8 @@
                     }
                     html += `</div>`;
 
-                    // Column area (19 x-axis values 0..18)
+                   // Column area (19 x-axis values 0..18)
                     html += `<div style="display:flex;align-items:flex-end;gap:1px;">`;
-                    // X-axis label row (0-18)
-                    html += `<div style="display:flex;flex-direction:column;">`;
 
                     for (let v = 0; v <= 18; v++) {
                         const count = hist[v];
@@ -1239,8 +1237,9 @@
                         html += `</div>`;
                     }
 
-                    // X-axis labels (0-18)
                     html += `</div>`;
+
+                    // X-axis labels (0-18) below dots
                     html += `<div style="display:flex;gap:1px;padding-top:2px;">`;
                     for (let v = 0; v <= 18; v++) {
                         if (v % 3 === 0 || v === 18) {
