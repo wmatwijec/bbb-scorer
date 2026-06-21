@@ -428,17 +428,23 @@
                 validRounds.push(round);
             }
 
-         // Deduplicate by matchId — keep the latest version of each round
-          const latestByMatchId = new Map();
-          for (const round of validRounds) {
-              const mid = round.matchId;
-              if (!mid) continue;
-              const existing = latestByMatchId.get(mid);
-              if (!existing || new Date(round.date) > new Date(existing.date)) {
-                  latestByMatchId.set(mid, round);
+         // Deduplicate by date+course+players — keep the round with the most holes played
+          // This handles the case where the same round is saved multiple times with different matchIds
+          const bestByKey = new Map();
+          validRounds.forEach(round => {
+              const dateKey = round.date.slice(0, 10);
+              const course = round.courseName || 'Unknown';
+              const playerKeys = (round.players || []).filter(p => p.name && !p.name.toLowerCase().includes('guest'))
+                  .map(p => p.name).sort().join(',');
+              const dedupKey = `${dateKey}|${course}|${playerKeys}`;
+              const existing = bestByKey.get(dedupKey);
+              const curHoles = (round.finishedHoles || []).length;
+              const existHoles = (existing?.finishedHoles || []).length;
+              if (!existing || curHoles > existHoles || (curHoles === existHoles && new Date(round.date) > new Date(existing.date))) {
+                  bestByKey.set(dedupKey, round);
               }
-          }
-          allRounds = Array.from(latestByMatchId.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+          });
+          allRounds = Array.from(bestByKey.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
 
             // Load course pars from CSV
             try {
