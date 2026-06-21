@@ -129,7 +129,7 @@
            <button class="btn btn-nav active" id="btn-leaderboard" onclick="showView('leaderboard')">Leaderboard</button>
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
             <button class="btn btn-nav" id="btn-round" onclick="showView('roundCard')">Round Card</button>
-             <button class="btn btn-nav" id="btn-weekly" onclick="showView('weekly')">Week in Review</button>
+             <button class="btn btn-nav" id="btn-weekly" onclick="showView('weekly')">Round Report</button>
             <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
                 Highlight:
                 <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
@@ -330,10 +330,15 @@
                 clPts += roundCL;
                 pPts += roundP;
 
-               holeDetails.push({
-                    points: roundTotal, scored: hasAny ? 1 : 0,
-                    fo: foRaw, gr: grRaw, cl: clRaw, p: pRaw, threePt: (s.firstOn && s.closest && s.putt) ? 1 : 0
-                });
+              holeDetails.push({
+                     points: roundTotal, scored: hasAny ? 1 : 0,
+                     fo: foRaw, gr: grRaw, cl: clRaw, p: pRaw, threePt: (s.firstOn && s.closest && s.putt) ? 1 : 0,
+                     hole: holeNumber,
+                     ci_fo: isPar3 && s.firstOn ? carryIn.greenie : (s.firstOn ? carryIn.firstOn : 0),
+                     ci_gr: isPar3 && s.firstOn ? carryIn.greenie : 0,
+                     ci_cl: s.closest ? carryIn.closest : 0,
+                     ci_p: s.putt ? carryIn.putt : 0,
+                 });
                 holeScoresPerPlayer.push(holeDetails[holeDetails.length - 1]);
             }
 
@@ -349,11 +354,12 @@
             });
 
            result.playerData[p.name] = {
-                totalPts, foPts, grPts, clPts, pPts,
-                numHoles: holeSequence.length, streaks,
-                holesScored, carryInTotal, maxHole, threePtrCount,
-                holeDetails
-            };
+                 totalPts, foPts, grPts, clPts, pPts,
+                 numHoles: holeSequence.length, streaks,
+                 holesScored, carryInTotal, maxHole, threePtrCount,
+                 threePtrPct: (threePtrCount / holeSequence.length * 100).toFixed(1),
+                 holeDetails
+             };
         });
 
         return result;
@@ -1961,7 +1967,7 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         document.getElementById('player-detail').innerHTML = html;
     }
 
-    // ── Week in Review ────────────────────────────────────────────────────
+    // ── Round Report ──────────────────────────────────────────────────────
 
     const GOLF_JOKES = [
 "Why did the golfer bring two pairs of pants? In case he got a hole in one.",
@@ -2144,16 +2150,17 @@ function selectRoundComment(roundStats) {
     const [runnerUpName, runnerUp] = sortedPlayers[1];
     const course = roundStats.courseName || '';
     const margin = winner.total - runnerUp.total;
+    const threePtrPct = winner.threePtrPct || ((winner.threePtrCount || 0) / (winner.numHoles || 18) * 100).toFixed(1);
     
     // High carry-in percentage
     if (winner.carryInTotal > winner.total * 0.25 && winner.total > 0) {
         const ciDetails = [];
-        winner.holeDetails.forEach(hd => {
+        (winner.holeDetails || []).forEach(hd => {
             const ci = (hd.ci_fo || 0) + (hd.ci_gr || 0) + (hd.ci_cl || 0) + (hd.ci_p || 0);
-            if (ci > 0) ciDetails.push([hd.hole, ci]);
+            if (ci > 0) ciDetails.push([hd.hole || '?', ci]);
         });
         ciDetails.sort((a, b) => b[1] - a[1]);
-        const [biggestHole, biggestCarry] = ciDetails[0];
+        const [biggestHole, biggestCarry] = ciDetails[0] || ['?', winner.carryInTotal];
         const basePts = winner.fo + winner.gr + winner.cl + winner.p - winner.carryInTotal;
         return `${winnerName}'s round was powered by carry-in — they banked ${winner.carryInTotal} carry-in points, including a massive ${biggestCarry} on hole ${biggestHole}. Their ${Math.max(basePts, 0)} base points were solid, but those bonus points were the difference between a good round and a legendary one.`;
     }
@@ -2176,19 +2183,19 @@ function selectRoundComment(roundStats) {
     
     // Clean card
     if (winner.holesScored >= 15) {
-        return `${winnerName} scored on ${winner.holesScored} of 18 holes with only ${winner.threePtrCount} three-strike holes. Three-strike holes are rare (only ${winner.threePtrPct}% of all holes), and ${winnerName} had ${winner.threePtrCount} of them!`;
+        return `${winnerName} scored on ${winner.holesScored} of 18 holes with only ${winner.threePtrCount} three-strike holes. Three-strike holes are rare (only ${threePtrPct}% of all holes), and ${winnerName} had ${winner.threePtrCount} of them!`;
     }
     
     // Putt heavy
     if (winner.p > winner.total * 0.4 && winner.p >= 6) {
-        const puCi = winner.holeDetails.filter(hd => hd.p > 0).reduce((s, hd) => s + (hd.ci_p || 0), 0);
+        const puCi = (winner.holeDetails || []).filter(hd => hd.p > 0).reduce((s, hd) => s + (hd.ci_p || 0), 0);
         return `${winnerName}'s putting was on another level — ${winner.p} of their ${winner.total} points came from putts, including ${puCi} points from putt carry-in. They had ${winner.p} putts all round, setting up pressure on the competition... get it?`;
     }
     
     // FO heavy
     if ((winner.fo + winner.gr) > winner.total * 0.4 && (winner.fo + winner.gr) >= 6) {
-        const foCi = winner.holeDetails.filter(hd => hd.fo + hd.gr > 0).reduce((s, hd) => s + (hd.ci_fo || 0) + (hd.ci_gr || 0), 0);
-        return `The driving game was real for ${winnerName} — ${winner.fo + winner.gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${winner.fo + winner.gr} times out of ${winner.holeDetails.length} holes played, setting up the short game all round.`;
+        const foCi = (winner.holeDetails || []).filter(hd => hd.fo + hd.gr > 0).reduce((s, hd) => s + (hd.ci_fo || 0) + (hd.ci_gr || 0), 0);
+        return `The driving game was real for ${winnerName} — ${winner.fo + winner.gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${winner.fo + winner.gr} times out of ${winner.holeDetails?.length || winner.numHoles || 18} holes played, setting up the short game all round.`;
     }
     
     // All around
@@ -2261,7 +2268,7 @@ function renderWeekInReview() {
     const openingLine = OPENING_LINES[openingIdx];
     
     let html = `<div style="margin-bottom:10px;">
-        <h2 style="color:#60a5fa;margin-bottom:4px;">BBB WEEK IN REVIEW — ${weekKey}</h2>
+        <h2 style="color:#60a5fa;margin-bottom:4px;">BBB ROUND REPORT — ${weekKey}</h2>
         <span style="color:#64748b;font-size:13px;">${formatDateFull(monday)} – ${formatDateFull(sunday)}</span>
     </div>`;
     
