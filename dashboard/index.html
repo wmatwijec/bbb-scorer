@@ -804,8 +804,12 @@ playerDetails[name] = (round._playerData && round._playerData[name] && round._pl
                   ? round._playerData[name].holeDetails
                   : [];
          });
-         console.log('round _playerData:', round._playerData ? Object.fromEntries(Object.entries(round._playerData).map(([k,v]) => [k, {numHoles: v?.numHoles, hdLen: v?.holeDetails?.length}])) : null);
-         console.log('round.scores keys:', round.scores ? Object.keys(round.scores) : null, 'lengths:', round.scores ? Object.fromEntries(Object.entries(round.scores).map(([k,v]) => [k, Array.isArray(v) ? v.length : 'no'])) : null);
+         if (round._playerData) {
+             Object.entries(round._playerData).forEach(([k,v]) => console.log(`  _playerData[${k}]: numHoles=${v?.numHoles} hdLen=${v?.holeDetails?.length}`));
+         }
+         if (round.scores) {
+             Object.entries(round.scores).forEach(([k,v]) => console.log(`  scores[${k}]: len=${Array.isArray(v) ? v.length : 'no'}`));
+         }
 
          // Build table: Player | H1..H9 | | | H10..H18 | Total = 21 columns
          html += `<div style="overflow-x:auto;">`;
