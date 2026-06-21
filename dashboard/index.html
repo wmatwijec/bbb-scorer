@@ -1117,14 +1117,14 @@
            // ── Dot Plots: Histogram This Round vs All Rounds ──
             html += `<div style="margin-top:14px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
             html += `<div style="color:#94a3b8;font-size:12px;font-weight:bold;margin-bottom:4px;">Performance This Round vs All Rounds</div>`;
-            html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">Stacked dots show frequency of each score across all rounds. Bright dot = current round value. Green = above median, Red = below median.</div>`;
+            html += `<div style="color:#64748b;font-size:10px;margin-bottom:10px;">One row per player. Each mini-histogram shows score distribution across all rounds. Bright dot = current round. Green = above median, Red = below.</div>`;
 
             const categories = [
-                { key: 'fo', label: 'FO', valuesArr: [], thisVal: 0 },
-                { key: 'gr', label: 'GR', valuesArr: [], thisVal: 0 },
-                { key: 'cl', label: 'CL', valuesArr: [], thisVal: 0 },
-                { key: 'p', label: 'P', valuesArr: [], thisVal: 0 },
-                { key: 'total', label: 'Total', valuesArr: [], thisVal: 0 }
+                { key: 'fo', label: 'FO' },
+                { key: 'gr', label: 'GR' },
+                { key: 'cl', label: 'CL' },
+                { key: 'p', label: 'P' },
+                { key: 'total', label: 'Total' }
             ];
 
             const curRound = filteredRounds[roundIdx];
@@ -1140,55 +1140,64 @@
                 }
             });
 
+            // Build per-player per-category histogram data
+            const playerHistData = {};
             players.forEach(name => {
                 const st = seasonStats[name];
                 if (!st) return;
                 const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
+                playerHistData[name] = {};
+                const thisV = thisRoundValsMap[name];
+                const medians = {};
+                categories.forEach(cat => {
+                    const valuesArr = cat.key === 'total' ? st.pointsPerRound : st[cat.key + 'PerRound'];
+                    if (!valuesArr) return;
+                    medians[cat.key] = median(valuesArr);
+                    // Build histogram: count of each value 0..18
+                    const hist = new Array(19).fill(0);
+                    valuesArr.forEach(v => {
+                        const idx = Math.max(0, Math.min(18, Math.round(v)));
+                        hist[idx]++;
+                    });
+                    playerHistData[name][cat.key] = { hist, thisVal: thisV[cat.key], median: medians[cat.key] };
+                });
+            });
 
-                // Build histogram arrays for this player
-                categories[0].valuesArr = st.foPerRound.slice();
-                categories[1].valuesArr = st.grPerRound.slice();
-                categories[2].valuesArr = st.clPerRound.slice();
-                categories[3].valuesArr = st.pPerRound.slice();
-                categories[4].valuesArr = st.pointsPerRound.slice();
+            // Render one row per player
+            players.forEach(name => {
+                if (!playerHistData[name]) return;
+                const color = PLAYER_COLORS[players.indexOf(name) % PLAYER_COLORS.length];
 
-                // Current round values
-                const tv = thisRoundValsMap[name];
-                categories[0].thisVal = tv.fo;
-                categories[1].thisVal = tv.gr;
-                categories[2].thisVal = tv.cl;
-                categories[3].thisVal = tv.p;
-                categories[4].thisVal = tv.total;
-
-                // Compute medians for highlighting
-                const medians = categories.map(c => median(c.valuesArr));
-
-                // Build per-category histogram: count of each value 0..18
-                const maxBins = 19;
                 html += `<div style="margin-bottom:10px;">`;
-                html += `<div style="color:${color};font-size:12px;font-weight:bold;margin-bottom:4px;">${name}</div>`;
+                html += `<div style="color:${color};font-size:12px;font-weight:bold;margin-bottom:3px;">${name}</div>`;
 
                 categories.forEach((cat, ci) => {
-                    const counts = new Array(maxBins).fill(0);
-                    cat.valuesArr.forEach(v => {
-                        const idx = Math.max(0, Math.min(maxBins - 1, Math.round(v)));
-                        counts[idx]++;
-                    });
-                    const medVal = medians[ci];
-                    const thisV = cat.thisVal;
-                    const dotColor = thisV > medVal ? '#22c55e' : (thisV < medVal ? '#ef4444' : '#94a3b8');
+                    const hd = playerHistData[name][cat.key];
+                    if (!hd) return;
+                    const { hist, thisVal, median: medVal } = hd;
+                    const dotColor = thisVal > medVal ? '#22c55e' : (thisVal < medVal ? '#ef4444' : '#94a3b8');
 
-                    html += `<div style="display:flex;align-items:flex-end;gap:1px;margin-bottom:2px;">`;
+                    html += `<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px;">`;
                     // Category label
-                    html += `<span style="color:${color};font-size:10px;font-weight:bold;min-width:24px;text-align:right;margin-right:4px;padding-bottom:1px;">${cat.label}</span>`;
+                    html += `<span style="color:#94a3b8;font-size:10px;font-weight:bold;min-width:18px;text-align:right;">${cat.label}</span>`;
+                    // Histogram: 19 columns (0..18)
+                    html += `<div style="display:flex;align-items:flex-end;gap:1px;">`;
+                    for (let v = 0; v <= 18; v++) {
+                        const count = hist[v];
+                        const maxDots = Math.min(count, 8);
+                        const colHeight = maxDots + (count > 8 ? 1 : 0);
 
-                    for (let v = 0; v < maxBins; v++) {
-                        const count = counts[v];
-                        // Stack dots vertically for this value
                         let dotsHtml = '';
-                        for (let d = 0; d < Math.min(count, 8); d++) {
-                            const isThisRound = (v === thisV && d === count - 1);
+                        for (let d = 0; d < maxDots; d++) {
+                            const isTop = (d === maxDots - 1);
+                            const isThisRound = (v === thisVal && count === 1);
                             if (isThisRound) {
+                                dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};box-shadow:0 0 4px ${dotColor}80;flex-shrink:0;"></div>`;
+                            } else if (count === 1) {
+                                // Single dot but not this round's value — shouldn't happen but safe fallback
+                                dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.3;flex-shrink:0;"></div>`;
+                            } else if (isTop && v === thisVal) {
+                                // Top dot at the current round value
                                 dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:${dotColor};box-shadow:0 0 4px ${dotColor}80;flex-shrink:0;"></div>`;
                             } else {
                                 dotsHtml += `<div style="width:10px;height:10px;border-radius:50%;background:#334155;opacity:0.3;flex-shrink:0;"></div>`;
@@ -1197,14 +1206,12 @@
                         if (count > 8) {
                             dotsHtml += `<div style="width:10px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#64748b;flex-shrink:0;">+${count - 8}</div>`;
                         }
-                        // Height of this column (in dot rows)
-                        const colHeight = Math.min(count, 8) + (count > 8 ? 1 : 0);
+
                         html += `<div style="display:flex;flex-direction:column-reverse;align-items:center;padding:0 1px;height:${Math.max(colHeight * 12, 12)}px;">`;
                         html += dotsHtml;
                         html += `</div>`;
                     }
-
-                    html += `</div>`;
+                    html += `</div></div>`;
                 });
 
                 html += `</div>`;
