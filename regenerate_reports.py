@@ -491,7 +491,7 @@ def main():
         payload = json.dumps(report).encode()
         headers = {"Content-Type": "application/json"}
         if auth_key:
-            headers["X-Auth-Key"] = auth_key
+            headers["Authorization"] = f"Bearer {auth_key}"
 
         req = Request(
             f"{BACKEND}/regenerate-reports",
