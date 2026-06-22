@@ -198,15 +198,20 @@ def compute_round_stats(round_data):
 
 # ── LLM prose generation ──────────────────────────────────────────────
 
-def call_llm(prompt):
+def call_llm(prompt, system_msg=None):
+    messages = []
+    if system_msg:
+        messages.append({"role": "system", "content": system_msg})
+    messages.append({"role": "user", "content": prompt})
     try:
         req = Request(
             LLM_SERVER,
             data=json.dumps({
                 "model": "qwen35b",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3,
-                "top_p": 0.9
+                "messages": messages,
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 500
             }).encode(),
             headers={"Content-Type": "application/json"}
         )
@@ -218,59 +223,65 @@ def call_llm(prompt):
 
 
 def build_round_prompt(round_stats):
+    """Build prompt with ONLY qualitative info — no scores, no numbers.
+    The LLM must not guess any numbers."""
     course = round_stats.get("course_name", "Unknown")
-    player_items = list(round_stats["player_data"].items())
-    sorted_players = sorted(player_items, key=lambda x: x[1]["total"], reverse=True)
-
-    max_total = max(d["total"] for _, d in sorted_players)
-    summary_lines = []
-    for name, data in sorted_players:
-        marker = " (WON)" if data["total"] == max_total else ""
-        summary_lines.append(
-            f"  {name}: {data['total']} pts (FO:{data['fo']} CL:{data['cl']} PU:{data['p']}, "
-            f"{data['holes_scored']} holes){marker}"
-        )
+    sorted_players = sorted(
+        round_stats["player_data"].items(),
+        key=lambda x: x[1]["total"],
+        reverse=True
+    )
 
     winner = sorted_players[0]
-    runner_up = sorted_players[1] if len(sorted_players) > 1 else sorted_players[-1]
-    margin = winner[1]["total"] - runner_up[1]["total"]
+    winner_name = winner[0]
+    winner_data = winner[1]
 
-    styles = []
-    if winner[1]["fo"] >= 6:
-        styles.append("dominant driving game")
-    if winner[1]["p"] >= 6:
-        styles.append("putting clinic")
-    if winner[1]["holes_scored"] >= 15:
-        styles.append("near-clean round")
+    runner_up = sorted_players[1] if len(sorted_players) > 1 else sorted_players[-1]
+    runner_up_name = runner_up[0]
+    margin = winner_data["total"] - runner_up[1]["total"]
+
+    # Build qualitative descriptions only
+    strengths = []
+    for name, data in sorted_players:
+        parts = []
+        if data["fo"] >= 6:
+            parts.append("dominant driving")
+        if data["cl"] >= 6:
+            parts.append("strong on the greens")
+        if data["p"] >= 6:
+            parts.append("excellent putting")
+        if data["holes_scored"] >= 15:
+            parts.append("near-clean round")
+        if parts:
+            strengths.append(f"{name}: {', '.join(parts)}")
 
     prompt = (
         "You are a sports broadcaster for a weekly golf league called Bingo Bango Bongo. "
         "Write a single paragraph (3-5 sentences) analyzing ONE completed round. "
         "Be conversational, engaging, never mean. Use player names naturally. "
         "Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n"
-        "CRITICAL: You are given exact scores below. YOU MUST NOT invent, estimate, or guess any scores. "
-        "Every number you mention must match exactly what is provided. "
-        "If you are unsure about a detail, describe it qualitatively instead of using a number. "
-        "NEVER write a score that differs from the provided data.\n\n"
+        "CRITICAL RULES:\n"
+        "1. NEVER include any player scores or point totals in your paragraph.\n"
+        "2. NEVER mention specific numbers (no point counts, no hole counts).\n"
+        "3. Use qualitative descriptions: 'won comfortably', 'narrowly', 'by a point',\n"
+        "   'dominated', 'strong putting', 'clutch performance'.\n"
+        "4. Mentioning a wrong number is unacceptable. Better to say nothing than guess.\n\n"
         f"ROUND: {course}\n\n"
-        "FINAL SCORES:\n" + "\n".join(summary_lines) + "\n\n"
-        "CONTEXT: This was a complete 18-hole round (54 total points available).\n\n"
-        f"WINNER: {winner[0]} with {winner[1]['total']} points\n"
-        f"RUNNER-UP: {runner_up[0]} with {runner_up[1]['total']} points\n"
+        f"WON BY: {winner_name} over {runner_up_name} (margin: {margin} points)\n"
     )
 
     if margin >= 8:
-        prompt += f"The winner dominated by {margin} points — a statement round.\n\n"
+        prompt += "The winner dominated the field — a statement round.\n\n"
     elif margin <= 1:
-        prompt += f"A nail-biter — decided by just {margin} point{'s' if margin > 1 else ''}.\n\n"
+        prompt += "A nail-biter — decided by just one point.\n\n"
     else:
         prompt += f"The winner held off a solid challenge, winning by {margin} points.\n\n"
 
-    if styles:
-        prompt += f"WHAT MADE IT INTERESTING: " + ", ".join(styles) + ".\n\n"
+    if strengths:
+        prompt += "PLAYER STRENGTHS:\n" + "\n".join(strengths) + "\n\n"
 
     prompt += (
-        "ANALYSIS: Describe the story of this round. Who built momentum early? "
+        "Describe the story of this round. Who built momentum early? "
         "Was there a late rally? Any player stood out with a particular strength? "
         "Make it feel like a real golf match with personality. "
         "3-5 sentences. Conversational sports broadcaster tone."
@@ -280,9 +291,13 @@ def build_round_prompt(round_stats):
 
 def generate_round_prose(round_data, round_stats):
     """Generate LLM prose for a round, with fallback."""
-    prose = call_llm(build_round_prompt(round_stats))
-    if prose:
-        return prose
+    system_msg = (
+        "You are writing a golf round analysis. "
+        "NEVER include any player scores or point totals. "
+        "Use only qualitative descriptions."
+    )
+    prose = call_llm(build_round_prompt(round_stats), system_msg)
+    return prose or "Analysis unavailable"
 
     # Fallback: template-based prose
     sorted_players = sorted(
