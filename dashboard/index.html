@@ -2145,15 +2145,21 @@ function selectRoundComment(roundStats) {
     const playerItems = Object.entries(roundStats.playerData);
     if (!playerItems.length || playerItems.length < 2) return null;
     
-    const sortedPlayers = playerItems.sort((a, b) => b[1].total - a[1].total);
+    // JS field names: totalPts, foPts, grPts, clPts, pPts
+    const sortedPlayers = playerItems.sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
     const [winnerName, winner] = sortedPlayers[0];
     const [runnerUpName, runnerUp] = sortedPlayers[1];
     const course = roundStats.courseName || '';
-    const margin = winner.total - runnerUp.total;
+    const total = winner.totalPts || 0;
+    const margin = total - (runnerUp.totalPts || 0);
+    const fo = winner.foPts || 0;
+    const gr = winner.grPts || 0;
+    const cl = winner.clPts || 0;
+    const pu = winner.pPts || 0;
     const threePtrPct = winner.threePtrPct || ((winner.threePtrCount || 0) / (winner.numHoles || 18) * 100).toFixed(1);
     
     // High carry-in percentage
-    if (winner.carryInTotal > winner.total * 0.25 && winner.total > 0) {
+    if (winner.carryInTotal > total * 0.25 && total > 0) {
         const ciDetails = [];
         (winner.holeDetails || []).forEach(hd => {
             const ci = (hd.ci_fo || 0) + (hd.ci_gr || 0) + (hd.ci_cl || 0) + (hd.ci_p || 0);
@@ -2161,23 +2167,23 @@ function selectRoundComment(roundStats) {
         });
         ciDetails.sort((a, b) => b[1] - a[1]);
         const [biggestHole, biggestCarry] = ciDetails[0] || ['?', winner.carryInTotal];
-        const basePts = winner.fo + winner.gr + winner.cl + winner.p - winner.carryInTotal;
+        const basePts = fo + gr + cl + pu - winner.carryInTotal;
         return `${winnerName}'s round was powered by carry-in — they banked ${winner.carryInTotal} carry-in points, including a massive ${biggestCarry} on hole ${biggestHole}. Their ${Math.max(basePts, 0)} base points were solid, but those bonus points were the difference between a good round and a legendary one.`;
     }
     
     // Dominant win
     if (margin >= 10) {
-        return `${winnerName} put on a clinic with ${winner.total} points, outscoring ${runnerUpName} by ${margin} points. They won ${winner.fo} first-ons, ${winner.cl} closests, and ${winner.p} putts — a complete round from tee to green.`;
+        return `${winnerName} put on a clinic with ${total} points, outscoring ${runnerUpName} by ${margin} points. They won ${fo} first-ons, ${cl} closests, and ${pu} putts — a complete round from tee to green.`;
     }
     
     // Close finish
-    if (margin <= 1 && winner.total > 0) {
+    if (margin <= 1 && total > 0) {
         const pl = margin > 1 ? 's' : '';
-        return `A thriller at ${course}! ${winnerName} edged ${runnerUpName} by just ${margin} point${pl} with ${winner.total} to ${runnerUp.total}. Both players had ${winner.holesScored} holes scored — this one came down to the final putt.`;
+        return `A thriller at ${course}! ${winnerName} edged ${runnerUpName} by just ${margin} point${pl} with ${total} to ${runnerUp.totalPts || 0}. Both players had ${winner.holesScored} holes scored — this one came down to the final putt.`;
     }
     
     // Blank round
-    if (winner.total === 0) {
+    if (total === 0) {
         return `'Twas a blank round at ${course} — nobody managed to score a single point. Sometimes the golf course just says no.`;
     }
     
@@ -2187,19 +2193,19 @@ function selectRoundComment(roundStats) {
     }
     
     // Putt heavy
-    if (winner.p > winner.total * 0.4 && winner.p >= 6) {
+    if (pu > total * 0.4 && pu >= 6) {
         const puCi = (winner.holeDetails || []).filter(hd => hd.p > 0).reduce((s, hd) => s + (hd.ci_p || 0), 0);
-        return `${winnerName}'s putting was on another level — ${winner.p} of their ${winner.total} points came from putts, including ${puCi} points from putt carry-in. They had ${winner.p} putts all round, setting up pressure on the competition... get it?`;
+        return `${winnerName}'s putting was on another level — ${pu} of their ${total} points came from putts, including ${puCi} points from putt carry-in. They had ${pu} putts all round, setting up pressure on the competition... get it?`;
     }
     
     // FO heavy
-    if ((winner.fo + winner.gr) > winner.total * 0.4 && (winner.fo + winner.gr) >= 6) {
+    if ((fo + gr) > total * 0.4 && (fo + gr) >= 6) {
         const foCi = (winner.holeDetails || []).filter(hd => hd.fo + hd.gr > 0).reduce((s, hd) => s + (hd.ci_fo || 0) + (hd.ci_gr || 0), 0);
-        return `The driving game was real for ${winnerName} — ${winner.fo + winner.gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${winner.fo + winner.gr} times out of ${winner.holeDetails?.length || winner.numHoles || 18} holes played, setting up the short game all round.`;
+        return `The driving game was real for ${winnerName} — ${fo + gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${fo + gr} times out of ${winner.holeDetails?.length || winner.numHoles || 18} holes played, setting up the short game all round.`;
     }
     
     // All around
-    return `A solid all-around round from ${winnerName} at ${course} — ${winner.total} points with ${winner.holesScored} holes scored. They picked up points all over: ${winner.fo} first-ons, ${winner.cl} closests, and ${winner.p} putts. A well-rounded performance.`;
+    return `A solid all-around round from ${winnerName} at ${course} — ${total} points with ${winner.holesScored} holes scored. They picked up points all over: ${fo} first-ons, ${cl} closests, and ${pu} putts. A well-rounded performance.`;
 }
 
 function initWeeklyView() {
@@ -2278,9 +2284,9 @@ function renderWeekInReview() {
         <div style="color:#94a3b8;line-height:1.6;">${openingLine}<br>`;
     html += `${weekRounds.length} completed round${weekRounds.length !== 1 ? 's' : ''} across ${courses.size} course${courses.size !== 1 ? 'es' : ''}: ${Array.from(courses).sort().join(', ')}.<br>`;
     
-    const topPlayer = Object.entries(weekBest).sort((a, b) => b[1].total - a[1].total)[0];
+    const topPlayer = Object.entries(weekBest).sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0))[0];
     if (topPlayer) {
-        html += `${topPlayer[0]} led the way with ${topPlayer[1].total} points.`;
+        html += `${topPlayer[0]} led the way with ${topPlayer[1].totalPts || 0} points.`;
     }
     html += `</div></div>`;
     
@@ -2296,8 +2302,8 @@ function renderWeekInReview() {
         const course = r.courseName || 'Unknown';
         
         // Scoreboard
-        const playerScores = Object.entries(r._playerData || {}).sort((a, b) => b[1].total - a[1].total);
-        const scoreStr = playerScores.map(([name, data]) => `${name} ${data.total}`).join(' | ');
+        const playerScores = Object.entries(r._playerData || {}).sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
+        const scoreStr = playerScores.map(([name, data]) => `${name} ${data.totalPts ?? 0}`).join(' | ');
         
         // Round comment
         const roundStats = {
@@ -2332,7 +2338,7 @@ function renderWeekInReview() {
         .filter(([name, data]) => {
             const record = ALL_TIME_BEST.find(r => r[0] === name);
             if (!record) return false;
-            return record[1] - data.total <= 5 && data.total > 0;
+            return record[1] - (data.totalPts || 0) <= 5 && (data.totalPts || 0) > 0;
         });
     
     if (contenders.length > 0) {
@@ -2340,7 +2346,7 @@ function renderWeekInReview() {
         contenders.forEach(([name, data]) => {
             const record = ALL_TIME_BEST.find(r => r[0] === name);
             if (!record) return;
-            html += `<span style="display:inline-block;min-width:80px;color:#e2e8f0;">${name} ${data.total} pts</span> — close to the big leagues!<br>`;
+            html += `<span style="display:inline-block;min-width:80px;color:#e2e8f0;">${name} ${data.totalPts || 0} pts</span> — close to the big leagues!<br>`;
         });
         html += `</div>`;
     }
@@ -2350,19 +2356,19 @@ function renderWeekInReview() {
     // Individual Record Chase
     html += `<h3>INDIVIDUAL RECORD CHASE</h3><div class="card" style="padding:15px;">`;
     
-    const sortedByName = Object.entries(weekBest).sort((a, b) => b[1].total - a[1].total);
+    const sortedByName = Object.entries(weekBest).sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
     sortedByName.forEach(([name, data]) => {
-        if (data.total === 0) return;
+        if ((data.totalPts || 0) === 0) return;
         const record = ALL_TIME_BEST.find(r => r[0] === name);
         if (record) {
-            const diff = record[1] - data.total;
+            const diff = record[1] - (data.totalPts || 0);
             if (diff <= 5) {
-                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. Had a ${data.total} this week. ${diff} away!</div>`;
+                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. Had a ${data.totalPts} this week. ${diff} away!</div>`;
             } else {
-                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. This week: ${data.total}. Room to grow.</div>`;
+                html += `<div style="color:#e2e8f0;font-size:13px;">${name}: Best ever ${record[1]}. This week: ${data.totalPts}. Room to grow.</div>`;
             }
         } else {
-            html += `<div style="color:#e2e8f0;font-size:13px;">${name}: First time on the radar with ${data.total}.</div>`;
+            html += `<div style="color:#e2e8f0;font-size:13px;">${name}: First time on the radar with ${data.totalPts || 0}.</div>`;
         }
     });
     
