@@ -258,59 +258,48 @@
     }
 
     // ── Report helpers ──
-    function renderReportSections(prose) {
+   function renderReportSections(prose) {
         // Parse the three-section format: OVERVIEW / FRONT NINE / BACK NINE
-        const knownHeaders = ['OVERVIEW', 'FRONT NINE', 'BACK NINE'];
+        // Use word-boundary anchors to prevent BACK NINE matching inside FRONT NINE
+        // Split by searching for each header independently
+        const headers = ['OVERVIEW', 'FRONT NINE', 'BACK NINE'];
+        const positions = [];
         
-        // Split on any of the headers (case-insensitive, with optional newline before)
-        const splitRegex = /\n?(OVERVIEW|FRONT NINE|BACK NINE)\s+/gi;
-        const parts = [];
-        let lastIndex = 0;
-        let match;
-        
-        while ((match = splitRegex.exec(prose)) !== null) {
-            // Text before this header (if any) — skip for first header
-            if (lastIndex < match.index && parts.length > 0) {
-                // leftover text from previous section — ignore
+        for (const h of headers) {
+            const idx = prose.search(new RegExp('\\b' + h + '\\b', 'i'));
+            if (idx >= 0) {
+                positions.push({ title: h, idx });
             }
-            const title = match[1].toUpperCase();
-            const bodyStart = splitRegex.lastIndex;
-            parts.push({ title, bodyStart, endIndex: match.index });
-            lastIndex = bodyStart;
         }
         
-        // The last section body goes to the end
-        if (parts.length > 0) {
-            parts[parts.length - 1].bodyEnd = prose.length;
+        // Sort by position
+        positions.sort((a, b) => a.idx - b.idx);
+        
+        if (positions.length < 2) {
+            return `<div class="report-section-body">${prose.replace(/\n/g, ' ')}</div>`;
         }
         
         // Extract bodies
-        const sections = parts.map((p, i) => {
-            let body;
-            if (i === 0 && p.bodyStart === 0) {
-                // First section: header was at position 0, body starts right after
-                body = prose.slice(p.bodyStart).trim();
-                // Cut off at next header if exists
-                if (i + 1 < parts.length) {
-                    const nextIdx = prose.toUpperCase().indexOf(parts[i+1].title, p.bodyStart);
-                    if (nextIdx > 0) body = body.slice(0, nextIdx - p.bodyStart).trim();
+        const sections = positions.map((p, i) => {
+            // Find the header text and what comes after it (skip the header word itself)
+            const headerText = prose.slice(p.idx).match(new RegExp('^\\s*' + p.title + '\\s*', 'i'));
+            const bodyStart = p.idx + (headerText ? headerText[0].length : p.title.length);
+            let body = prose.slice(bodyStart).trim();
+            
+            // Cut off at the next section's header
+            if (i + 1 < positions.length) {
+                const nextIdx = prose.search(new RegExp('\\b' + positions[i+1].title + '\\b', 'i'));
+                if (nextIdx > bodyStart) {
+                    body = prose.slice(bodyStart, nextIdx).trim();
                 }
-            } else {
-                body = prose.slice(p.bodyStart, p.bodyEnd).trim();
             }
             return { title: p.title, body };
         });
         
-        // If we found 2+ sections, render them
-        if (sections.length >= 2) {
-            return sections.map(s =>
-                `<div class="report-section"><div class="report-section-title">${s.title}</div>` +
-                `<div class="report-section-body">${s.body}</div></div>`
-            ).join('');
-        }
-
-        // Fallback: single block
-        return `<div class="report-section-body">${prose.replace(/\n/g, ' ')}</div>`;
+        return sections.map(s =>
+            `<div class="report-section"><div class="report-section-title">${s.title}</div>` +
+            `<div class="report-section-body">${s.body}</div></div>`
+        ).join('');
     }
 
     async function loadReportWeeks() {
