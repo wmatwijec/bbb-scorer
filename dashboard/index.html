@@ -2309,11 +2309,22 @@ function renderWeekInReview() {
     
     const container = document.getElementById('weekly-content');
     
-    // Filter rounds for this week
+    // Filter rounds for this week, deduplicating by matchId (keep latest)
     const weekRounds = allRounds.filter(r => {
         const rd = new Date(r.date.slice(0, 10) + 'T12:00:00');
         return rd >= monday && rd <= sunday;
     });
+    const matchIdMap = new Map();
+    weekRounds.forEach(r => {
+        const mid = r.matchId;
+        if (mid) {
+            const existing = matchIdMap.get(mid);
+            if (!existing || new Date(r.date) > new Date(existing.date)) {
+                matchIdMap.set(mid, r);
+            }
+        }
+    });
+    const dedupedRounds = Array.from(matchIdMap.values());
     
     // Compute stats
     const courses = new Set(weekRounds.map(r => r.courseName));
@@ -2346,7 +2357,7 @@ function renderWeekInReview() {
     html += `<div class="card">
         <h3>THE WORD ON THE COURSE</h3>
         <div style="color:#94a3b8;line-height:1.6;">${openingLine}<br>`;
-    html += `${weekRounds.length} completed round${weekRounds.length !== 1 ? 's' : ''} across ${courses.size} course${courses.size !== 1 ? 'es' : ''}: ${Array.from(courses).sort().join(', ')}.<br>`;
+    html += `${dedupedRounds.length} completed round${dedupedRounds.length !== 1 ? 's' : ''} across ${courses.size} course${courses.size !== 1 ? 'es' : ''}: ${Array.from(courses).sort().join(', ')}.<br>`;
     
     const topPlayer = Object.entries(weekBest).sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0))[0];
     if (topPlayer) {
@@ -2357,7 +2368,7 @@ function renderWeekInReview() {
     // Round-by-Round
     html += `<h3>ROUND-BY-ROUND RECAP</h3><div class="card" style="padding:15px;" id="round-recap-list">`;
     
-    const sortedWeekRounds = [...weekRounds].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedWeekRounds = [...dedupedRounds].sort((a, b) => new Date(a.date) - new Date(b.date));
     
     // Build HTML placeholders, then fetch LLM comments
     sortedWeekRounds.forEach(r => {
