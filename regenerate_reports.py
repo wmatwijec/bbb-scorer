@@ -205,7 +205,8 @@ def call_llm(prompt):
             data=json.dumps({
                 "model": "qwen35b",
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.8
+                "temperature": 0.3,
+                "top_p": 0.9
             }).encode(),
             headers={"Content-Type": "application/json"}
         )
@@ -247,6 +248,10 @@ def build_round_prompt(round_stats):
         "Write a single paragraph (3-5 sentences) analyzing ONE completed round. "
         "Be conversational, engaging, never mean. Use player names naturally. "
         "Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n"
+        "CRITICAL: You are given exact scores below. YOU MUST NOT invent, estimate, or guess any scores. "
+        "Every number you mention must match exactly what is provided. "
+        "If you are unsure about a detail, describe it qualitatively instead of using a number. "
+        "NEVER write a score that differs from the provided data.\n\n"
         f"ROUND: {course}\n\n"
         "FINAL SCORES:\n" + "\n".join(summary_lines) + "\n\n"
         "CONTEXT: This was a complete 18-hole round (54 total points available).\n\n"
