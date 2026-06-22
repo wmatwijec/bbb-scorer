@@ -588,17 +588,14 @@ function renderReportSections(prose) {
                 const backupData = await backupRes.json();
                 if (backupData.backups && backupData.backups.length > 0) {
                     const latestBackup = backupData.backups[0];
-                    const dlRes = await fetch(`${BACKEND}/backup/${latestBackup}`);
-                    if (dlRes.ok) {
-                        const blob = await dlRes.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = latestBackup;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        console.log(`Backup downloaded: ${latestBackup}`);
-                    }
+                    const a = document.createElement('a');
+                    a.href = `${BACKEND}/backup/${latestBackup}`;
+                    a.download = latestBackup;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    console.log(`Backup downloaded: ${latestBackup}`);
                 }
             }
         } catch(e) {
