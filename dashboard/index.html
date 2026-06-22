@@ -2287,7 +2287,7 @@ function renderWeekInReview() {
     weekRounds.forEach(r => {
         weekDates.add(r.date.slice(0, 10));
         Object.entries(r._playerData || {}).forEach(([name, data]) => {
-            if (!weekBest[name] || data.total > weekBest[name].total) {
+            if (!weekBest[name] || data.totalPts > (weekBest[name].totalPts || 0)) {
                 weekBest[name] = data;
                 weekBest[name]._date = r.date;
                 weekBest[name]._course = r.courseName;
