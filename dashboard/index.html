@@ -212,6 +212,7 @@
     let currentSort = 'median_desc';
     let sortState = {};
     let coursePars = {};
+    let availableReportWeeks = [];
 
     // ── Median helper ──
     function median(arr) {
@@ -234,6 +235,38 @@
         if (val === undefined) return null;
         if (typeof val === 'object') return val;
         // Old format: return null (can't break down old data into categories)
+        return null;
+    }
+
+    // ── Report helpers ──
+    async function loadReportWeeks() {
+        try {
+            const res = await fetch(`${BACKEND}/report-weeks`);
+            if (!res.ok) { availableReportWeeks = []; return; }
+            const data = await res.json();
+            availableReportWeeks = data.weeks || [];
+        } catch (e) {
+            console.log('Could not load report weeks:', e);
+            availableReportWeeks = [];
+        }
+    }
+
+    function getProseForRound(round, weekKey) {
+        // Check if we have cached prose for this round from a previous fetch
+        if (round._cachedProse) return round._cachedProse;
+        return null;
+    }
+
+    function matchProseEntry(round, proseEntries) {
+        const dateKey = round.date.slice(0, 10);
+        const course = round.courseName || 'Unknown';
+        const playerKeys = (round.players || []).filter(p => p.name && !p.name.toLowerCase().includes('guest'))
+            .map(p => p.name).sort().join(',');
+        for (const entry of proseEntries) {
+            if (entry.roundDate === dateKey && entry.players === playerKeys) {
+                return entry;
+            }
+        }
         return null;
     }
 
@@ -439,9 +472,7 @@
         const statusEl = document.getElementById('status');
         statusEl.textContent = 'Fetching season data...';
         statusEl.className = 'status';
-        console.log('>>> loadData START');
-
-        try {
+         try {
             const res = await fetch(`${BACKEND}/rounds`);
             if (!res.ok) throw new Error(`Backend error: ${res.status}`);
             const data = await res.json();
@@ -496,8 +527,7 @@
                    coursesCSV.trim().split('\n').forEach(line => {
                         const cols = line.split(',');
                         const name = cols[0]?.trim();
-                        console.log('CSV line:', name, 'cols:', cols.length, 'values:', cols.slice(1,20));
-                        if (name && cols.length >= 19) {
+                      if (name && cols.length >= 19) {
                             const pars = [];
                             for (let i = 1; i <= 18; i++) {
                                 const par = parseInt(cols[i]);
@@ -508,7 +538,6 @@
                     });
                 }
  } catch(e) { console.warn('Could not load course pars:', e); }
-             console.log('Final coursePars:', coursePars);
 
             // Collect unique players (non-guest, non-excluded)
             const excludedPlayers = new Set(['Doug', 'Ryan']);
@@ -527,9 +556,7 @@
                 statusEl.className = 'status error';
                 return;
             }
-            console.log('  allRounds count:', allRounds.length, 'allPlayers:', allPlayers.length);
-
-            // Compute per-player per-round stats
+                    // Compute per-player per-round stats
             seasonStats = {};
             playerRoundData = {};
             allPlayers.forEach(name => {
@@ -554,8 +581,8 @@
              for (const round of allRounds) {
                  roundIndex++;
                 const result = computeRoundStats(round);
-                 round._playerData = result.playerData;
-                 if (roundIndex <= 3) console.log(`  round ${roundIndex}: ${round.date.slice(0,10)} ${round.courseName} players=${Object.keys(result.playerData).join(',')} totalPts=${Object.entries(result.playerData).map(([n,d])=>`${n}:${d.totalPts}`).join(',')}`);
+      round._playerData = result.playerData;
+
 
                 // Determine round winners
                 const playerScores = Object.entries(result.playerData)
@@ -747,10 +774,11 @@
                 playerCurrentStreaks[name] = { ...currentHoleStreaks };
             }
 
-          statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
+           statusEl.textContent = `Loaded ${allRounds.length} rounds • ${allPlayers.length} players`;
             allRoundDates = allRounds.map(r => r.date);
             renderLeaderboard();
             populatePlayerSelector();
+            loadReportWeeks();
 
         } catch (err) {
             console.error(err);
@@ -761,7 +789,6 @@
 
     // ── View switching ──
     function showView(view) {
-         console.log('showView called with:', view);
          document.getElementById('leaderboard-view').style.display = view === 'leaderboard' ? '' : 'none';
          document.getElementById('player-view').style.display = view === 'player' ? '' : 'none';
          document.getElementById('round-card-view').style.display = view === 'roundCard' ? '' : 'none';
@@ -771,7 +798,7 @@
          document.getElementById('btn-round').className = `btn btn-nav${view === 'roundCard' ? ' active' : ''}`;
          document.getElementById('btn-weekly').className = `btn btn-nav${view === 'weekly' ? ' active' : ''}`;
          if (view === 'leaderboard') renderLeaderboard();
-         if (view === 'roundCard') { console.log('about to call renderRoundCard, allRounds:', allRounds.length); renderRoundCard(); }
+         if (view === 'roundCard') { renderRoundCard(); }
          if (view === 'weekly') initWeeklyView();
      }
 
@@ -2238,40 +2265,38 @@ function callLLM(prompt) {
  }
 
 function initWeeklyView() {
-    console.log('>>> initWeeklyView START');
-    console.log('  allRounds count:', allRounds.length);
     const sel = document.getElementById('weekSelect');
-    if (sel.options.length > 0) { console.log('  already populated'); return; }
+    if (sel.options.length > 0) return;
     
-    // Build week list from round dates (most recent first)
-    const weekSet = new Set();
-    allRounds.forEach(r => {
-        const dateStr = r.date.slice(0, 10);
-        const year = getISOYear(dateStr);
-        const week = getISOWeekNumber(dateStr);
-        weekSet.add(getWeekKey(year, week));
-    });
+    // Use available report weeks from backend (only recent weeks with LLM prose)
+    // Fall back to all round weeks if no reports available
+    let weeks;
+    if (availableReportWeeks.length > 0) {
+        weeks = availableReportWeeks;
+    } else {
+        const weekSet = new Set();
+        allRounds.forEach(r => {
+            const dateStr = r.date.slice(0, 10);
+            const year = getISOYear(dateStr);
+            const week = getISOWeekNumber(dateStr);
+            weekSet.add(getWeekKey(year, week));
+        });
+        weeks = Array.from(weekSet).sort().reverse();
+    }
     
-    const weeks = Array.from(weekSet).sort().reverse();
-    console.log('  weeks found:', weeks.length, weeks.slice(0, 5));
     sel.innerHTML = weeks.map(w => `<option value="${w}">${w}</option>`).join('');
     sel.value = weeks[0] || '';
-    console.log('  selected week:', sel.value);
     renderWeekInReview();
 }
 
 function renderWeekInReview() {
-    console.log('>>> renderWeekInReview START');
-    console.log('  allRounds count:', allRounds.length);
     const sel = document.getElementById('weekSelect');
     const weekKey = sel.value;
-    console.log('  selected weekKey:', weekKey);
-    if (!weekKey) { console.log('  no weekKey, returning'); return; }
+    if (!weekKey) return;
     
     const [yearStr, wStr] = weekKey.split('-W');
     const year = parseInt(yearStr);
     const weekNum = parseInt(wStr);
-    console.log('  year:', year, 'weekNum:', weekNum);
     
     // Find the Monday of that ISO week
     const jan4 = new Date(year, 0, 4);
@@ -2281,18 +2306,14 @@ function renderWeekInReview() {
     monday.setDate(startOfWeek1.getDate() + (weekNum - 1) * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    console.log('  date range:', monday.toISOString(), 'to', sunday.toISOString());
     
     const container = document.getElementById('weekly-content');
-    console.log('  container exists:', !!container);
     
     // Filter rounds for this week
     const weekRounds = allRounds.filter(r => {
         const rd = new Date(r.date.slice(0, 10) + 'T12:00:00');
         return rd >= monday && rd <= sunday;
     });
-    console.log('  weekRounds count:', weekRounds.length);
-    weekRounds.forEach(r => console.log('    round:', r.date.slice(0,10), r.courseName, 'holes:', (r.finishedHoles||[]).length, 'scores:', Object.keys(r.scores||{}).join(','), '_playerData:', !!r._playerData));
     
     // Compute stats
     const courses = new Set(weekRounds.map(r => r.courseName));
@@ -2311,7 +2332,6 @@ function renderWeekInReview() {
             });
         }
     });
-    console.log('  weekBest keys:', Object.keys(weekBest));
     
     // Opening
     const openingIdx = (weekNum + Math.floor(year / 100)) % OPENING_LINES.length;
@@ -2454,25 +2474,53 @@ function renderWeekInReview() {
     
     container.innerHTML = html;
     
-    // Fetch LLM comments for complete rounds only
+    // Fetch stored prose from backend and fill in round comments
     const recapEl = document.getElementById('round-recap-list');
     if (recapEl) {
-        const entries = recapEl.querySelectorAll('.round-entry');
-        entries.forEach((entry, idx) => {
-            const r = sortedWeekRounds[idx];
-            if (!r || !entry.dataset.complete) return;
-            const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
-            
-            selectRoundComment(r, roundStats).then(comment => {
-                const commentDiv = entry.querySelector('.round-comment');
-                if (commentDiv) {
-                    commentDiv.textContent = comment ? `"${comment}"` : '—';
-                }
-            }).catch(() => {
-                const commentDiv = entry.querySelector('.round-comment');
-                if (commentDiv) commentDiv.textContent = '—';
+        fetch(`${BACKEND}/reports?week=${weekKey}`)
+            .then(r => r.ok ? r.json() : {})
+            .then(report => {
+                if (!report || !report.rounds) return;
+                const entries = recapEl.querySelectorAll('.round-entry');
+                entries.forEach((entry, idx) => {
+                    const r = sortedWeekRounds[idx];
+                    if (!r) return;
+                    
+                    const proseEntry = matchProseEntry(r, report.rounds);
+                    const commentDiv = entry.querySelector('.round-comment');
+                    if (commentDiv) {
+                        if (proseEntry && proseEntry.prose) {
+                            commentDiv.textContent = proseEntry.prose;
+                        } else if (entry.dataset.complete === 'false') {
+                            commentDiv.textContent = 'Round in progress';
+                        } else {
+                            // Fallback to inline prose generation
+                            const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
+                            selectRoundComment(r, roundStats).then(comment => {
+                                if (commentDiv) commentDiv.textContent = comment ? `"${comment}"` : '—';
+                            }).catch(() => {
+                                if (commentDiv) commentDiv.textContent = '—';
+                            });
+                        }
+                    }
+                });
+            })
+            .catch(() => {
+                // Fetch failed — use inline fallback for all rounds
+                const entries = recapEl.querySelectorAll('.round-entry');
+                entries.forEach((entry, idx) => {
+                    const r = sortedWeekRounds[idx];
+                    if (!r || !entry.dataset.complete) return;
+                    const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
+                    selectRoundComment(r, roundStats).then(comment => {
+                        const commentDiv = entry.querySelector('.round-comment');
+                        if (commentDiv) commentDiv.textContent = comment ? `"${comment}"` : '—';
+                    }).catch(() => {
+                        const commentDiv = entry.querySelector('.round-comment');
+                        if (commentDiv) commentDiv.textContent = '—';
+                    });
+                });
             });
-        });
     }
 }
 
