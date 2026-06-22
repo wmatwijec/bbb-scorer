@@ -567,7 +567,7 @@ function renderReportSections(prose) {
         statusEl.textContent = 'Fetching season data...';
         statusEl.className = 'status';
 
-        // Step 1: Backup + dedup rounds on backend
+        // Run dedup on backend (removes zero-hole and low-score partials)
         try {
             const cleanupRes = await fetch(`${BACKEND}/cleanup-rounds`, { method: 'POST' });
             if (cleanupRes.ok) {
@@ -579,27 +579,6 @@ function renderReportSections(prose) {
             }
         } catch(e) {
             console.warn('Cleanup failed:', e.message);
-        }
-
-        // Step 2: Download latest backup to PC
-        try {
-            const backupRes = await fetch(`${BACKEND}/backup`);
-            if (backupRes.ok) {
-                const backupData = await backupRes.json();
-                if (backupData.backups && backupData.backups.length > 0) {
-                    const latestBackup = backupData.backups[0];
-                    const a = document.createElement('a');
-                    a.href = `${BACKEND}/backup/${latestBackup}`;
-                    a.download = latestBackup;
-                    a.style.display = 'none';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    console.log(`Backup downloaded: ${latestBackup}`);
-                }
-            }
-        } catch(e) {
-            console.warn('Backup download failed:', e.message);
         }
 
          try {

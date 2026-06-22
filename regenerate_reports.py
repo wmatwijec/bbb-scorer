@@ -657,6 +657,26 @@ def main():
         print(f"  Report data saved to /tmp/bbb_reports_{week_key}.json for manual upload")
         Path(f"/tmp/bbb_reports_{week_key}.json").write_text(json.dumps(report, indent=2))
 
+    # Download latest backup from Render
+    print(f"Downloading latest rounds backup from {BACKEND}...")
+    try:
+        backup_resp = urlopen(f"{BACKEND}/backup", timeout=15)
+        backup_data = json.loads(backup_resp.read())
+        backups = backup_data.get("backups", [])
+        if backups:
+            latest = backups[0]
+            backup_url = f"{BACKEND}/backup/{latest}"
+            backup_data_raw = urlopen(backup_url, timeout=30).read()
+            backup_dir = Path("/home/wm/projects/bbb-scorer/rounds-backups")
+            backup_dir.mkdir(exist_ok=True)
+            backup_file = backup_dir / latest
+            backup_file.write_bytes(backup_data_raw)
+            print(f"  Backup saved: {backup_file} ({len(backup_data_raw)} bytes)")
+        else:
+            print("  No backups found on server.")
+    except Exception as e:
+        print(f"  Backup download failed: {e}")
+
     print("Done.")
 
 
