@@ -439,6 +439,7 @@
         const statusEl = document.getElementById('status');
         statusEl.textContent = 'Fetching season data...';
         statusEl.className = 'status';
+        console.log('>>> loadData START');
 
         try {
             const res = await fetch(`${BACKEND}/rounds`);
@@ -526,6 +527,7 @@
                 statusEl.className = 'status error';
                 return;
             }
+            console.log('  allRounds count:', allRounds.length, 'allPlayers:', allPlayers.length);
 
             // Compute per-player per-round stats
             seasonStats = {};
@@ -549,10 +551,11 @@
             });
 
            let roundIndex = 0;
-            for (const round of allRounds) {
-                roundIndex++;
-               const result = computeRoundStats(round);
-                round._playerData = result.playerData;
+             for (const round of allRounds) {
+                 roundIndex++;
+                const result = computeRoundStats(round);
+                 round._playerData = result.playerData;
+                 if (roundIndex <= 3) console.log(`  round ${roundIndex}: ${round.date.slice(0,10)} ${round.courseName} players=${Object.keys(result.playerData).join(',')} totalPts=${Object.entries(result.playerData).map(([n,d])=>`${n}:${d.totalPts}`).join(',')}`);
 
                 // Determine round winners
                 const playerScores = Object.entries(result.playerData)
@@ -2235,8 +2238,10 @@ function callLLM(prompt) {
  }
 
 function initWeeklyView() {
+    console.log('>>> initWeeklyView START');
+    console.log('  allRounds count:', allRounds.length);
     const sel = document.getElementById('weekSelect');
-    if (sel.options.length > 0) return; // already populated
+    if (sel.options.length > 0) { console.log('  already populated'); return; }
     
     // Build week list from round dates (most recent first)
     const weekSet = new Set();
@@ -2248,19 +2253,25 @@ function initWeeklyView() {
     });
     
     const weeks = Array.from(weekSet).sort().reverse();
+    console.log('  weeks found:', weeks.length, weeks.slice(0, 5));
     sel.innerHTML = weeks.map(w => `<option value="${w}">${w}</option>`).join('');
     sel.value = weeks[0] || '';
+    console.log('  selected week:', sel.value);
     renderWeekInReview();
 }
 
 function renderWeekInReview() {
+    console.log('>>> renderWeekInReview START');
+    console.log('  allRounds count:', allRounds.length);
     const sel = document.getElementById('weekSelect');
     const weekKey = sel.value;
-    if (!weekKey) return;
+    console.log('  selected weekKey:', weekKey);
+    if (!weekKey) { console.log('  no weekKey, returning'); return; }
     
     const [yearStr, wStr] = weekKey.split('-W');
     const year = parseInt(yearStr);
     const weekNum = parseInt(wStr);
+    console.log('  year:', year, 'weekNum:', weekNum);
     
     // Find the Monday of that ISO week
     const jan4 = new Date(year, 0, 4);
@@ -2270,14 +2281,18 @@ function renderWeekInReview() {
     monday.setDate(startOfWeek1.getDate() + (weekNum - 1) * 7);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
+    console.log('  date range:', monday.toISOString(), 'to', sunday.toISOString());
     
     const container = document.getElementById('weekly-content');
+    console.log('  container exists:', !!container);
     
     // Filter rounds for this week
     const weekRounds = allRounds.filter(r => {
         const rd = new Date(r.date.slice(0, 10) + 'T12:00:00');
         return rd >= monday && rd <= sunday;
     });
+    console.log('  weekRounds count:', weekRounds.length);
+    weekRounds.forEach(r => console.log('    round:', r.date.slice(0,10), r.courseName, 'holes:', (r.finishedHoles||[]).length, 'scores:', Object.keys(r.scores||{}).join(','), '_playerData:', !!r._playerData));
     
     // Compute stats
     const courses = new Set(weekRounds.map(r => r.courseName));
@@ -2286,14 +2301,17 @@ function renderWeekInReview() {
     
     weekRounds.forEach(r => {
         weekDates.add(r.date.slice(0, 10));
-        Object.entries(r._playerData || {}).forEach(([name, data]) => {
-            if (!weekBest[name] || data.totalPts > (weekBest[name].totalPts || 0)) {
-                weekBest[name] = data;
-                weekBest[name]._date = r.date;
-                weekBest[name]._course = r.courseName;
-            }
-        });
+        if (r._playerData) {
+            Object.entries(r._playerData).forEach(([name, data]) => {
+                if (!weekBest[name] || data.totalPts > (weekBest[name].totalPts || 0)) {
+                    weekBest[name] = data;
+                    weekBest[name]._date = r.date;
+                    weekBest[name]._course = r.courseName;
+                }
+            });
+        }
     });
+    console.log('  weekBest keys:', Object.keys(weekBest));
     
     // Opening
     const openingIdx = (weekNum + Math.floor(year / 100)) % OPENING_LINES.length;
