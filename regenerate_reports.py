@@ -211,7 +211,7 @@ def call_llm(prompt, system_msg=None):
                 "messages": messages,
                 "temperature": 0.2,
                 "top_p": 0.9,
-                "max_tokens": 500
+                "max_tokens": 800
             }).encode(),
             headers={"Content-Type": "application/json"}
         )
@@ -223,8 +223,7 @@ def call_llm(prompt, system_msg=None):
 
 
 def build_round_prompt(round_stats):
-    """Build prompt with ONLY qualitative info — no scores, no numbers.
-    The LLM must not guess any numbers."""
+    """Build prompt with per-hole detail for rich narrative, no raw scores."""
     course = round_stats.get("course_name", "Unknown")
     sorted_players = sorted(
         round_stats["player_data"].items(),
@@ -240,8 +239,8 @@ def build_round_prompt(round_stats):
     runner_up_name = runner_up[0]
     margin = winner_data["total"] - runner_up[1]["total"]
 
-    # Build qualitative descriptions only
-    strengths = []
+    # Build player strength tags
+    strength_tags = []
     for name, data in sorted_players:
         parts = []
         if data["fo"] >= 6:
@@ -253,38 +252,64 @@ def build_round_prompt(round_stats):
         if data["holes_scored"] >= 15:
             parts.append("near-clean round")
         if parts:
-            strengths.append(f"{name}: {', '.join(parts)}")
+            strength_tags.append(f"{name}: {', '.join(parts)}")
+
+    # Build per-hole highlights — big scoring holes and carry-in moments
+    hole_highlights = []
+    for name, data in sorted_players:
+        for hd in data["hole_details"]:
+            reasons = []
+            if hd["fo"] >= 2:
+                reasons.append(f"+{hd['fo']} FO (carry-in)")
+            if hd["gr"] >= 2:
+                reasons.append(f"+{hd['gr']} GR (carry-in)")
+            if hd["cl"] >= 2:
+                reasons.append(f"+{hd['cl']} CL (carry-in)")
+            if hd["p"] >= 2:
+                reasons.append(f"+{hd['p']} PU (carry-in)")
+            if hd["pts"] >= 3:
+                reasons.append(f"3-pointer")
+            if reasons:
+                hole_highlights.append(f"  Hole {hd['hole']} (Par {hd['par']}): {name} {', '.join(reasons)}")
 
     prompt = (
         "You are a sports broadcaster for a weekly golf league called Bingo Bango Bongo. "
-        "Write a single paragraph (3-5 sentences) analyzing ONE completed round. "
+        "Write a single paragraph (5-7 sentences) analyzing ONE completed round. "
         "Be conversational, engaging, never mean. Use player names naturally. "
         "Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n"
         "CRITICAL RULES:\n"
         "1. NEVER include any player scores or point totals in your paragraph.\n"
-        "2. NEVER mention specific numbers (no point counts, no hole counts).\n"
+        "2. You MAY reference specific hole numbers (e.g., 'on the 7th hole') since these are "
+        "just course positions, not scores.\n"
         "3. Use qualitative descriptions: 'won comfortably', 'narrowly', 'by a point',\n"
-        "   'dominated', 'strong putting', 'clutch performance'.\n"
-        "4. Mentioning a wrong number is unacceptable. Better to say nothing than guess.\n\n"
+        "   'dominated', 'strong putting', 'clutch performance', 'swept the hole'.\n"
+        "4. Reference the hole highlights below to tell a specific story — which holes had "
+        "carry-ins, who swept a hole, who built momentum early vs late.\n"
+        "5. Write 5-7 sentences with actual detail, not just generic praise.\n\n"
         f"ROUND: {course}\n\n"
-        f"WON BY: {winner_name} over {runner_up_name} (margin: {margin} points)\n"
+        f"WON BY: {winner_name} over {runner_up_name}\n"
     )
 
     if margin >= 8:
         prompt += "The winner dominated the field — a statement round.\n\n"
     elif margin <= 1:
-        prompt += "A nail-biter — decided by just one point.\n\n"
+        prompt += "A nail-biter — decided by a razor-thin margin.\n\n"
     else:
         prompt += f"The winner held off a solid challenge, winning by {margin} points.\n\n"
 
-    if strengths:
-        prompt += "PLAYER STRENGTHS:\n" + "\n".join(strengths) + "\n\n"
+    if strength_tags:
+        prompt += "PLAYER STRENGTHS:\n" + "\n".join(strength_tags) + "\n\n"
+
+    if hole_highlights:
+        prompt += "KEY MOMENTS (holes where carry-ins or multi-carry sweeps happened):\n" + "\n".join(hole_highlights[:20]) + "\n\n"
 
     prompt += (
-        "Describe the story of this round. Who built momentum early? "
-        "Was there a late rally? Any player stood out with a particular strength? "
-        "Make it feel like a real golf match with personality. "
-        "3-5 sentences. Conversational sports broadcaster tone."
+        "ANALYSIS: Describe the story of this round in detail. "
+        "Who built momentum early (front nine)? Was there a late rally (back nine)? "
+        "Which holes had carry-ins that shifted the momentum? "
+        "Any player who swept multiple carries on a single hole? "
+        "Make it feel like a real golf match told by a knowledgeable broadcaster. "
+        "5-7 sentences with specific hole references from the key moments above."
     )
     return prompt
 
