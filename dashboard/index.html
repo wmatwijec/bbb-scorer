@@ -260,39 +260,50 @@
     // ── Report helpers ──
     function renderReportSections(prose) {
         // Parse the three-section format: OVERVIEW / FRONT NINE / BACK NINE
-        // LLM may put headers on same line as text or on separate lines
         const knownHeaders = ['OVERVIEW', 'FRONT NINE', 'BACK NINE'];
         
-        // Try regex split by section headers
-        let parts = [];
-        let remaining = prose;
+        // Split on any of the headers (case-insensitive, with optional newline before)
+        const splitRegex = /\n?(OVERVIEW|FRONT NINE|BACK NINE)\s+/gi;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
         
-        for (const header of knownHeaders) {
-            // Match header followed by space or newline then content
-            const regex = new RegExp(`^${header}\\s+`, 'i');
-            const match = remaining.match(regex);
-            if (match) {
-                const headerText = header.toUpperCase();
-                const body = remaining.slice(match[0].length).trim();
-                parts.push({ title: headerText, body: body });
-                remaining = body;
+        while ((match = splitRegex.exec(prose)) !== null) {
+            // Text before this header (if any) — skip for first header
+            if (lastIndex < match.index && parts.length > 0) {
+                // leftover text from previous section — ignore
             }
+            const title = match[1].toUpperCase();
+            const bodyStart = splitRegex.lastIndex;
+            parts.push({ title, bodyStart, endIndex: match.index });
+            lastIndex = bodyStart;
         }
         
-        // If regex parsing worked, format and return
-        if (parts.length >= 2) {
-            // Remove any remaining unparsed text from last section's body
-            // (it might have picked up the next section's header text)
-            for (let i = 0; i < parts.length - 1; i++) {
-                const nextHeader = knownHeaders[knownHeaders.indexOf(parts[i+1].title)];
-                if (nextHeader) {
-                    const idx = parts[i].body.indexOf(nextHeader.toUpperCase());
-                    if (idx > 0) {
-                        parts[i].body = parts[i].body.slice(0, idx).trim();
-                    }
+        // The last section body goes to the end
+        if (parts.length > 0) {
+            parts[parts.length - 1].bodyEnd = prose.length;
+        }
+        
+        // Extract bodies
+        const sections = parts.map((p, i) => {
+            let body;
+            if (i === 0 && p.bodyStart === 0) {
+                // First section: header was at position 0, body starts right after
+                body = prose.slice(p.bodyStart).trim();
+                // Cut off at next header if exists
+                if (i + 1 < parts.length) {
+                    const nextIdx = prose.toUpperCase().indexOf(parts[i+1].title, p.bodyStart);
+                    if (nextIdx > 0) body = body.slice(0, nextIdx - p.bodyStart).trim();
                 }
+            } else {
+                body = prose.slice(p.bodyStart, p.bodyEnd).trim();
             }
-            return parts.map(s =>
+            return { title: p.title, body };
+        });
+        
+        // If we found 2+ sections, render them
+        if (sections.length >= 2) {
+            return sections.map(s =>
                 `<div class="report-section"><div class="report-section-title">${s.title}</div>` +
                 `<div class="report-section-body">${s.body}</div></div>`
             ).join('');
