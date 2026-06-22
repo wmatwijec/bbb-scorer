@@ -162,11 +162,6 @@ def compute_round_stats(round_data):
             cl_pts += hole_cl
             p_pts += hole_p
 
-        ci_total = sum(
-            hd["ci_fo"] + hd["ci_gr"] + hd["ci_cl"] + hd["ci_p"]
-            for hd in hole_details
-        )
-
         # Compute carry-in values for hole_details
         for seq_idx in range(len(hole_sequence)):
             hole_number = hole_sequence[seq_idx]
@@ -174,12 +169,17 @@ def compute_round_stats(round_data):
             carry = get_carry_in_for_hole(hole_scores, pars, hole_number, hole_sequence)
             s = hole_scores.get(idx, {}).get(name, {})
             par = pars[idx] if idx < len(pars) else 4
-            is_par3 = par == 4
+            is_par3 = par == 3
             hd = hole_details[seq_idx]
             hd["ci_fo"] = (hd["fo"] - (1 if s.get("firstOn") else 0))
             hd["ci_gr"] = (hd["gr"] - (1 if is_par3 and s.get("firstOn") else 0))
             hd["ci_cl"] = (hd["cl"] - (1 if s.get("closest") else 0))
             hd["ci_p"] = (hd["p"] - (1 if s.get("putt") else 0))
+
+        ci_total = sum(
+            hd["ci_fo"] + hd["ci_gr"] + hd["ci_cl"] + hd["ci_p"]
+            for hd in hole_details
+        )
 
         result["player_data"][name] = {
             "total": total_pts,
