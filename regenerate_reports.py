@@ -398,9 +398,27 @@ def filter_and_dedup(rounds, monday, sunday):
 
 
 def main():
-    # Determine target week: last Mon-Sun
+    # Determine target week: last Mon-Sun (or specified week)
+    import sys
+    target_week = None
+    target_year = None
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg in ('--week', '-w') and i < len(sys.argv):
+            try:
+                target_week = int(sys.argv[i+1])
+            except ValueError:
+                pass
+        if arg in ('--year', '-y') and i < len(sys.argv):
+            try:
+                target_year = int(sys.argv[i+1])
+            except ValueError:
+                pass
+
     today = datetime.now().date()
-    monday, sunday = iso_week_start(today - timedelta(days=7)), iso_week_end(today - timedelta(days=7))
+    if target_week is not None and target_year is not None:
+        monday, sunday = get_week_range(week=target_week, year=target_year)
+    else:
+        monday, sunday = iso_week_start(today - timedelta(days=7)), iso_week_end(today - timedelta(days=7))
     week_key = get_iso_week_key(f"{monday.isoformat()}")
 
     print(f"=== BBB Round Report Regenerator ===")
