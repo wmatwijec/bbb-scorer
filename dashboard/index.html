@@ -2141,72 +2141,98 @@ function getJokeForWeek(weekNum) {
     return GOLF_JOKES[idx];
 }
 
-function selectRoundComment(roundStats) {
-    const playerItems = Object.entries(roundStats.playerData);
-    if (!playerItems.length || playerItems.length < 2) return null;
-    
-    // JS field names: totalPts, foPts, grPts, clPts, pPts
-    const sortedPlayers = playerItems.sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
-    const [winnerName, winner] = sortedPlayers[0];
-    const [runnerUpName, runnerUp] = sortedPlayers[1];
-    const course = roundStats.courseName || '';
-    const total = winner.totalPts || 0;
-    const margin = total - (runnerUp.totalPts || 0);
-    const fo = winner.foPts || 0;
-    const gr = winner.grPts || 0;
-    const cl = winner.clPts || 0;
-    const pu = winner.pPts || 0;
-    const threePtrPct = winner.threePtrPct || ((winner.threePtrCount || 0) / (winner.numHoles || 18) * 100).toFixed(1);
-    
-    // High carry-in percentage
-    if (winner.carryInTotal > total * 0.25 && total > 0) {
-        const ciDetails = [];
-        (winner.holeDetails || []).forEach(hd => {
-            const ci = (hd.ci_fo || 0) + (hd.ci_gr || 0) + (hd.ci_cl || 0) + (hd.ci_p || 0);
-            if (ci > 0) ciDetails.push([hd.hole || '?', ci]);
-        });
-        ciDetails.sort((a, b) => b[1] - a[1]);
-        const [biggestHole, biggestCarry] = ciDetails[0] || ['?', winner.carryInTotal];
-        const basePts = fo + gr + cl + pu - winner.carryInTotal;
-        return `${winnerName}'s round was powered by carry-in — they banked ${winner.carryInTotal} carry-in points, including a massive ${biggestCarry} on hole ${biggestHole}. Their ${Math.max(basePts, 0)} base points were solid, but those bonus points were the difference between a good round and a legendary one.`;
-    }
-    
-    // Dominant win
-    if (margin >= 10) {
-        return `${winnerName} put on a clinic with ${total} points, outscoring ${runnerUpName} by ${margin} points. They won ${fo} first-ons, ${cl} closests, and ${pu} putts — a complete round from tee to green.`;
-    }
-    
-    // Close finish
-    if (margin <= 1 && total > 0) {
-        const pl = margin > 1 ? 's' : '';
-        return `A thriller at ${course}! ${winnerName} edged ${runnerUpName} by just ${margin} point${pl} with ${total} to ${runnerUp.totalPts || 0}. Both players had ${winner.holesScored} holes scored — this one came down to the final putt.`;
-    }
-    
-    // Blank round
-    if (total === 0) {
-        return `'Twas a blank round at ${course} — nobody managed to score a single point. Sometimes the golf course just says no.`;
-    }
-    
-    // Clean card
-    if (winner.holesScored >= 15) {
-        return `${winnerName} scored on ${winner.holesScored} of 18 holes with only ${winner.threePtrCount} three-strike holes. Three-strike holes are rare (only ${threePtrPct}% of all holes), and ${winnerName} had ${winner.threePtrCount} of them!`;
-    }
-    
-    // Putt heavy
-    if (pu > total * 0.4 && pu >= 6) {
-        const puCi = (winner.holeDetails || []).filter(hd => hd.p > 0).reduce((s, hd) => s + (hd.ci_p || 0), 0);
-        return `${winnerName}'s putting was on another level — ${pu} of their ${total} points came from putts, including ${puCi} points from putt carry-in. They had ${pu} putts all round, setting up pressure on the competition... get it?`;
-    }
-    
-    // FO heavy
-    if ((fo + gr) > total * 0.4 && (fo + gr) >= 6) {
-        const foCi = (winner.holeDetails || []).filter(hd => hd.fo + hd.gr > 0).reduce((s, hd) => s + (hd.ci_fo || 0) + (hd.ci_gr || 0), 0);
-        return `The driving game was real for ${winnerName} — ${fo + gr} points from first-on, including ${foCi} carry-in points. They got on the green first ${fo + gr} times out of ${winner.holeDetails?.length || winner.numHoles || 18} holes played, setting up the short game all round.`;
-    }
-    
-    // All around
-    return `A solid all-around round from ${winnerName} at ${course} — ${total} points with ${winner.holesScored} holes scored. They picked up points all over: ${fo} first-ons, ${cl} closests, and ${pu} putts. A well-rounded performance.`;
-}
+function callLLM(prompt) {
+     return fetch('http://localhost:8081/v1/chat/completions', {
+         method: 'POST',
+         headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify({model: 'qwen35b', messages: [{role: 'user', content: prompt}], temperature: 0.8})
+     })
+     .then(r => r.json())
+     .then(j => j.choices?.[0]?.message?.content?.trim())
+     .catch(() => null);
+ }
+
+ function buildRoundPrompt(roundData, roundStats) {
+      const course = roundStats.courseName || 'Unknown';
+      const playerItems = Object.entries(roundStats.playerData);
+      const sortedPlayers = [...playerItems].sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
+      
+      const maxTotal = Math.max(...sortedPlayers.map(([, d]) => d.totalPts || 0));
+      let summaryLines = [];
+      sortedPlayers.forEach(([name, d]) => {
+          const total = d.totalPts || 0;
+          const marker = total === maxTotal ? ' (WON)' : '';
+          summaryLines.push(`  ${name}: ${total} pts (FO:${d.foPts||0} CL:${d.clPts||0} PU:${d.pPts||0}, ${d.holesScored||0} holes scored)${marker}`);
+      });
+      
+      const winner = sortedPlayers[0];
+      const loser = sortedPlayers[sortedPlayers.length - 1];
+      const margin = winner[1].totalPts - (sortedPlayers.length > 2 ? sortedPlayers[1][1].totalPts : 0);
+      
+      const styles = [];
+      if (winner[1].foPts >= 6) styles.push('dominant driving');
+      if (winner[1].pPts >= 6) styles.push('putting clinic');
+      if (winner[1].holesScored >= 15) styles.push('near-clean round');
+      
+      let framing = '';
+      if (margin >= 8) framing = 'The winner dominated by ' + margin + ' points — a statement round.';
+      else if (margin <= 1) framing = 'A nail-biter — decided by just ' + margin + ' point' + (margin > 1 ? 's' : '') + '.';
+      else framing = 'The winner held off a solid challenge, winning by ' + margin + ' points.';
+      
+      let styleNote = styles.length ? ' WHAT MADE IT INTERESTING: ' + styles.join(', ') + '.' : '';
+      
+      return (
+          'You are a sports broadcaster for a weekly golf league called Bingo Bango Bongo. ' +
+          'Write a single paragraph (3-5 sentences) analyzing ONE completed round. ' +
+          'Be conversational, engaging, never mean. Use player names naturally. ' +
+          'Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n' +
+          'ROUND: ' + course + '\n\n' +
+          'FINAL SCORES:\n' + summaryLines.join('\n') + '\n\n' +
+          'CONTEXT: This was a complete 18-hole round (54 total points available).\n' +
+          framing + '\n\n' +
+          styleNote + '\n\n' +
+          'ANALYSIS: Describe the story of this round. Who built momentum early? ' +
+          'Was there a late rally? Any player stood out with a particular strength? ' +
+          'Make it feel like a real golf match with personality. ' +
+          '3-5 sentences. Conversational sports broadcaster tone.'
+      );
+ }
+
+ function selectRoundComment(roundData, roundStats) {
+     const playerItems = Object.entries(roundStats.playerData);
+     if (!playerItems.length || playerItems.length < 2) return null;
+     
+     return callLLM(buildRoundPrompt(roundData, roundStats)).then(prose => {
+         if (prose) return prose;
+         
+         // Fallback to template
+         const sortedPlayers = [...playerItems].sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
+         const [winnerName, winner] = sortedPlayers[0];
+         const [runnerUpName, runnerUp] = sortedPlayers[1];
+         const course = roundStats.courseName || '';
+         const total = winner.totalPts || 0;
+         const margin = total - (runnerUp.totalPts || 0);
+         const fo = winner.foPts || 0;
+         const gr = winner.grPts || 0;
+         const cl = winner.clPts || 0;
+         const pu = winner.pPts || 0;
+         const hs = winner.holesScored || 0;
+         const threePtrPct = winner.threePtrPct || ((winner.threePtrCount || 0) / (winner.numHoles || 18) * 100).toFixed(1);
+         
+         if (winner.carryInTotal > total * 0.25 && total > 0) {
+             return `${winnerName}'s round was powered by carry-in — they banked ${winner.carryInTotal} carry-in points. Their base points were solid, but those bonus points were the difference between a good round and a legendary one.`;
+         }
+         if (margin >= 10) {
+             return `${winnerName} put on a clinic with ${total} points, outscoring ${runnerUpName} by ${margin} points. They won ${fo} first-ons, ${cl} closests, and ${pu} putts — a complete round from tee to green.`;
+         }
+         if (margin <= 1 && total > 0) {
+             return `A thriller at ${course}! ${winnerName} edged ${runnerUpName} by just ${margin} point${margin > 1 ? 's' : ''} with ${total} to ${runnerUp.totalPts || 0}.`;
+         }
+         if (total === 0) return `'Twas a blank round at ${course} — nobody managed to score a single point. Sometimes the golf course just says no.`;
+         if (hs >= 15) return `${winnerName} scored on ${hs} of 18 holes — a near-clean round.`;
+         return `A solid all-around round from ${winnerName} at ${course} — ${total} points with ${hs} holes scored. ${fo} first-ons, ${cl} closests, ${pu} putts.`;
+     });
+ }
 
 function initWeeklyView() {
     const sel = document.getElementById('weekSelect');
@@ -2291,37 +2317,53 @@ function renderWeekInReview() {
     html += `</div></div>`;
     
     // Round-by-Round
-    html += `<h3>ROUND-BY-ROUND RECAP</h3><div class="card" style="padding:15px;">`;
+    html += `<h3>ROUND-BY-ROUND RECAP</h3><div class="card" style="padding:15px;" id="round-recap-list">`;
     
     const sortedWeekRounds = [...weekRounds].sort((a, b) => new Date(a.date) - new Date(b.date));
     
+    // Build HTML placeholders, then fetch LLM comments
     sortedWeekRounds.forEach(r => {
         const dateStr = r.date.slice(0, 10);
         const rd = new Date(dateStr + 'T12:00:00');
         const dayName = rd.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const course = r.courseName || 'Unknown';
         
-        // Scoreboard
         const playerScores = Object.entries(r._playerData || {}).sort((a, b) => (b[1].totalPts || 0) - (a[1].totalPts || 0));
         const scoreStr = playerScores.map(([name, data]) => `${name} ${data.totalPts ?? 0}`).join(' | ');
         
-        // Round comment
-        const roundStats = {
-            playerData: r._playerData || {},
-            courseName: course
-        };
-        const comment = selectRoundComment(roundStats);
+        // Check if complete 18-hole round (first 2 players have 18 score entries)
+        const scores = r.scores || {};
+        const playerNames = playerScores.map(([n]) => n);
+        const isComplete = playerNames.length >= 2 && playerNames.slice(0, 2).every(n => (scores[n] || []).length >= 18);
+        const commentText = isComplete ? 'Generating analysis...' : '(round in progress)';
         
-        html += `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #2d3154;">
+        html += `<div class="round-entry" data-date="${r.date}" data-course="${course}" data-complete="${isComplete}" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #2d3154;">
             <div style="color:#60a5fa;font-size:13px;font-weight:600;margin-bottom:4px;">${dayName} — ${course}</div>
-            <div style="color:#e2e8f0;font-size:13px;margin-bottom:6px;">${scoreStr}</div>`;
-        if (comment) {
-            html += `<div style="color:#94a3b8;font-size:13px;line-height:1.5;font-style:italic;">"${comment}"</div>`;
-        }
-        html += `</div>`;
+            <div style="color:#e2e8f0;font-size:13px;margin-bottom:6px;">${scoreStr}</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.5;font-style:italic;" class="round-comment">${commentText}</div>
+        </div>`;
     });
     
     html += `</div>`;
+    
+    // Fetch LLM comments for complete rounds only
+    const recapEl = document.getElementById('round-recap-list');
+    const entries = recapEl.querySelectorAll('.round-entry');
+    entries.forEach((entry, idx) => {
+        const r = sortedWeekRounds[idx];
+        if (!r || !entry.dataset.complete) return; // skip partial rounds
+        const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
+        
+        selectRoundComment(r, roundStats).then(comment => {
+            const commentDiv = entry.querySelector('.round-comment');
+            if (commentDiv) {
+                commentDiv.textContent = comment ? `"${comment}"` : '—';
+            }
+        }).catch(() => {
+            const commentDiv = entry.querySelector('.round-comment');
+            if (commentDiv) commentDiv.textContent = '—';
+        });
+    });
     
     // Records Watch
     html += `<h3>RECORDS WATCH</h3><div class="card" style="padding:15px;">`;

@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 BACKEND = "https://pwa-players-backend.onrender.com"
+LLM_SERVER = "http://localhost:8081/v1/chat/completions"
 
 DEFAULT_PARS = [4, 5, 3, 4, 3, 4, 4, 4, 3, 5, 4, 3, 4, 3, 4, 4, 5, 4]
 
@@ -449,18 +450,103 @@ ROUND_COMMENT_OPENERS = {
 }
 
 
-def select_round_comment(round_stats):
-    """Select the best prose template for a round based on what actually happened."""
+def build_round_prompt(round_data, round_stats):
+    """Build the prompt for generating round prose via LLM."""
+    course = round_stats.get("course_name", "Unknown")
+    player_items = list(round_stats["player_data"].items())
+    sorted_players = sorted(player_items, key=lambda x: x[1]["total"], reverse=True)
+    
+    # Build player summary lines
+    max_total = max(d["total"] for _, d in sorted_players)
+    summary_lines = []
+    for name, data in sorted_players:
+        total = data["total"]
+        fo = data["fo"]
+        gr = data["gr"]
+        cl = data["cl"]
+        pu = data["p"]
+        hs = data["holes_scored"]
+        marker = " (WON)" if total == max_total else ""
+        summary_lines.append(f"  {name}: {total} pts (FO:{fo} CL:{cl} PU:{pu}, {hs} holes scored){marker}")
+    
+    # Find key narrative moments from player data
+    winner = sorted_players[0]
+    loser = sorted_players[-1]
+    margin = winner[1]["total"] - sorted_players[-2][1]["total"] if len(sorted_players) > 2 else winner[1]["total"]
+    winner_total = winner[1]["total"]
+    
+    # Identify scoring style
+    styles = []
+    if winner[1]["fo"] >= 6: styles.append("dominant driving game")
+    if winner[1]["p"] >= 6: styles.append("putting clinic")
+    if winner[1]["holes_scored"] >= 15: styles.append("near-clean round")
+    
+    prompt = (
+        "You are a sports broadcaster for a weekly golf league called Bingo Bango Bongo. "
+        "Write a single paragraph (3-5 sentences) analyzing ONE completed round. "
+        "Be conversational, engaging, never mean. Use player names naturally. "
+        "Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n"
+        f"ROUND: {course}\n\n"
+        "FINAL SCORES:\n" + "\n".join(summary_lines) + "\n\n"
+        "CONTEXT: This was a complete 18-hole round (54 total points available).\n"
+    )
+    
+    # Add narrative framing based on actual data
+    if margin >= 8:
+        prompt += f"The winner dominated by {margin} points — a statement round.\n\n"
+    elif margin <= 1:
+        prompt += f"A nail-biter — decided by just {margin} point{'s' if margin > 1 else ''}.\n\n"
+    else:
+        prompt += f"The winner held off a solid challenge, winning by {margin} points.\n\n"
+    
+    if styles:
+        prompt += f"WHAT MADE IT INTERESTING: " + ", ".join(styles) + ".\n\n"
+    
+    prompt += (
+        "ANALYSIS: Describe the story of this round. Who built momentum early? "
+        "Was there a late rally? Any player stood out with a particular strength? "
+        "Make it feel like a real golf match with personality. "
+        "3-5 sentences. Conversational sports broadcaster tone."
+    )
+    return prompt
+
+
+def call_llm(prompt):
+    """Call local LLM server for prose generation."""
+    try:
+        import urllib.request as urllib
+        req = urllib.Request(
+            LLM_SERVER,
+            data=json.dumps({
+                "model": "qwen35b",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.8
+            }).encode(),
+            headers={"Content-Type": "application/json"}
+        )
+        resp = json.loads(urllib.urlopen(req).read())
+        return resp["choices"][0]["message"]["content"].strip()
+    except Exception:
+        return None
+
+
+def select_round_comment(round_data, round_stats):
+    """Generate round prose via LLM. Falls back to template if LLM unavailable."""
     player_items = list(round_stats["player_data"].items())
     if not player_items or len(player_items) < 2:
         return None
     
+    # Try LLM first
+    prose = call_llm(build_round_prompt(round_data, round_stats))
+    if prose:
+        return prose
+    
+    # Fallback to template
     winner_name, winner = max(player_items, key=lambda x: x[1]["total"])
     sorted_players = sorted(player_items, key=lambda x: x[1]["total"], reverse=True)
     runner_up_name, runner_up = sorted_players[1]
     course = round_stats.get("course_name", "")
     
-    # Determine comment type based on actual stats
     if winner["carry_in_total"] > winner["total"] * 0.25:
         ci_details = []
         for hd in winner["hole_details"]:
@@ -470,77 +556,49 @@ def select_round_comment(round_stats):
         biggest_hole, biggest_carry = ci_details[0]
         base_pts = winner["fo"] + winner["gr"] + winner["cl"] + winner["p"] - winner["carry_in_total"]
         return ROUND_COMMENT_OPENERS["big_carry_in"].format(
-            winner=winner_name,
-            ci_pts=winner["carry_in_total"],
-            biggest_carry=biggest_carry,
-            biggest_hole=biggest_hole,
+            winner=winner_name, ci_pts=winner["carry_in_total"],
+            biggest_carry=biggest_carry, biggest_hole=biggest_hole,
             base_pts=max(base_pts, 0),
         )
     
     margin = winner["total"] - runner_up["total"]
     if margin >= 10:
         return ROUND_COMMENT_OPENERS["dominant_win"].format(
-            winner=winner_name,
-            pts=winner["total"],
-            runner_up=runner_up_name,
-            margin=margin,
-            fo_count=winner["fo"],
-            cl_count=winner["cl"],
-            pu_count=winner["p"],
+            winner=winner_name, pts=winner["total"],
+            runner_up=runner_up_name, margin=margin,
+            fo_count=winner["fo"], cl_count=winner["cl"], pu_count=winner["p"],
         )
-    
     if margin <= 1 and winner["total"] > 0:
         return ROUND_COMMENT_OPENERS["close_finish"].format(
-            winner=winner_name,
-            runner_up=runner_up_name,
-            margin=margin,
-            pl="s" if margin > 1 else "",
-            pts=winner["total"],
-            runner_pts=runner_up["total"],
-            holes_scored=winner["holes_scored"],
-            course=course,
+            winner=winner_name, runner_up=runner_up_name,
+            margin=margin, pl="s" if margin > 1 else "",
+            pts=winner["total"], runner_pts=runner_up["total"],
+            holes_scored=winner["holes_scored"], course=course,
         )
-    
     if winner["total"] == 0:
         return f"'Twas a blank round at {course} — nobody managed to score a single point. Sometimes the golf course just says no."
-    
     if winner["holes_scored"] >= 15:
         return ROUND_COMMENT_OPENERS["clean_card"].format(
-            winner=winner_name,
-            holes_scored=winner["holes_scored"],
-            three_ptr=winner["three_ptr_holes"],
-            three_ptr_pct=winner["three_ptr_pct"],
+            winner=winner_name, holes_scored=winner["holes_scored"],
+            three_ptr=winner["three_ptr_holes"], three_ptr_pct=winner["three_ptr_pct"],
         )
-    
     if winner["p"] > winner["total"] * 0.4 and winner["p"] >= 6:
         pu_ci = sum(hd["ci_p"] for hd in winner["hole_details"] if hd["p"] > 0)
         return ROUND_COMMENT_OPENERS["putt_heavy"].format(
-            winner=winner_name,
-            pu_pts=winner["p"],
-            pts=winner["total"],
-            pu_ci=pu_ci,
-            pu_count=winner["p"],
+            winner=winner_name, pu_pts=winner["p"], pts=winner["total"],
+            pu_ci=pu_ci, pu_count=winner["p"],
         )
-    
     if winner["fo"] + winner["gr"] > winner["total"] * 0.4 and winner["fo"] + winner["gr"] >= 6:
         fo_ci = sum(hd["ci_fo"] + hd["ci_gr"] for hd in winner["hole_details"] if hd["fo"] + hd["gr"] > 0)
         return ROUND_COMMENT_OPENERS["fo_heavy"].format(
-            winner=winner_name,
-            fo_pts=winner["fo"] + winner["gr"],
-            fo_ci=fo_ci,
-            fo_count=winner["fo"] + winner["gr"],
-            total_holes=len(winner["hole_details"]),
-            course=course,
+            winner=winner_name, fo_pts=winner["fo"] + winner["gr"],
+            fo_ci=fo_ci, fo_count=winner["fo"] + winner["gr"],
+            total_holes=len(winner["hole_details"]), course=course,
         )
-    
     return ROUND_COMMENT_OPENERS["all_around"].format(
-        winner=winner_name,
-        course=course,
-        pts=winner["total"],
-        holes_scored=winner["holes_scored"],
-        fo_count=winner["fo"],
-        cl_count=winner["cl"],
-        pu_count=winner["p"],
+        winner=winner_name, course=course, pts=winner["total"],
+        holes_scored=winner["holes_scored"], fo_count=winner["fo"],
+        cl_count=winner["cl"], pu_count=winner["p"],
     )
 
 
@@ -641,6 +699,10 @@ def get_week_in_review(rounds):
         stats["date"] = rd.get("date", "")
         stats["players_list"] = [p["name"] for p in rd.get("players", []) if p.get("name") and p["name"].lower() != "guest"]
         
+        # Track raw round info for completion check and LLM
+        stats["_raw_scores"] = rd.get("scores", {})
+        stats["_cached_totals"] = rd.get("_cachedTotals", {})
+        
         # Add per-category totals from _cachedTotals if available
         for name in stats["player_data"]:
             cat = get_category_totals(rd.get("_cachedTotals"), name)
@@ -726,13 +788,25 @@ def format_output(week_info, monday, sunday, player_filter=None):
             reverse=True,
         )
         score_str = " | ".join(f"{name} {data['total']}" for name, data in player_scores)
+        
+        # Check if this is a complete 18-hole round (all players finished all 18 holes)
+        scores_data = rd.get("_raw_scores", {})
+        player_names = [name for name, _ in player_scores]
+        is_complete = all(
+            name in scores_data and len(scores_data.get(name, [])) >= 18
+            for name in player_names[:2]
+        )
+        
         lines.append(f"\n• {date_str} — {course}")
         lines.append(f"  {score_str}")
         
-        # Prose comment
-        comment = select_round_comment(rd)
-        if comment:
-            lines.append(f'  "{comment}"')
+        # Prose comment — only for complete 18-hole rounds
+        if is_complete:
+            comment = select_round_comment(rd, rd)
+            if comment:
+                lines.append(f'  "{comment}"')
+        else:
+            lines.append(f'  (round in progress)')
     
     lines.append("")
     
