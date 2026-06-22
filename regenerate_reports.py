@@ -231,7 +231,8 @@ def build_round_prompt(round_stats):
         )
 
     winner = sorted_players[0]
-    margin = winner[1]["total"] - sorted_players[-2][1]["total"] if len(sorted_players) > 2 else winner[1]["total"]
+    runner_up = sorted_players[1] if len(sorted_players) > 1 else sorted_players[-1]
+    margin = winner[1]["total"] - runner_up[1]["total"]
 
     styles = []
     if winner[1]["fo"] >= 6:
@@ -248,7 +249,9 @@ def build_round_prompt(round_stats):
         "Write ONLY the paragraph — no labels, no quotes, no preamble.\n\n"
         f"ROUND: {course}\n\n"
         "FINAL SCORES:\n" + "\n".join(summary_lines) + "\n\n"
-        "CONTEXT: This was a complete 18-hole round (54 total points available).\n"
+        "CONTEXT: This was a complete 18-hole round (54 total points available).\n\n"
+        f"WINNER: {winner[0]} with {winner[1]['total']} points\n"
+        f"RUNNER-UP: {runner_up[0]} with {runner_up[1]['total']} points\n"
     )
 
     if margin >= 8:
