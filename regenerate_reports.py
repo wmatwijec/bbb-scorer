@@ -494,7 +494,7 @@ def main():
             headers["Authorization"] = f"Bearer {auth_key}"
 
         req = Request(
-            f"{BACKEND}/regenerate-reports",
+            f"{BACKEND}/regenerate-reports?week={week_key}",
             data=payload,
             headers=headers,
             method="POST"
