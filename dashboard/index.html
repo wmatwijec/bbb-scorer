@@ -561,13 +561,52 @@ function renderReportSections(prose) {
         return result;
     }
 
-    // ── Data loading ──
+   // ── Data loading ──
     async function loadData() {
         const statusEl = document.getElementById('status');
         statusEl.textContent = 'Fetching season data...';
         statusEl.className = 'status';
+
+        // Step 1: Backup + dedup rounds on backend
+        try {
+            const cleanupRes = await fetch(`${BACKEND}/cleanup-rounds`, { method: 'POST' });
+            if (cleanupRes.ok) {
+                const cleanup = await cleanupRes.json();
+                if (cleanup.deleted > 0) {
+                    console.log(`Cleanup: removed ${cleanup.deleted} partials (${cleanup.before} → ${cleanup.after}), backup: ${cleanup.backup}`);
+                    statusEl.textContent = `Cleaning up partial rounds... (${cleanup.before} → ${cleanup.after})`;
+                }
+            }
+        } catch(e) {
+            console.warn('Cleanup failed:', e.message);
+        }
+
+        // Step 2: Download latest backup to PC
+        try {
+            const backupRes = await fetch(`${BACKEND}/backup`);
+            if (backupRes.ok) {
+                const backupData = await backupRes.json();
+                if (backupData.backups && backupData.backups.length > 0) {
+                    const latestBackup = backupData.backups[0];
+                    const dlRes = await fetch(`${BACKEND}/backup/${latestBackup}`);
+                    if (dlRes.ok) {
+                        const blob = await dlRes.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = latestBackup;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        console.log(`Backup downloaded: ${latestBackup}`);
+                    }
+                }
+            }
+        } catch(e) {
+            console.warn('Backup download failed:', e.message);
+        }
+
          try {
-            const res = await fetch(`${BACKEND}/rounds`);
+             const res = await fetch(`${BACKEND}/rounds`);
             if (!res.ok) throw new Error(`Backend error: ${res.status}`);
             const data = await res.json();
             let rounds = data.rounds || [];
