@@ -2364,25 +2364,6 @@ function renderWeekInReview() {
     
     html += `</div>`;
     
-    // Fetch LLM comments for complete rounds only
-    const recapEl = document.getElementById('round-recap-list');
-    const entries = recapEl.querySelectorAll('.round-entry');
-    entries.forEach((entry, idx) => {
-        const r = sortedWeekRounds[idx];
-        if (!r || !entry.dataset.complete) return; // skip partial rounds
-        const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
-        
-        selectRoundComment(r, roundStats).then(comment => {
-            const commentDiv = entry.querySelector('.round-comment');
-            if (commentDiv) {
-                commentDiv.textContent = comment ? `"${comment}"` : '—';
-            }
-        }).catch(() => {
-            const commentDiv = entry.querySelector('.round-comment');
-            if (commentDiv) commentDiv.textContent = '—';
-        });
-    });
-    
     // Records Watch
     html += `<h3>RECORDS WATCH</h3><div class="card" style="padding:15px;">`;
     
@@ -2472,6 +2453,27 @@ function renderWeekInReview() {
     html += `<div style="text-align:center;color:#475569;font-size:11px;margin-top:16px;">${weekKey} | Generated from bbb-scorer data</div>`;
     
     container.innerHTML = html;
+    
+    // Fetch LLM comments for complete rounds only
+    const recapEl = document.getElementById('round-recap-list');
+    if (recapEl) {
+        const entries = recapEl.querySelectorAll('.round-entry');
+        entries.forEach((entry, idx) => {
+            const r = sortedWeekRounds[idx];
+            if (!r || !entry.dataset.complete) return;
+            const roundStats = { playerData: r._playerData || {}, courseName: r.courseName || 'Unknown' };
+            
+            selectRoundComment(r, roundStats).then(comment => {
+                const commentDiv = entry.querySelector('.round-comment');
+                if (commentDiv) {
+                    commentDiv.textContent = comment ? `"${comment}"` : '—';
+                }
+            }).catch(() => {
+                const commentDiv = entry.querySelector('.round-comment');
+                if (commentDiv) commentDiv.textContent = '—';
+            });
+        });
+    }
 }
 
     // ── Init ──
