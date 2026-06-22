@@ -307,28 +307,26 @@ def build_round_prompt(round_stats):
         player_lines.append(f"  {name}: {data['total']} points, {tag}{f9b9}")
 
     # Build per-hole highlights
-    # FO on par-3 = potential greenie; FO on par-4/5 = just a drive to the green
-    # GR only exists on par-3 (it IS the par-3 carry-in)
-    # CL = closest to pin; PU = closest putt
+    # Build bullet-friendly hole highlights — descriptive text, not abbreviations
     hole_highlights = []
     for name, data in sorted_players:
         for hd in data["hole_details"]:
-            reasons = []
+            parts = []
             if hd["fo"] >= 2:
                 if hd["par"] == 3:
-                    reasons.append(f"+{hd['fo']} FO (par-3 carry)")
+                    parts.append(f"Hole {hd['hole']}: {name} won the par-3 carry-in")
                 else:
-                    reasons.append(f"+{hd['fo']} FO (drive)")
+                    parts.append(f"Hole {hd['hole']}: {name} got first-on/approach")
             if hd["gr"] >= 2:
-                reasons.append(f"+{hd['gr']} GR (greenie carry)")
+                parts.append(f"Hole {hd['hole']}: {name} won the greenie")
             if hd["cl"] >= 2:
-                reasons.append(f"+{hd['cl']} CL (closest to pin)")
+                parts.append(f"Hole {hd['hole']}: {name} had closest ball")
             if hd["p"] >= 2:
-                reasons.append(f"+{hd['p']} PU (closest putt)")
+                parts.append(f"Hole {hd['hole']}: {name} had the longest putt")
             if hd["pts"] >= 3:
-                reasons.append("3-pointer")
-            if reasons:
-                hole_highlights.append(f"  Hole {hd['hole']} (Par {hd['par']}): {name} {', '.join(reasons)}")
+                parts.append(f"Hole {hd['hole']}: {name} swept (3-pointer)")
+            if parts:
+                hole_highlights.extend(parts)
 
     # Collect special moments
     all_sweeps = []
@@ -339,65 +337,81 @@ def build_round_prompt(round_stats):
         all_greenies.extend(data.get("greenies", []))
         all_ci_streaks.extend(data.get("ci_streaks", []))
 
-    prompt = (
-        "You are a sports broadcaster for a weekly golf league called Bingo Bango Bongo. "
-        "Write a detailed round analysis with EXACTLY these three sections. "
-        "Be conversational, engaging, never mean. Use player names naturally.\n\n"
-        "CRITICAL RULES:\n"
-        "1. NEVER include any player scores or point totals.\n"
-        "2. You MAY reference specific hole numbers (just course positions, not scores).\n"
-        "3. Use qualitative descriptions: 'won comfortably', 'narrowly', 'dominated',\n"
-        "   'clutch performance', 'swept the hole'.\n"
-        "4. Write 4-6 sentences per section.\n"
-        "5. ONLY describe actions when you have explicit data for them. Do NOT invent\n"
-        "   'carry-in off the tee' or 'leveraging driving' on specific holes unless you\n"
-        "   see explicit FO/GR/CL/PU carry-in data for that hole. Do NOT attribute\n"
-        "   'powerful driving' or 'setting up favorable positions' unless FO carries\n"
-        "   are explicitly listed for those holes.\n\n"
-        "BINGO BANGO BONGO SCORING DEFINITIONS:\n"
-        "This is a point-scoring game, not traditional golf scoring.\n"
-        "- FO (First On): Who gets their ball closest to the hole on the green\n"
-        "  (on par-3: the tee shot; on par-4/5: the approach shot).\n"
-        "- GR (Greenie): On par-3s ONLY — the player who wins FO gets the greenie point.\n"
-        "  If another player also beat the first-on distance, they get an additional carry-in.\n"
-        "- CL (Closest): Who has the closest putt to the hole.\n"
-        "- PU (Putt): The closest putt winner also wins PU.\n"
-        "- A 'sweep' = a player won 3 or 4 carries on one hole (e.g., FO + GR + CL + PU = full sweep;\n"
-        "  FO + GR + PU = greenie sweep on a par-3).\n"
-        "- A 'greenie' = winning the greenie carry on a par-3, especially when carry-ins cascade.\n"
-        "- A 'carry-in streak' = a player got any carry-ins on 2+ consecutive holes.\n\n"
-        "NOTE: F9/B9 in the standings shows front nine vs back nine point splits. "
-        "If a player has much higher F9 points they dominated early; higher B9 means they mounted a comeback.\n\n"
-        f"ROUND: {course}\n\n"
-        "FINAL STANDINGS:\n" + "\n".join(player_lines) + "\n\n"
-        f"WON BY: {winner_name} over {runner_up_name} ({'a nail-biter' if margin <= 1 else 'by a comfortable margin' if margin >= 8 else f'{margin} points'})\n\n"
-    )
+    # Build score-free bullet data for the LLM
+    bullet_data = []
 
     if all_greenies:
-        prompt += "GREENIE MOMENTS:\n" + "\n".join(all_greenies) + "\n\n"
+        bullet_data.append("--- GREENIES ---")
+        bullet_data.extend(all_greenies)
 
     if all_sweeps:
-        prompt += "SWEEPS:\n" + "\n".join(all_sweeps) + "\n\n"
+        bullet_data.append("\n--- SWEEPS ---")
+        bullet_data.extend(all_sweeps)
 
     if all_ci_streaks:
-        prompt += "CARRY-IN STREAKS:\n" + "\n".join(all_ci_streaks) + "\n\n"
+        bullet_data.append("\n--- CARRY-IN STREAKS ---")
+        bullet_data.extend(all_ci_streaks)
 
     if hole_highlights:
-        prompt += "KEY HOLE MOMENTS:\n" + "\n".join(hole_highlights[:20]) + "\n\n"
+        bullet_data.append("\n--- HOLE HIGHLIGHTS ---")
+        bullet_data.extend(hole_highlights[:20])
 
+    bullet_data.append("\n--- PLAYERS ---")
+    for i, (name, data) in enumerate(sorted_players, 1):
+        bullet_data.append(f"  #{i} {name}")
+
+    # Margin — qualitative only, no point numbers
+    if margin <= 1:
+        margin_str = "Very close finish"
+    elif margin >= 8:
+        margin_str = "Comfortable win"
+    else:
+        margin_str = "Moderate margin"
+    bullet_data.append("\n--- MARGIN ---")
+    bullet_data.append(f"  {margin_str}")
+
+    # Momentum — qualitative only
+    bullet_data.append("\n--- MOMENTUM ---")
+    for name, data in sorted_players:
+        f9, b9 = data["f9_pts"], data["b9_pts"]
+        if f9 > b9 * 1.5:
+            bullet_data.append(f"  {name}: strong start, faded later")
+        elif b9 > f9 * 1.5:
+            bullet_data.append(f"  {name}: slow start, strong finish")
+        else:
+            bullet_data.append(f"  {name}: balanced round")
+
+    prompt = "\n".join(bullet_data)
+
+    # Bullet-format output request
     prompt += (
-        "OUTPUT FORMAT:\n"
-        "Write your response with exactly these three section headers:\n\n"
+        "\n\nOUTPUT FORMAT:\n"
+        "Write your response as bullet points with exactly these three section headers:\n\n"
         "OVERVIEW\n"
-        "[4-6 sentences: Who won, who was close, overall story of the round, "
-        "was there a clear leader or back-and-forth battle, any standout player]\n\n"
+        "- bullet point (1 sentence, start with player name)\n"
+        "- bullet point\n"
+        "- bullet point\n\n"
         "FRONT NINE\n"
-        "[4-6 sentences: What happened on holes 1-9, who built momentum early, "
-        "any greenies on par-3s, carry-in chains, who dominated the early holes]\n\n"
+        "- bullet point (what happened holes 1-9, greenies, first-ons)\n"
+        "- bullet point\n"
+        "- bullet point\n\n"
         "BACK NINE\n"
-        "[4-6 sentences: What happened on holes 10-18, late rallies or collapsing leads, "
-        "key carries, sweeps, clutch putts that decided the round]\n\n"
-        "Write ONLY the three sections with their headers. No preamble, no sign-off."
+        "- bullet point (what happened holes 10-18, momentum shifts)\n"
+        "- bullet point\n"
+        "- bullet point\n\n"
+        "RULES:\n"
+        "- ONLY bullet points. No prose paragraphs. No narrative.\n"
+        "- NEVER include any scores, points, totals, or point values.\n"
+        "- ONLY describe events in the data above. Do NOT invent holes or actions.\n"
+        "- Each bullet: 1 short sentence. Start with player name.\n"
+        "- Use these exact phrases from the data:\n"
+        "  'won the par-3 carry-in' = first-on on a par-3\n"
+        "  'won the greenie' = won greenie carry on a par-3\n"
+        "  'closest ball' = closest ball to hole after green\n"
+        "  'longest putt' = made the longest putt\n"
+        "  'got first-on/approach' = closest on par-4/5\n"
+        "  'swept (3-pointer)' = won 3 carries on one hole\n"
+        "- No preamble, no sign-off. ONLY the three section headers and bullets."
     )
     return prompt
 
@@ -405,16 +419,12 @@ def build_round_prompt(round_stats):
 def generate_round_prose(round_data, round_stats):
     """Generate LLM prose for a round, with fallback."""
     system_msg = (
-        "You are writing a golf round analysis with three sections: "
-        "OVERVIEW, FRONT NINE, and BACK NINE. "
-        "NEVER include any player scores or point totals. "
-        "Use only qualitative descriptions. Reference specific hole numbers. "
-        "CRITICAL: Only describe specific actions (carries, drives, putts) when "
-        "the data explicitly shows them for that hole. Do not invent narrative "
-        "about 'powerful driving' or 'carry-in off the tee' unless you see "
-        "FO/GR carry-in data for that hole. When you lack data for a specific "
-        "hole, use general language like 'the front nine saw strong play' "
-        "instead of making up details."
+        "You write a Bingo Bango Bongo golf round analysis as bullet points. "
+        "Format: OVERVIEW, FRONT NINE, BACK NINE sections with - bullet points. "
+        "NEVER include any scores, points, totals, or point values. "
+        "ONLY describe events in the data. Do NOT invent holes or actions. "
+        "Each bullet: 1 sentence starting with player name. "
+        "No prose paragraphs. No preamble. No sign-off."
     )
     prose = call_llm(build_round_prompt(round_stats), system_msg)
     return prose or "Analysis unavailable"
