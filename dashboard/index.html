@@ -45,6 +45,25 @@
             border-radius: 8px; padding: 16px; margin-bottom: 16px;
         }
 
+        /* ── Round report sections ── */
+        .report-section {
+            margin-bottom: 10px;
+        }
+        .report-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+        .report-section-body {
+            font-size: 13px;
+            line-height: 1.55;
+            color: #cbd5e1;
+            margin-bottom: 12px;
+        }
+
         /* ── Stat cards row ── */
         .stat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
         .stat-card {
@@ -239,6 +258,43 @@
     }
 
     // ── Report helpers ──
+    function renderReportSections(prose) {
+        // Parse the three-section format: OVERVIEW / FRONT NINE / BACK NINE
+        const sections = [];
+        const lines = prose.split('\n').filter(l => l.trim());
+        let currentSection = null;
+        let currentText = [];
+
+        const knownHeaders = ['OVERVIEW', 'FRONT NINE', 'BACK NINE'];
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (knownHeaders.includes(trimmed)) {
+                // Save previous section
+                if (currentSection && currentText.length) {
+                    sections.push({ title: currentSection, body: currentText.join(' ') });
+                }
+                currentSection = trimmed;
+                currentText = [];
+            } else if (currentSection) {
+                currentText.push(trimmed);
+            }
+        }
+        // Save last section
+        if (currentSection && currentText.length) {
+            sections.push({ title: currentSection, body: currentText.join(' ') });
+        }
+
+        // If we didn't parse sections, fall back to single block
+        if (sections.length === 0) {
+            return prose.replace(/\n/g, ' ');
+        }
+
+        return sections.map(s =>
+            `<div class="report-section"><div class="report-section-title">${s.title}</div>` +
+            `<div class="report-section-body">${s.body}</div></div>`
+        ).join('');
+    }
+
     async function loadReportWeeks() {
         try {
             const res = await fetch(`${BACKEND}/report-weeks`);
@@ -2501,7 +2557,7 @@ function renderWeekInReview() {
                     const commentDiv = entry.querySelector('.round-comment');
                     if (commentDiv) {
                         if (proseEntry && proseEntry.prose) {
-                            commentDiv.textContent = proseEntry.prose;
+                            commentDiv.innerHTML = renderReportSections(proseEntry.prose);
                         } else if (entry.dataset.complete === 'false') {
                             commentDiv.textContent = 'Round in progress';
                         } else {
