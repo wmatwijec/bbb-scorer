@@ -1341,20 +1341,26 @@ function precomputeAllTotals() {
    let holePoints = 0;
    let holeFoPts = 0, holeGrPts = 0, holeClPts = 0, holePPts = 0;
 
-   // Base points + carry-in for FO/GR
-   if (s.firstOn) {
-     holeFoPts = 1;
-     holeGrPts = isPar3 ? 1 : 0;
-   }
+  // Base points + carry-in for FO/GR
+    if (s.firstOn) {
+      if (isPar3) {
+        holeGrPts = 1;
+      } else {
+        holeFoPts = 1;
+      }
+    }
    if (s.closest) holeClPts = 1;
    if (s.putt) holePPts = 1;
 
    // Carry-in
-     if (s.firstOn) {
-       const ciAdd = isPar3 ? carryIn.greenie : carryIn.firstOn;
-       holeFoPts += ciAdd;
-       holeGrPts += isPar3 ? ciAdd : 0;
-     }
+      if (s.firstOn) {
+        const ciAdd = isPar3 ? carryIn.greenie : carryIn.firstOn;
+        if (isPar3) {
+          holeGrPts += ciAdd;
+        } else {
+          holeFoPts += ciAdd;
+        }
+      }
      if (s.closest) holeClPts += carryIn.closest;
      if (s.putt) holePPts += carryIn.putt;
    
@@ -1599,16 +1605,34 @@ if (isFinished) {
 function renderRoundSummary() {
   if (!els.roundSummary) return;
 
-  let wins = 0;
-  players.forEach(p => wins += p._cachedTotal || 0);
+  let totalPoints = 0;
+  let categoryWins = 0;
+
+  for (let idx = 0; idx < HOLES; idx++) {
+    const holeNumber = idx + 1;
+    if (!finishedHoles.has(holeNumber)) continue;
+
+    let hasFirstOn = false, hasClosest = false, hasPutt = false;
+    players.forEach(p => {
+      const s = p.scores[idx] || {};
+      if (s.firstOn) hasFirstOn = true;
+      if (s.closest) hasClosest = true;
+      if (s.putt) hasPutt = true;
+    });
+    if (hasFirstOn) categoryWins++;
+    if (hasClosest) categoryWins++;
+    if (hasPutt) categoryWins++;
+  }
+
+  players.forEach(p => totalPoints += p._cachedTotal || 0);
 
   const expected = finishedHoles.size * 3;
-  const openCarry = expected - wins;   // ← correct variable name
+  const openCarry = expected - categoryWins;
 
   els.roundSummary.innerHTML = `
 <div style="font-size:0.9rem;line-height:1.4;">
-  Wins: <strong>${wins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
-  <small>Expected Pts: ${finishedHoles.size} Holes × 3 = ${expected}</small>
+  Category Wins: <strong>${categoryWins}</strong> + Open Carry: <strong>${openCarry}</strong> = <strong>${expected}</strong><br>
+  <small>Points: ${totalPoints} | ${finishedHoles.size} Holes × 3 = ${expected}</small>
 </div>
   `;
 
