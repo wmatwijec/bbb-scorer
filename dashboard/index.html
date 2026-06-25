@@ -352,9 +352,9 @@ function renderReportSections(prose) {
     }
 
     function matchProseEntry(round, proseEntries) {
-        const dateKey = round.date.slice(0, 10);
+        const dateKey = getRoundLocalDate(round);
         const course = round.courseName || 'Unknown';
-        const playerKeys = (round.players || []).filter(p => p.name && !p.name.toLowerCase().includes('guest'))
+        const playerKeys = (round.players || []).filter(p => p && p.name)
             .map(p => p.name).sort().join(',');
         for (const entry of proseEntries) {
             if (entry.roundDate === dateKey && entry.players === playerKeys) {
@@ -399,6 +399,11 @@ function renderReportSections(prose) {
         return carry;
     }
 
+    // === HELPER: Get local date string from round (uses localDate if available, falls back to date) ===
+    function getRoundLocalDate(round) {
+        return round.localDate || (round.date ? round.date.slice(0, 10) : '');
+    }
+
     function computeRoundStats(round) {
         let pars = round.pars && Array.isArray(round.pars) && round.pars.length === 18
             ? round.pars : (coursePars[round.courseName] || DEFAULT_PARS);
@@ -415,7 +420,7 @@ function renderReportSections(prose) {
         const result = { playerData: {} };
 
         (round.players || []).forEach(p => {
-            if (!p?.name || p.name.toLowerCase().includes('guest')) return;
+            if (!p?.name) return;
           let totalPts = 0, foPts = 0, grPts = 0, clPts = 0, pPts = 0;
             const holeDetails = [];
             const holeScoresPerPlayer = [];
@@ -614,10 +619,10 @@ function renderReportSections(prose) {
           // This handles the case where the same round is saved multiple times with different matchIds
           const bestByKey = new Map();
           validRounds.forEach(round => {
-              const dateKey = round.date.slice(0, 10);
+const dateKey = getRoundLocalDate(round);
               const course = round.courseName || 'Unknown';
-              const playerKeys = (round.players || []).filter(p => p.name && !p.name.toLowerCase().includes('guest'))
-                  .map(p => p.name).sort().join(',');
+            const playerKeys = (round.players || []).filter(p => p && p.name)
+                   .map(p => p.name).sort().join(',');
               const dedupKey = `${dateKey}|${course}|${playerKeys}`;
               const existing = bestByKey.get(dedupKey);
               const curHoles = (round.finishedHoles || []).length;
@@ -659,6 +664,21 @@ function renderReportSections(prose) {
                 });
             });
             allPlayers = Array.from(playerSet).sort();
+
+            // Aggregate guest stats
+            let guestStats = { totalPts: 0, rounds: 0, wins: 0, totalHolesScored: 0, bestRound: 0, foWins: 0, grWins: 0, clWins: 0, pWins: 0, winStreak: 0, lossDrought: 0 };
+            for (const name of Object.keys(seasonStats)) {
+                if (name && name.toLowerCase().includes('guest')) {
+                    guestStats.totalPts += seasonStats[name].totalPts;
+                    guestStats.rounds += seasonStats[name].rounds;
+                    guestStats.wins += seasonStats[name].wins || 0;
+                    guestStats.bestRound = Math.max(guestStats.bestRound, seasonStats[name].totalPts);
+                }
+            }
+            if (guestStats.rounds > 0) {
+                seasonStats['Guests'] = guestStats;
+                if (!allPlayers.includes('Guests')) allPlayers.push('Guests');
+            }
 
             if (allPlayers.length === 0) {
                 statusEl.textContent = 'No valid completed rounds found.';
@@ -855,7 +875,7 @@ function renderReportSections(prose) {
                     // Win/loss streak (consecutive rounds)
                     const playerScores = Object.entries(round._cachedTotals || {})
                         .map(([n, val]) => ({ name: n, totalPts: getPointTotal(round._cachedTotals, n) }))
-                        .filter(x => !x.name.toLowerCase().includes('guest') && !excludedPlayers.has(x.name))
+                        .filter(x => !excludedPlayers.has(x.name))
                         .sort((a, b) => b.totalPts - a.totalPts);
                     const n = playerScores.length;
                     const isWinner = new Set();
@@ -927,12 +947,12 @@ function renderReportSections(prose) {
         const filtered = playerFilter === ALL_PLAYERS_VALUE
             ? allRounds
             : allRounds.filter(r => {
-                const playerNames = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+                const playerNames = (r.players || []).filter(p => p && p.name).map(p => p.name);
                 return playerNames.includes(playerFilter);
             });
         const dateMap = new Map();
         filtered.forEach(r => {
-            const dateKey = r.date.slice(0, 10);
+            const dateKey = getRoundLocalDate(r);
             if (!dateMap.has(dateKey)) dateMap.set(dateKey, r.date);
         });
         roundDatesByDate = Array.from(dateMap.values()).sort();
@@ -951,10 +971,10 @@ function renderReportSections(prose) {
         const playerFilter = document.getElementById('roundPlayerSelect').value;
         const opt = document.getElementById('roundDateSelect').options[parseInt(dateIdx)];
         const dateKey = opt ? opt.dataset.date : '';
-        let roundsForDate = allRounds.filter(r => r.date.slice(0, 10) === dateKey);
+        let roundsForDate = allRounds.filter(r => getRoundLocalDate(r) === dateKey);
         if (playerFilter !== ALL_PLAYERS_VALUE) {
             roundsForDate = roundsForDate.filter(r => {
-                const playerNames = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+                const playerNames = (r.players || []).filter(p => p && p.name).map(p => p.name);
                 return playerNames.includes(playerFilter);
             });
         }
@@ -969,7 +989,7 @@ function renderReportSections(prose) {
         sel.innerHTML = roundsForDate.map((r, i) => {
             const startTime = r.groupStartTime || '';
             const timeStr = startTime ? ` — ${startTime}` : '';
-            const players = (r.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name).join(', ');
+            const players = (r.players || []).filter(p => p && p.name).map(p => p.name).join(', ');
             return `<option value="${i}">Round ${i + 1} — ${r.courseName || 'Unknown'}${timeStr}<br><span style="color:#64748b;font-size:11px;">${players}</span></option>`;
         }).join('');
         sel.value = '0';
@@ -1000,14 +1020,14 @@ function renderReportSections(prose) {
          const round = dateRounds[roundIdx];
     const container = document.getElementById('round-card-content');
          console.log('container found:', !!container, 'view display:', document.getElementById('round-card-view').style.display, 'card display:', document.querySelector('#round-card-view .card')?.style.display);
-  const dateKey = round.date.slice(0, 10);
+  const dateKey = getRoundLocalDate(round);
           const roundDate = new Date(dateKey + 'T12:00:00');
           const dateStr = roundDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
          const startTime = round.groupStartTime || '';
          const course = round.courseName || 'Unknown';
           const pars = coursePars[course] || DEFAULT_PARS;
          console.log('renderScorecard pars:', course, '->', pars);
-         const players = (round.players || []).filter(p => p && p.name && !p.name.toLowerCase().includes('guest')).map(p => p.name);
+         const players = (round.players || []).filter(p => p && p.name).map(p => p.name);
          const holeSequence = buildHoleSequence(round);
 
          let html = `<div style="margin-bottom:10px;">
@@ -1723,8 +1743,9 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             const st = seasonStats[entry.name];
             const medRank = sortedIdx(entry.name);
             const meanRank = [...lb].sort((a, b) => b.mean - a.mean).findIndex(s => s.name === entry.name) + 1;
+            const isGuests = entry.name === 'Guests';
 
-            html += `           <tr onclick="showView('player'); document.getElementById('playerSelect').value='${entry.name}'; onPlayerChange('${entry.name}');" style="cursor:pointer;" title="Click for player details">
+            html += `           <tr onclick="${isGuests ? '' : "showView('player'); document.getElementById('playerSelect').value='" + entry.name + "'; onPlayerChange('" + entry.name + "');" }" style="cursor:${isGuests ? 'default' : 'pointer'};${isGuests ? 'color: #c084fc; font-style: italic; background: #2e1065;' : ''}" title="${isGuests ? '' : 'Click for player details'}">
                 <td>${entry.name}</td>
                 <td>${entry.rounds}</td>
                 <td>${entry.totalPoints}</td>
@@ -1830,7 +1851,7 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         select.innerHTML = '<option value="">-- Select Player --</option>';
         const highlightSelect = document.getElementById('playerSelectLB');
         highlightSelect.innerHTML = '<option value="">-- None --</option>';
-        allPlayers.forEach(name => {
+        allPlayers.filter(name => name !== 'Guests').forEach(name => {
             const opt = document.createElement('option');
             opt.value = name;
             opt.textContent = name;
@@ -2385,7 +2406,7 @@ function initWeeklyView() {
     } else {
         const weekSet = new Set();
         allRounds.forEach(r => {
-            const dateStr = r.date.slice(0, 10);
+            const dateStr = getRoundLocalDate(r);
             const year = getISOYear(dateStr);
             const week = getISOWeekNumber(dateStr);
             weekSet.add(getWeekKey(year, week));
@@ -2419,8 +2440,8 @@ function renderWeekInReview() {
     const container = document.getElementById('weekly-content');
     
     // Filter rounds for this week, deduplicating by matchId (keep latest)
-    const weekRounds = allRounds.filter(r => {
-        const rd = new Date(r.date.slice(0, 10) + 'T12:00:00');
+       const weekRounds = allRounds.filter(r => {
+        const rd = new Date(getRoundLocalDate(r) + 'T12:00:00');
         return rd >= monday && rd <= sunday;
     });
     const matchIdMap = new Map();
@@ -2440,8 +2461,8 @@ function renderWeekInReview() {
     const weekBest = {};
     const weekDates = new Set();
     
-    weekRounds.forEach(r => {
-        weekDates.add(r.date.slice(0, 10));
+      weekRounds.forEach(r => {
+        weekDates.add(getRoundLocalDate(r));
         if (r._playerData) {
             Object.entries(r._playerData).forEach(([name, data]) => {
                 if (!weekBest[name] || data.totalPts > (weekBest[name].totalPts || 0)) {
@@ -2481,7 +2502,7 @@ function renderWeekInReview() {
     
     // Build HTML placeholders, then fetch LLM comments
     sortedWeekRounds.forEach(r => {
-        const dateStr = r.date.slice(0, 10);
+        const dateStr = getRoundLocalDate(r);
         const rd = new Date(dateStr + 'T12:00:00');
         const dayName = rd.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
         const course = r.courseName || 'Unknown';
