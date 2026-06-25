@@ -732,19 +732,28 @@ const dateKey = getRoundLocalDate(round);
                         // Tie for 1st → 2 winners
                         isWinner.add(playerScores[1].name);
                     }
-                } else if (numPlayers === 4) {
-                    isWinner.add(playerScores[0].name);
-                    if (playerScores[0].totalPts === playerScores[1].totalPts) {
-                        // Tie for 1st → 2 winners
-                        isWinner.add(playerScores[1].name);
-                    } else if (playerScores[1].totalPts === playerScores[2].totalPts) {
-                        // Tie for 2nd → neither tied player gets anything, 1st wins, 3rd/4th lose
-                    } else {
-                        // No tie, top 2 win
-                        isWinner.add(playerScores[1].name);
-                    }
+           } else if (numPlayers === 4) {
+                isWinner.add(playerScores[0].name);
+                if (playerScores[0].totalPts === playerScores[1].totalPts) {
+                    // Tie for 1st → 2 winners
+                    isWinner.add(playerScores[1].name);
+                } else if (playerScores[1].totalPts === playerScores[2].totalPts) {
+                    // Tie for 2nd → neither tied player gets anything, 1st wins, 3rd/4th lose
+                } else {
+                    // No tie, top 2 win
+                    isWinner.add(playerScores[1].name);
                 }
-                // numPlayers < 2: no winner determination
+            } else if (numPlayers >= 5) {
+                isWinner.add(playerScores[0].name);
+                if (playerScores[0].totalPts === playerScores[1].totalPts) {
+                    isWinner.add(playerScores[1].name);
+                } else if (playerScores[1].totalPts === playerScores[2].totalPts) {
+                    // Tie for 2nd → neither tied player gets a win
+                } else {
+                    isWinner.add(playerScores[1].name);
+                }
+            }
+            // numPlayers < 2: no winner determination
 
                 for (const [name, data] of Object.entries(result.playerData)) {
                     if (!seasonStats[name]) continue;
