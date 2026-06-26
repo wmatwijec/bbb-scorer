@@ -2866,11 +2866,11 @@ function renderWeekInReview() {
             <h4>Scoring System</h4>
             <p>BBB uses a point-based scoring system. Here's how points are earned each round:</p>
             <ul>
-                <li><strong>FO (First On):</strong> 1 point for hitting the green in the regulated number of strokes (par-4: 2nd shot or earlier, par-5: 3rd shot or earlier). Putt-out for 1 point adds another.</li>
-                <li><strong>GR (Greenie):</strong> 1 bonus point for hitting a par-3 green in regulation (first shot on). Awarded at the end of the round.</li>
-                <li><strong>CL (Closest to Pin):</strong> 1 point for having the ball closest to the hole on par-3s (or par-4s/5s when a greenie is awarded). Putt-out for 1 point adds another.</li>
-                <li><strong>P (Putt):</strong> 1 point for making a putt of 20+ feet. Shorter putts are worth nothing.</li>
-                <li><strong>Carry-In:</strong> Points from balls that carry greens but don't stop on them. Awarded at the end of each hole when applicable.</li>
+                <li><strong>FO (First On):</strong> 1 point for being the first to hit the green. The number of strokes does not matter.</li>
+                <li><strong>GR (Greenie):</strong> 1 bonus point for hitting a par-3 green on the first shot. Awarded when the hole is finished.</li>
+                <li><strong>CL (Closest to Pin):</strong> 1 point for having the ball closest to the hole on par-3s (or par-4s/5s when a greenie is awarded).</li>
+                <li><strong>P (Putt):</strong> 1 point for the longest putt made in the round.</li>
+                <li><strong>Carry-In:</strong> Points carried from one hole to the next of different types until they are awarded.</li>
             </ul>
         </div>
 
@@ -2879,12 +2879,12 @@ function renderWeekInReview() {
             <ul>
                 <li><strong>Score Streak:</strong> Consecutive holes where you scored any point (FO, CL, P, Carry-In, or Greenie).</li>
                 <li><strong>Zero Streak (Drought):</strong> Consecutive holes where you scored zero points. Capped at 18 holes (a full round).</li>
-                <li><strong>FO Streak:</strong> Consecutive par-4 or par-5 holes where you hit the green in regulation.</li>
+                <li><strong>FO Streak:</strong> Consecutive par-4 or par-5 holes where you were First On the green — does not have to be in regulation.</li>
                 <li><strong>Closest Streak:</strong> Consecutive holes where you won closest-to-pin.</li>
-                <li><strong>Putt Streak:</strong> Consecutive putts of 20+ feet that you made.</li>
+                <li><strong>Putt Streak:</strong> Consecutive holes where you won the putt.</li>
                 <li><strong>Greenie Run:</strong> Most consecutive par-3 holes where you hit the green in regulation within a single round.</li>
                 <li><strong>3-Ptr Streak:</strong> Most holes where you earned FO + Closest + Putt on the same hole (within a round).</li>
-                <li><strong>Max Hole Score:</strong> Highest total points scored on a single hole in one round (e.g., FO + CL + P + Carry-In = up to 6 points).</li>
+                <li><strong>Max Hole Score:</strong> Highest total points scored on a single hole in one round (not limited to six points).</li>
             </ul>
         </div>
 
@@ -2939,7 +2939,7 @@ function renderWeekInReview() {
 
         <div class="help-section">
             <h4>Player Count Filter</h4>
-            <p>Rounds are split into 3-player and 4-player categories because carry-in dynamics differ: 3-player rounds typically award more points per player due to fewer competitors for greens. We do not average or normalize between the two — each is shown separately. The "All Rounds" view combines both.</p>
+            <p>Rounds are split into 3-player and 4-player categories because with fewer competitors there are more potential points to award a player. This is a mathematical fact, not a typical observation. We do not average or normalize between the two — each is shown separately. The "All Rounds" view combines both.</p>
         </div>
 
         <div class="help-section">
