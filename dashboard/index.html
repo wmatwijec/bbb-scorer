@@ -2539,9 +2539,7 @@ function renderWinLossGrid() {
                     <div class="h2h-header-row">
                         <div class="h2h-header-cell h2h-corner">Par \ Category</div>
                         ${h2hCategories.map(cat => `<div class="h2h-header-cell">${cat.toUpperCase()}</div>`).join('')}
-                        <div class="h2h-header-cell">${tipIcon('Total average points per round on this par')} Total Pts</div>
-                        <div class="h2h-header-cell">${tipIcon('Total average points per round on this par')} Total Pts</div>
-                    </div>
+                        </div>
                     ${h2hParRows.map((parRow, parIdx) => {
                         const aParTotals = h2hCategories.map(cat => {
                             const key = cat + 'PerRound' + h2hParSuffixes[cat][parIdx];
@@ -2566,8 +2564,6 @@ function renderWinLossGrid() {
                                 );
                                 return `<div class="h2h-cell ${h2hResult.cellClass}" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
                             }).join('')}
-                            <div class="h2h-cell h2h-a" style="font-weight:600;" title="Combined avg of FO, Greenie, CL, Putt for this par">${aParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div>
-                            <div class="h2h-cell h2h-b" style="font-weight:600;" title="Combined avg of FO, Greenie, CL, Putt for this par">${bParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div>
                         </div>`;
                     }).join('')}
                     <div class="h2h-row" style="border-top: 2px solid #2d3154;">
@@ -2582,26 +2578,6 @@ function renderWinLossGrid() {
                             );
                             return `<div class="h2h-cell ${h2hResult.cellClass}" style="font-weight:600;" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
                         }).join('')}
-                          <div class="h2h-cell h2h-a" style="font-weight:600;" title="Total average points per round across all pars">${h2hCategories.reduce((sum, cat) => {
-                            let total = 0;
-                            const parIndices = h2hParSuffixes[cat].map(() => true);
-                            parIndices.forEach((_, idx) => {
-                                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
-                                const data = ps[h2hPlayerA] && ps[h2hPlayerA][key];
-                                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
-                            });
-                            return sum + total;
-                        }, 0).toFixed(2)}</div>
-                         <div class="h2h-cell h2h-b" style="font-weight:600;" title="Total average points per round across all pars">${h2hCategories.reduce((sum, cat) => {
-                            let total = 0;
-                            const parIndices = h2hParSuffixes[cat].map(() => true);
-                            parIndices.forEach((_, idx) => {
-                                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
-                                const data = ps[h2hPlayerB] && ps[h2hPlayerB][key];
-                                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
-                            });
-                            return sum + total;
-                        }, 0).toFixed(2)}</div>
                     </div>
                 </div>
             </div>
@@ -3331,50 +3307,21 @@ function renderWeekInReview() {
         };
         let html = `<div class="h2h-header-row"><div class="h2h-header-cell h2h-corner">Par \\ Category</div>`;
         html += h2hCategories.map(cat => `<div class="h2h-header-cell">${cat.toUpperCase()}</div>`).join('');
-        html += `<div class="h2h-header-cell">${tipIcon('Total average points per round on this par')} Total Pts</div>`;
-        html += `<div class="h2h-header-cell">${tipIcon('Total average points per round on this par')} Total Pts</div></div>`;
-        h2hParRows.forEach((parRow, parIdx) => {
-            const aParTotals = h2hCategories.map(cat => {
-                const key = cat + 'PerRound' + h2hParSuffixes[cat][parIdx];
-                const data = ps[h2hPlayerA] && ps[h2hPlayerA][key];
-                return data && data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0;
-            });
-            const bParTotals = h2hCategories.map(cat => {
-                const key = cat + 'PerRound' + h2hParSuffixes[cat][parIdx];
-                const data = ps[h2hPlayerB] && ps[h2hPlayerB][key];
-                return data && data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0;
-            });
-            html += `<div class="h2h-row"><div class="h2h-header-cell h2h-par-label">${parRow}</div>`;
+        html += `</div>`;
+      h2hParRows.forEach((parRow, parIdx) => {
+             html += `<div class="h2h-row"><div class="h2h-header-cell h2h-par-label">${parRow}</div>`;
             h2hCategories.forEach(cat => {
                 const cell = computeCell(h2hPlayerA || Object.keys(ps)[0], h2hPlayerB || Object.keys(ps)[1], cat, parIdx);
                 html += `<div class="h2h-cell ${cell.cls}" title="${cell.title}">${cell.content}</div>`;
             });
-            html += `<div class="h2h-cell h2h-a" style="font-weight:600;" title="Combined avg of FO, Greenie, CL, Putt for this par">${aParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div>`;
-            html += `<div class="h2h-cell h2h-b" style="font-weight:600;" title="Combined avg of FO, Greenie, CL, Putt for this par">${bParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div></div>`;
+            html += `</div>`;
         });
         html += `<div class="h2h-row" style="border-top: 2px solid #2d3154;"><div class="h2h-header-cell h2h-par-label">Total</div>`;
         h2hCategories.forEach(cat => {
             const cell = computeCell(h2hPlayerA || Object.keys(ps)[0], h2hPlayerB || Object.keys(ps)[1], cat, -1);
             html += `<div class="h2h-cell ${cell.cls}" style="font-weight:600;" title="${cell.title}">${cell.content}</div>`;
         });
-        html += `<div class="h2h-cell h2h-a" style="font-weight:600;" title="Total average points per round across all pars">${h2hCategories.reduce((sum, cat) => {
-            let total = 0;
-            h2hParSuffixes[cat].forEach((_, idx) => {
-                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
-                const data = ps[h2hPlayerA] && ps[h2hPlayerA][key];
-                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
-            });
-            return sum + total;
-        }, 0).toFixed(2)}</div>`;
-        html += `<div class="h2h-cell h2h-b" style="font-weight:600;" title="Total average points per round across all pars">${h2hCategories.reduce((sum, cat) => {
-            let total = 0;
-            h2hParSuffixes[cat].forEach((_, idx) => {
-                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
-                const data = ps[h2hPlayerB] && ps[h2hPlayerB][key];
-                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
-            });
-            return sum + total;
-        }, 0).toFixed(2)}</div></div>`;
+        html += `</div></div>`;
         grid.innerHTML = html;
     }
 
