@@ -2217,7 +2217,7 @@ function renderWinLossGrid() {
         const tipIcon = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
         const tipL = (label, text) => `${label}${tipIcon(text)}`;
         const tipS = (label, sub, text) => `${label}<div class="sub">${sub}</div>${tipIcon(text)}`;
-        const tipH = (text) => `${text}${tipIcon(text)} `;
+        const tipH = (label, help) => `${label}${tipIcon(help)} `;
         const tipC = (text, helpText) => `${text}${tipIcon(helpText)}`;
 
         let html = `
@@ -2247,7 +2247,7 @@ function renderWinLossGrid() {
             </div>
 
             <div class="card">
-                <h3>${tipH('Category Breakdown', 'How the player compares to the group average in each scoring category')}Category Breakdown</h3>
+                <h3>${tipH('Category Breakdown', 'How the player compares to the group average in each scoring category')}</h3>
                 <table class="cat-table">
                     <thead>
                         <tr><th>${tipC('Category', 'Scoring category')}</th><th>${tipC('Your Total', 'Number of rounds with a win in this category')}</th><th>${tipC('Your Mean/Rnd', 'Average points per round from this category')}</th><th>${tipC('Group Mean/Rnd', 'Average of all players\' Mean/Rnd for this category')}</th><th>${tipC('vs Group', 'Difference from group average — green means above average, red means below')}</th></tr>
