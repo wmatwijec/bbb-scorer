@@ -1723,9 +1723,10 @@ const dateKey = getRoundLocalDate(round);
                   console.log('sliderVal:', slider?.value, 'statsCount:', _currentStreakStats?.length);
               }
     for (const ss of _currentStreakStats) {
+                  const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
                   const allPlayersData = allPlayers.map(name => ({
                       name,
-                      seasonVal: ss.special ? seasonStats[name].maxHoleScore : seasonStats[name][ss.statsKey] || 0,
+                      seasonVal: ss.special ? st[name].maxHoleScore : st[name][ss.statsKey] || 0,
                       dynamicVal: getDynVal(name, ss)
           }));
                    const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, _cardPlayerCount);
@@ -1781,9 +1782,10 @@ function renderOtherGrid() {
                    console.log('sliderVal:', slider?.value, 'statsCount:', _currentOtherStats?.length);
                }
               for (const os of _currentOtherStats) {
+                  const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
                   const allPlayersData = allPlayers.map(name => ({
                       name,
-                      seasonVal: seasonStats[name][os.key] || 0,
+                      seasonVal: st[name][os.key] || 0,
                       dynamicVal: getOtherDynVal(name, os)
                   }));
                 const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, _cardPlayerCount);
@@ -1835,11 +1837,12 @@ function renderWinLossGrid() {
                     console.group('renderWinLossGrid |', _streakMode);
                     console.log('sliderVal:', slider?.value, 'statsCount:', _currentWinLossStats?.length);
                 }
-              for (const wl of _currentWinLossStats) {
-                  const fmt = (v) => wl.fmt ? wl.fmt(v) : v;
+            for (const wl of _currentWinLossStats) {
+                   const fmt = (v) => wl.fmt ? wl.fmt(v) : v;
+                  const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
                   const allPlayersData = allPlayers.map(name => ({
                       name,
-                      seasonVal: wl.sort === 'ratio' ? (seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0) : seasonStats[name][wl.key] || 0,
+                      seasonVal: wl.sort === 'ratio' ? (st[name].rounds > 0 ? st[name].wins / st[name].rounds : 0) : st[name][wl.key] || 0,
                       dynamicVal: getWinLossDynVal(name, wl)
                   }));
             const seasonTop10 = allPlayersData.filter(e => e.seasonVal > 0).sort((a, b) => b.seasonVal - a.seasonVal).slice(0, _cardPlayerCount);
