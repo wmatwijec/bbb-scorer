@@ -200,6 +200,11 @@
             color: #fff;
             border-color: #60a5fa;
         }
+        .compare-note {
+            font-size: 11px;
+            color: #64748b;
+            vertical-align: middle;
+        }
 
         /* ── Tables ── */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -3023,8 +3028,11 @@ function renderWeekInReview() {
     function renderCompareToggle() {
         const active = compareTop5 ? 'active' : '';
         const title = compareTop5 ? 'Compare vs all players' : 'Compare vs top 5 by win %';
-        const btn = `<button onclick="toggleCompareTop5()" class="compare-btn ${active}" title="${title}">${compareTop5 ? 'T5' : 'ALL'}</button>`;
-        return btn + ' ';
+        const btn = `<button onclick="toggleCompareTop5()" class="compare-btn ${active}" title="${title}">${compareTop5 ? 'Top 5' : 'ALL'}</button>`;
+        const note = compareTop5
+            ? `<span class="compare-note">Click button to switch to all players</span>`
+            : `<span class="compare-note">Click button to compare vs top 5 by win %</span>`;
+        return btn + ' ' + note;
     }
 
     // ── Help sidebar ──
