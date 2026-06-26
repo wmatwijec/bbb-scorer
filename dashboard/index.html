@@ -2214,10 +2214,11 @@ function renderWinLossGrid() {
         const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
 
         // Tooltip helpers
-        const tip = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
-        const tipL = (label, text) => `${label}${tip(text)}`;
-        const tipS = (label, sub, text) => `${label}<div class="sub">${sub}</div>${tip(text)}`;
-        const tipH = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span> ` : '';
+        const tipIcon = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
+        const tipL = (label, text) => `${label}${tipIcon(text)}`;
+        const tipS = (label, sub, text) => `${label}<div class="sub">${sub}</div>${tipIcon(text)}`;
+        const tipH = (text) => `${text}${tipIcon(text)} `;
+        const tipC = (text, helpText) => `${text}${tipIcon(helpText)}`;
 
         let html = `
             <h2>${name}'s Stats</h2>
@@ -2249,32 +2250,32 @@ function renderWinLossGrid() {
                 <h3>${tipH('Category Breakdown', 'How the player compares to the group average in each scoring category')}Category Breakdown</h3>
                 <table class="cat-table">
                     <thead>
-                        <tr><th>${tipH('Category', 'Scoring category')}</th><th>${tipH('Your Total', 'Number of rounds with a win in this category')}</th><th>${tipH('Your Mean/Rnd', 'Average points per round from this category')}</th><th>${tipH('Group Mean/Rnd', 'Average of all players\' Mean/Rnd for this category')}</th><th>${tipH('vs Group', 'Difference from group average — green means above average, red means below')}</th></tr>
+                        <tr><th>${tipC('Category', 'Scoring category')}</th><th>${tipC('Your Total', 'Number of rounds with a win in this category')}</th><th>${tipC('Your Mean/Rnd', 'Average points per round from this category')}</th><th>${tipC('Group Mean/Rnd', 'Average of all players\' Mean/Rnd for this category')}</th><th>${tipC('vs Group', 'Difference from group average — green means above average, red means below')}</th></tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>${tip('FO Wins', 'Rounds with a First-On point — 1 pt for being the first to hit the green')}</td>
+                            <td>${tipC('FO Wins', 'Rounds with a First-On point — 1 pt for being the first to hit the green')}</td>
                             <td>${stData.foWins}</td>
                             <td>${stData.foPerRound.length ? (stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgFo.toFixed(1)}</td>
                             <td class="${diffClass(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}">${diff(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}</td>
                         </tr>
                         <tr>
-                            <td>${tip('Greenie Wins', 'Rounds with a Greenie — 1 pt for hitting a par-3 green on the first shot')}</td>
+                            <td>${tipC('Greenie Wins', 'Rounds with a Greenie — 1 pt for hitting a par-3 green on the first shot')}</td>
                             <td>${stData.grWins}</td>
                             <td>${stData.grPerRound.length ? (stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgGr.toFixed(1)}</td>
                             <td class="${diffClass(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}">${diff(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}</td>
                         </tr>
                         <tr>
-                            <td>${tip('Closest Wins', 'Rounds with Closest-to-Pin — 1 pt for having the ball closest to the hole')}</td>
+                            <td>${tipC('Closest Wins', 'Rounds with Closest-to-Pin — 1 pt for having the ball closest to the hole')}</td>
                             <td>${stData.clWins}</td>
                             <td>${stData.clPerRound.length ? (stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgCl.toFixed(1)}</td>
                             <td class="${diffClass(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}">${diff(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}</td>
                         </tr>
                         <tr>
-                            <td>${tip('Putt Wins', 'Rounds with a Putt — 1 pt for the longest putt made on the hole')}</td>
+                            <td>${tipC('Putt Wins', 'Rounds with a Putt — 1 pt for the longest putt made on the hole')}</td>
                             <td>${stData.pWins}</td>
                             <td>${stData.pPerRound.length ? (stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgP.toFixed(1)}</td>
@@ -2363,10 +2364,10 @@ function renderWinLossGrid() {
             <h3>${tipH('Round-by-Round', 'Every round the player has participated in')}</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
-                    <thead><tr><th>#</th><th>${tipH('Date', 'Date of the round')}</th>`;
+                    <thead><tr><th>#</th><th>${tipC('Date', 'Date of the round')}</th>`;
         const hasCourse = playerRoundData[name]?.some(r => r.course);
-        if (hasCourse) html += `<th>${tipH('Course', 'Course name')}</th>`;
-        html += `<th>${tipH('Total', 'Total points scored that round (highlighted green for best round)')}</th><th>${tipH('FO', 'First-On points that round')}</th><th>${tipH('GR', 'Greenie points that round')}</th><th>${tipH('CL', 'Closest-to-Pin points that round')}</th><th>${tipH('P', 'Putt points that round')}</th></tr></thead>
+        if (hasCourse) html += `<th>${tipC('Course', 'Course name')}</th>`;
+        html += `<th>${tipC('Total', 'Total points scored that round (highlighted green for best round)')}</th><th>${tipC('FO', 'First-On points that round')}</th><th>${tipC('GR', 'Greenie points that round')}</th><th>${tipC('CL', 'Closest-to-Pin points that round')}</th><th>${tipC('P', 'Putt points that round')}</th></tr></thead>
                     <tbody>`;
 
         playerRoundData[name]?.forEach((r, i) => {
