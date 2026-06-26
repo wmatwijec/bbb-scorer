@@ -2307,22 +2307,24 @@ function renderWinLossGrid() {
             </div>
 
             <div class="card">
-                <h3>${tipH('Where to Improve', 'Your biggest opportunities compared to group average — sorted by largest gap (most improvement potential first)')}</h3>
+                <h3>${tipH('Where to Improve', 'Categories where you score below group average — sorted by biggest gap (most improvement potential first)')}</h3>
                 <div class="improve-list">`;
-        for (const cat of improveCategories) {
-            const gap = cat.avg - cat.val;
-            const gapClass = gap > 0 ? 'neg' : 'pos';
-            const barWidth = Math.min(Math.abs(gap) / maxGap * 100, 100);
-            const barColor = gap > 0 ? '#f87171' : '#34d399';
-            const barLabel = gap > 0 ? `-${Math.abs(gap).toFixed(2)}/rnd` : `+${gap.toFixed(2)}/rnd`;
-            html += `
+        const belowAvg = improveCategories.filter(c => c.avg - c.val > 0);
+        if (belowAvg.length === 0) {
+            html += `<div style="color:#64748b;font-size:13px;text-align:center;padding:12px 0;">You're above average in every category — keep it up!</div>`;
+        } else {
+            for (const cat of belowAvg) {
+                const gap = cat.avg - cat.val;
+                const barWidth = Math.min(gap / maxGap * 100, 100);
+                html += `
                 <div class="improve-row">
                     <div class="improve-label">${tipC(cat.label, '')}</div>
                     <div class="improve-bar-track">
-                        <div class="improve-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
+                        <div class="improve-bar-fill" style="width:${barWidth}%;background:#f87171;"></div>
                     </div>
-                    <div class="improve-value ${gapClass}">${barLabel}</div>
+                    <div class="improve-value neg">${gap.toFixed(2)}/rnd</div>
                 </div>`;
+            }
         }
         html += `</div></div>`;
 
