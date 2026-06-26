@@ -1900,7 +1900,7 @@ const dateKey = getRoundLocalDate(round);
                   html += `</div>`;
                  // Current column
                    html += `<div>`;
-                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote}${sliderNote}</div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${sliderNote}</div>`;
                    currentTop10.forEach((entry, i) => {
                        const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
@@ -1954,7 +1954,7 @@ function renderOtherGrid() {
                   if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
                   html += `</div>`;
                   html += `<div>`;
-                html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote2}${sliderNote2}</div>`;
+                html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${sliderNote2}</div>`;
                    currentTop10.forEach((entry, i) => {
                        const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
                        const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
@@ -2010,7 +2010,7 @@ function renderWinLossGrid() {
                    if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
                    html += `</div>`;
                    html += `<div>`;
-                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote3}${sliderNote3}</div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${sliderNote3}</div>`;
                    currentTop10.forEach((entry, i) => {
                        const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
                        const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
