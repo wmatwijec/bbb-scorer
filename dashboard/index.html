@@ -206,6 +206,85 @@
             vertical-align: middle;
         }
 
+        /* ── Head-to-Head ── */
+        .h2h-selectors {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .h2h-select {
+            background: #0f111a;
+            color: #e2e8f0;
+            border: 1px solid #2d3154;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 12px;
+            min-width: 140px;
+        }
+        .h2h-refresh-btn {
+            background: #1a1d2e;
+            color: #94a3b8;
+            border: 1px solid #2d3154;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .h2h-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .h2h-header-row {
+            display: flex;
+            gap: 4px;
+        }
+        .h2h-row {
+            display: flex;
+            gap: 4px;
+        }
+        .h2h-cell, .h2h-header-cell {
+            flex: 1;
+            text-align: center;
+            padding: 10px 4px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #0f111a;
+        }
+        .h2h-header-cell {
+            font-weight: 600;
+            color: #94a3b8;
+            background: #1a1d2e;
+        }
+        .h2h-corner {
+            flex: none;
+            width: 80px;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 11px;
+        }
+        .h2h-par-label {
+            flex: none;
+            width: 80px;
+            font-weight: 600;
+            color: #60a5fa;
+        }
+        .h2h-a {
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.15);
+        }
+        .h2h-b {
+            color: #34d399;
+            background: rgba(52, 211, 153, 0.15);
+        }
+        .h2h-tie {
+            color: #475569;
+            background: #0f111a;
+        }
+
         /* ── Tables ── */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #2d3154; }
@@ -630,13 +709,27 @@ function renderReportSections(prose) {
                 threePtrCount += h.threePt || 0;
             });
 
-           result.playerData[p.name] = {
-                 totalPts, foPts, grPts, clPts, pPts,
-                 numHoles: holeSequence.length, streaks,
-                 holesScored, carryInTotal, maxHole, threePtrCount,
-                 threePtrPct: (threePtrCount / holeSequence.length * 100).toFixed(1),
-                 holeDetails
-             };
+            // Par-specific breakdown
+            let foPar3 = 0, foPar4 = 0, foPar5 = 0;
+            let grPar3 = 0;
+            let clPar3 = 0, clPar4 = 0, clPar5 = 0;
+            let pPar3 = 0, pPar4 = 0, pPar5 = 0;
+            holeDetails.forEach(h => {
+                const par = pars[h.hole - 1] || 4;
+                if (h.fo) { if (par === 3) foPar3++; else if (par === 4) foPar4++; else if (par === 5) foPar5++; }
+                if (h.gr) { if (par === 3) grPar3++; }
+                if (h.cl) { if (par === 3) clPar3++; else if (par === 4) clPar4++; else if (par === 5) clPar5++; }
+                if (h.p) { if (par === 3) pPar3++; else if (par === 4) pPar4++; else if (par === 5) pPar5++; }
+            });
+
+            result.playerData[p.name] = {
+                  totalPts, foPts, grPts, clPts, pPts,
+                  numHoles: holeSequence.length, streaks,
+                  holesScored, carryInTotal, maxHole, threePtrCount,
+                  threePtrPct: (threePtrCount / holeSequence.length * 100).toFixed(1),
+                  holeDetails,
+                  parBreakdown: { foPar3, foPar4, foPar5, grPar3, clPar3, clPar4, clPar5, pPar3, pPar4, pPar5 }
+              };
         });
 
         return result;
@@ -848,20 +941,25 @@ const dateKey = getRoundLocalDate(round);
             seasonStats = {};
             playerRoundData = {};
             allPlayers.forEach(name => {
-              seasonStats[name] = {
-                    rounds: 0, totalPoints: 0,
-                    foWins: 0, grWins: 0, clWins: 0, pWins: 0,
-                    bestRound: 0,
-                    pointsPerRound: [], foPerRound: [], grPerRound: [],
-                    clPerRound: [], pPerRound: [],
-                    // Streak season totals
-                    longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
-                    longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
-                   // Additional season stats
-                    totalHolesScored: 0, totalCarryIn: 0, maxHoleScore: 0, total3PtrHoles: 0,
-                    // Win/loss stats
-                    wins: 0, losses: 0, winStreak: 0, lossDrought: 0,
-                };
+            seasonStats[name] = {
+                     rounds: 0, totalPoints: 0,
+                     foWins: 0, grWins: 0, clWins: 0, pWins: 0,
+                     bestRound: 0,
+                     pointsPerRound: [], foPerRound: [], grPerRound: [],
+                     clPerRound: [], pPerRound: [],
+                     // Par-specific per-round arrays
+                     foPerRoundPar3: [], foPerRoundPar4: [], foPerRoundPar5: [],
+                     grPerRoundPar3: [],
+                     clPerRoundPar3: [], clPerRoundPar4: [], clPerRoundPar5: [],
+                     pPerRoundPar3: [], pPerRoundPar4: [], pPerRoundPar5: [],
+                     // Streak season totals
+                     longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
+                     longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
+                    // Additional season stats
+                     totalHolesScored: 0, totalCarryIn: 0, maxHoleScore: 0, total3PtrHoles: 0,
+                     // Win/loss stats
+                     wins: 0, losses: 0, winStreak: 0, lossDrought: 0,
+                 };
                 playerRoundData[name] = [];
             });
 
@@ -931,6 +1029,19 @@ const dateKey = getRoundLocalDate(round);
                     st.grPerRound.push(data.grPts);
                     st.clPerRound.push(data.clPts);
                     st.pPerRound.push(data.pPts);
+
+                    // Par-specific per-round tracking
+                    const pb = data.parBreakdown || {};
+                    st.foPerRoundPar3.push(pb.foPar3 || 0);
+                    st.foPerRoundPar4.push(pb.foPar4 || 0);
+                    st.foPerRoundPar5.push(pb.foPar5 || 0);
+                    st.grPerRoundPar3.push(pb.grPar3 || 0);
+                    st.clPerRoundPar3.push(pb.clPar3 || 0);
+                    st.clPerRoundPar4.push(pb.clPar4 || 0);
+                    st.clPerRoundPar5.push(pb.clPar5 || 0);
+                    st.pPerRoundPar3.push(pb.pPar3 || 0);
+                    st.pPerRoundPar4.push(pb.pPar4 || 0);
+                    st.pPerRoundPar5.push(pb.pPar5 || 0);
 
                   if (data.streaks) {
                         st.longestScoring = Math.max(st.longestScoring, data.streaks.longestScoring);
@@ -2267,6 +2378,55 @@ function renderWinLossGrid() {
         improveCategories.sort((a, b) => b.diff - a.diff);
         const maxGap = Math.max(...improveCategories.map(c => Math.abs(c.diff)), 0.01);
 
+        // Head-to-Head heat map data
+        const h2hCategoryLabel = {
+            foPar3: 'FO', foPar4: 'FO', foPar5: 'FO',
+            grPar3: 'GR',
+            clPar3: 'CL', clPar4: 'CL', clPar5: 'CL',
+            pPar3: 'P', pPar4: 'P', pPar5: 'P'
+        };
+        const h2hCategoryLabelFull = {
+            foPar3: 'FO on Par 3', foPar4: 'FO on Par 4', foPar5: 'FO on Par 5',
+            grPar3: 'Greenie on Par 3',
+            clPar3: 'CL on Par 3', clPar4: 'CL on Par 4', clPar5: 'CL on Par 5',
+            pPar3: 'Putt on Par 3', pPar4: 'Putt on Par 4', pPar5: 'Putt on Par 5'
+        };
+        const h2hParRows = ['Par-3', 'Par-4', 'Par-5'];
+        const h2hCategories = ['fo', 'gr', 'cl', 'p'];
+        const h2hParSuffixes = { fo: ['Par3', 'Par4', 'Par5'], gr: ['Par3'], cl: ['Par3', 'Par4', 'Par5'], p: ['Par3', 'Par4', 'Par5'] };
+        
+        const computeH2HCell = (playerA, playerB, category, parIdx) => {
+            const playerAData = playerA ? ps[playerA] : null;
+            const playerBData = playerB ? ps[playerB] : null;
+            if (!playerAData && !playerBData) return { cellContent: '—', cellClass: 'h2h-tie', title: 'No data' };
+            
+            const aKey = category + 'PerRound' + h2hParSuffixes[category][parIdx];
+            const bKey = category + 'PerRound' + h2hParSuffixes[category][parIdx];
+            
+            const aAvg = playerAData && playerAData[aKey] && playerAData[aKey].length
+                ? playerAData[aKey].reduce((a, b) => a + b, 0) / playerAData[aKey].length : 0;
+            const bAvg = playerBData && playerBData[bKey] && playerBData[bKey].length
+                ? playerBData[bKey].reduce((a, b) => a + b, 0) / playerBData[bKey].length : 0;
+            
+            const diff = aAvg - bAvg;
+            const aRounds = playerAData && playerAData[aKey] ? playerAData[aKey].length : 0;
+            const bRounds = playerBData && playerBData[bKey] ? playerBData[bKey].length : 0;
+            const hasData = aRounds > 0 || bRounds > 0;
+            
+            if (!hasData) return { cellContent: '—', cellClass: 'h2h-tie', title: 'No rounds data' };
+            
+            let cellClass = 'h2h-tie';
+            let cellContent = diff.toFixed(2);
+            if (diff > 0) { cellClass = 'h2h-a'; cellContent = '+' + diff.toFixed(2); }
+            else if (diff < 0) { cellClass = 'h2h-b'; cellContent = diff.toFixed(2); }
+            
+            const aLabel = playerA ? playerA : '—';
+            const bLabel = playerB ? playerB : '—';
+            const title = `${aLabel}: ${aAvg.toFixed(2)}/rnd | ${bLabel}: ${bAvg.toFixed(2)}/rnd\n${aRounds} rounds vs ${bRounds} rounds`;
+            
+            return { cellContent, cellClass, title };
+        };
+
         // Tooltip helpers
         const tipIcon = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
         const tipL = (label, text) => `${label}${tipIcon(text)}`;
@@ -2360,6 +2520,40 @@ function renderWinLossGrid() {
                         <div class="improve-value ${valClass}">${sign}${Math.abs(cat.diff).toFixed(2)}/rnd</div>
                     </div>`;
                 }).join('')}</div></div>
+
+            <div class="card">
+                <h3>${tipH('⚔️ Head-to-Head', 'Compare two players across par × point type categories — color shows who wins each matchup')}</h3>
+                <div class="h2h-selectors">
+                    <select id="h2hPlayerA" class="h2h-select" title="Player A">
+                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[0] ? 'selected' : ''}>${name}</option>`).join('')}
+                    </select>
+                    <span style="color:#64748b;font-weight:bold;padding:0 8px;">vs</span>
+                    <select id="h2hPlayerB" class="h2h-select" title="Player B">
+                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[1] ? 'selected' : ''}>${name}</option>`).join('')}
+                    </select>
+                    <button class="h2h-refresh-btn" onclick="refreshH2H()" title="Refresh comparison">↻</button>
+                </div>
+                <div class="h2h-grid">
+                    <div class="h2h-header-row">
+                        <div class="h2h-header-cell h2h-corner">Par \ Category</div>
+                        ${h2hCategories.map(cat => `<div class="h2h-header-cell">${cat.toUpperCase()}</div>`).join('')}
+                    </div>
+                    ${h2hParRows.map((parRow, parIdx) => `
+                        <div class="h2h-row">
+                            <div class="h2h-header-cell h2h-par-label">${parRow}</div>
+                            ${h2hCategories.map(cat => {
+                                const h2hResult = computeH2HCell(
+                                    document.getElementById('h2hPlayerA').value,
+                                    document.getElementById('h2hPlayerB').value,
+                                    cat,
+                                    parIdx
+                                );
+                                return `<div class="h2h-cell ${h2hResult.cellClass}" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
+                            }).join('')}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
 
             <div class="card">
                 <h3>${tipH('🔥 Streaks', 'Longest consecutive streaks across the season')}</h3>
@@ -3033,6 +3227,14 @@ function renderWeekInReview() {
             ? `<span class="compare-note">Click button to switch to all players</span>`
             : `<span class="compare-note">Click button to compare vs top 5 by win %</span>`;
         return btn + ' ' + note;
+    }
+
+    // ── Head-to-Head ──
+    function refreshH2H() {
+        const playerView = document.getElementById('player-view');
+        if (playerView.style.display === 'none') return;
+        const player = document.getElementById('playerSelect').value;
+        if (player) renderPlayerDetail(player);
     }
 
     // ── Help sidebar ──
