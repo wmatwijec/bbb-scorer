@@ -93,6 +93,86 @@
         .stat-card .value.neg { color: #f87171; }
         .stat-card .sub { font-size: 11px; color: #64748b; margin-top: 2px; }
 
+        /* ── Tooltip help mode ── */
+        .help-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            line-height: 14px;
+            text-align: center;
+            border-radius: 50%;
+            background: #2d3154;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 4px;
+            cursor: help;
+            position: relative;
+            vertical-align: middle;
+            font-style: normal;
+        }
+        .help-icon:hover { background: #60a5fa; color: #fff; }
+        .help-icon .tooltip {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f111a;
+            border: 1px solid #2d3154;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #e2e8f0;
+            white-space: normal;
+            width: max-content;
+            max-width: 260px;
+            z-index: 3000;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+            text-align: left;
+            line-height: 1.45;
+            pointer-events: none;
+        }
+        .help-icon .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #2d3154;
+        }
+        .help-icon .tooltip::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #0f111a;
+            top: calc(100% - 1px);
+        }
+        .help-icon:hover .tooltip { display: block; }
+        .tooltip-btn {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            text-align: center;
+            border-radius: 4px;
+            background: #1a1d2e;
+            border: 1px solid #2d3154;
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            vertical-align: middle;
+            padding: 0;
+            font-family: inherit;
+        }
+        .tooltip-btn:hover { color: #e2e8f0; }
+        .tooltip-btn.active { background: #1e3a5f; border-color: #60a5fa; color: #60a5fa; }
+
         /* ── Tables ── */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #2d3154; }
@@ -223,6 +303,7 @@
             <select id="playerSelect" onchange="onPlayerChange(this.value)">
                 <option value="">-- Select Player --</option>
             </select>
+            <button id="tooltipToggleBtn" class="tooltip-btn" onclick="toggleTooltipMode()" title="Toggle hover explanations">ⓘ</button>
         </div>
         <div id="player-detail"></div>
     </div>
@@ -2132,64 +2213,68 @@ function renderWinLossGrid() {
         const diff = (val, avg) => (val - avg).toFixed(1);
         const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
 
+        // Tooltip helpers
+        const tip = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
+        const tipL = (label, text) => `${label}${tip(text)}`;
+        const tipS = (label, sub, text) => `${label}<div class="sub">${sub}</div>${tip(text)}`;
+        const tipH = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span> ` : '';
+
         let html = `
             <h2>${name}'s Stats</h2>
 
             <div class="stat-row">
                 <div class="stat-card">
-                    <div class="label">Rounds</div>
+                    <div class="label">${tipL('Rounds', 'Number of rounds played (filtered by player count selection)')}</div>
                     <div class="value">${stData.rounds}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="label">Total Points</div>
+                    <div class="label">${tipL('Total Points', 'Sum of all points scored across all rounds')}</div>
                     <div class="value">${stData.totalPoints}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="label">Median/Rnd</div>
+                    <div class="label">${tipS('Median/Rnd', `#${medRank} of ${allPlayers.length}`, 'Median points per round — middle value when all round scores are sorted. More robust than mean for small samples. Rank among all players.')}</div>
                     <div class="value">${med.toFixed(1)}</div>
-                    <div class="sub">#${medRank} of ${allPlayers.length}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="label">Mean/Rnd</div>
+                    <div class="label">${tipS('Mean/Rnd', `#${meanRank} of ${allPlayers.length}`, 'Arithmetic average points per round (Total ÷ Rounds). Rank among all players.')}</div>
                     <div class="value">${mean.toFixed(1)}</div>
-                    <div class="sub">#${meanRank} of ${allPlayers.length}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="label">Best Round</div>
+                    <div class="label">${tipL('Best Round', 'Highest total points scored in a single round')}</div>
                     <div class="value pos">${stData.bestRound}</div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>Category Breakdown</h3>
+                <h3>${tipH('Category Breakdown', 'How the player compares to the group average in each scoring category')}Category Breakdown</h3>
                 <table class="cat-table">
                     <thead>
-                        <tr><th>Category</th><th>Your Total</th><th>Your Mean/Rnd</th><th>Group Mean/Rnd</th><th>vs Group</th></tr>
+                        <tr><th>${tipH('Category', 'Scoring category')}</th><th>${tipH('Your Total', 'Number of rounds with a win in this category')}</th><th>${tipH('Your Mean/Rnd', 'Average points per round from this category')}</th><th>${tipH('Group Mean/Rnd', 'Average of all players\' Mean/Rnd for this category')}</th><th>${tipH('vs Group', 'Difference from group average — green means above average, red means below')}</th></tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>FO Wins</td>
+                            <td>${tip('FO Wins', 'Rounds with a First-On point — 1 pt for being the first to hit the green')}</td>
                             <td>${stData.foWins}</td>
                             <td>${stData.foPerRound.length ? (stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgFo.toFixed(1)}</td>
                             <td class="${diffClass(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}">${diff(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}</td>
                         </tr>
                         <tr>
-                            <td>Greenie Wins</td>
+                            <td>${tip('Greenie Wins', 'Rounds with a Greenie — 1 pt for hitting a par-3 green on the first shot')}</td>
                             <td>${stData.grWins}</td>
                             <td>${stData.grPerRound.length ? (stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgGr.toFixed(1)}</td>
                             <td class="${diffClass(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}">${diff(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}</td>
                         </tr>
                         <tr>
-                            <td>Closest Wins</td>
+                            <td>${tip('Closest Wins', 'Rounds with Closest-to-Pin — 1 pt for having the ball closest to the hole')}</td>
                             <td>${stData.clWins}</td>
                             <td>${stData.clPerRound.length ? (stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgCl.toFixed(1)}</td>
                             <td class="${diffClass(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}">${diff(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}</td>
                         </tr>
                         <tr>
-                            <td>Putt Wins</td>
+                            <td>${tip('Putt Wins', 'Rounds with a Putt — 1 pt for the longest putt made on the hole')}</td>
                             <td>${stData.pWins}</td>
                             <td>${stData.pPerRound.length ? (stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgP.toFixed(1)}</td>
@@ -2200,88 +2285,88 @@ function renderWinLossGrid() {
             </div>
 
             <div class="card">
-                <h3>🔥 Streaks</h3>
+                <h3>${tipH('🔥 Streaks', 'Longest consecutive streaks across the season')}</h3>
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
                     <div class="stat-card">
-                        <div class="label">Score Streak<div class="sub">consecutive holes scoring any point</div></div>
+                        <div class="label">${tipS('Score Streak', 'consecutive holes scoring any point', 'Longest streak of consecutive holes where any point was scored (FO, CL, P, Carry-In, or Greenie)')}</div>
                         <div class="value">${stData.longestScoring}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Drought<div class="sub">consecutive holes with zero points</div></div>
+                        <div class="label">${tipS('Drought', 'consecutive holes with zero points', 'Longest streak of consecutive holes with zero points scored (capped at 18 holes)')}</div>
                         <div class="value">${stData.longestZero}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">FO Streak<div class="sub">consecutive par-4/5 first-ons</div></div>
+                        <div class="label">${tipS('FO Streak', 'consecutive par-4/5 first-ons', 'Longest streak of consecutive par-4/5 holes where the player was First On the green (not requiring regulation)')}</div>
                         <div class="value">${stData.longestFO}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Closest Streak<div class="sub">consecutive closest-to-pin</div></div>
+                        <div class="label">${tipS('Closest Streak', 'consecutive closest-to-pin', 'Longest streak of consecutive holes winning Closest-to-Pin')}</div>
                         <div class="value">${stData.longestClosest}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Putt Streak<div class="sub">consecutive putting points</div></div>
+                        <div class="label">${tipS('Putt Streak', 'consecutive putting points', 'Longest streak of consecutive holes where the player won the Putt (longest putt on the hole)')}</div>
                         <div class="value">${stData.longestPutt}</div>
                     </div>
               <div class="stat-card">
-                        <div class="label">Best Greenie Run<div class="sub">most consecutive par-3 FO in one round</div></div>
+                        <div class="label">${tipS('Best Greenie Run', 'most consecutive par-3 FO in one round', 'Most consecutive par-3 holes won in a row within a single round')}</div>
                         <div class="value">${stData.maxGreenies}</div>
                     </div>
               <div class="stat-card">
-                        <div class="label">3-Ptr Streak<div class="sub">FO + Closest + Putt on same hole</div></div>
+                        <div class="label">${tipS('3-Ptr Streak', 'FO + Closest + Putt on same hole', 'Most holes in a single round where the player earned FO + Closest + Putt on the same hole')}</div>
                         <div class="value">${stData.max3PointHoles}</div>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h3>📊 Season Summary</h3>
+                <h3>${tipH('📊 Season Summary', 'Overall season performance metrics')}</h3>
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
                     <div class="stat-card">
-                        <div class="label">Holes Scored<div class="sub">of ${stData.rounds * 18} total</div></div>
+                        <div class="label">${tipS('Holes Scored', `of ${stData.rounds * 18} total`, 'Total holes where the player earned any point out of total holes played (rounds × 18)')}</div>
                         <div class="value">${stData.totalHolesScored}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Score Rate<div class="sub">holes with points</div></div>
+                        <div class="label">${tipS('Score Rate', 'holes with points', 'Percentage of all holes where the player scored at least one point')}</div>
                         <div class="value">${stData.rounds > 0 ? ((stData.totalHolesScored / (stData.rounds * 18)) * 100).toFixed(0) : 0}%</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Carry-In Pts<div class="sub">bonus points earned</div></div>
+                        <div class="label">${tipS('Carry-In Pts', 'bonus points earned', 'Total bonus points from Carry-In shots across the season')}</div>
                         <div class="value">${stData.totalCarryIn}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Max Hole Score<div class="sub">highest pts in one hole</div></div>
+                        <div class="label">${tipS('Max Hole Score', 'highest pts in one hole', 'Highest points scored on a single hole in one round')}</div>
                         <div class="value">${stData.maxHoleScore}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">3-Ptr Holes<div class="sub">FO+Closest+Putt same hole</div></div>
+                        <div class="label">${tipS('3-Ptr Holes', 'FO+Closest+Putt same hole', 'Total holes where FO + Closest + Putt were all earned in the same hole')}</div>
                         <div class="value">${stData.total3PtrHoles}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Wins<div class="sub">rounds won as % of total points</div></div>
+                        <div class="label">${tipS('Wins', 'rounds won as % of total points', 'Rounds won: top 2 scoring players in a foursome, top 1 in a threesome')}</div>
                         <div class="value">${stData.wins}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Losses<div class="sub">rounds lost (all teammates scored higher)</div></div>
+                        <div class="label">${tipS('Losses', 'rounds lost (all teammates scored higher)', 'Rounds not won (someone else scored higher)')}</div>
                         <div class="value">${stData.losses}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Win Streak<div class="sub">most consecutive wins in a row</div></div>
+                        <div class="label">${tipS('Win Streak', 'most consecutive wins in a row', 'Most consecutive rounds won')}</div>
                         <div class="value">${stData.winStreak}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="label">Loss Streak<div class="sub">most consecutive losses</div></div>
+                        <div class="label">${tipS('Loss Streak', 'most consecutive losses', 'Most consecutive rounds not won')}</div>
                         <div class="value">${stData.lossDrought}</div>
                     </div>
                 </div>
             </div>
 
-            <h3>Round-by-Round</h3>
+            <h3>${tipH('Round-by-Round', 'Every round the player has participated in')}</h3>
             <div class="card" style="overflow-x:auto; margin-bottom:16px;">
                 <table>
-                    <thead><tr><th>#</th><th>Date`;
+                    <thead><tr><th>#</th><th>${tipH('Date', 'Date of the round')}</th>`;
         const hasCourse = playerRoundData[name]?.some(r => r.course);
-        if (hasCourse) html += `<th>Course</th>`;
-        html += `<th>Total</th><th>FO</th><th>GR</th><th>CL</th><th>P</th></tr></thead>
+        if (hasCourse) html += `<th>${tipH('Course', 'Course name')}</th>`;
+        html += `<th>${tipH('Total', 'Total points scored that round (highlighted green for best round)')}</th><th>${tipH('FO', 'First-On points that round')}</th><th>${tipH('GR', 'Greenie points that round')}</th><th>${tipH('CL', 'Closest-to-Pin points that round')}</th><th>${tipH('P', 'Putt points that round')}</th></tr></thead>
                     <tbody>`;
 
         playerRoundData[name]?.forEach((r, i) => {
@@ -2833,8 +2918,28 @@ function renderWeekInReview() {
     }
 }
 
-    // ── Init ──
+   // ── Init ──
     loadData();
+
+    // ── Tooltip mode ──
+    let tooltipMode = sessionStorage.getItem('tooltipMode') === 'true';
+    function toggleTooltipMode() {
+        tooltipMode = !tooltipMode;
+        sessionStorage.setItem('tooltipMode', tooltipMode);
+        const btn = document.getElementById('tooltipToggleBtn');
+        btn.classList.toggle('active', tooltipMode);
+        // Re-render current view if on player stats
+        const activeView = document.querySelector('.view[style*="display: block"], .view:not([style*="display: none"])');
+        if (activeView && document.getElementById('player-view').style.display !== 'none') {
+            const player = document.getElementById('playerSelect').value;
+            if (player) renderPlayerDetail(player);
+        }
+    }
+    // Restore button state
+    if (tooltipMode) {
+        const btn = document.getElementById('tooltipToggleBtn');
+        if (btn) btn.classList.add('active');
+    }
 
     // ── Help sidebar ──
     function toggleHelp() {
