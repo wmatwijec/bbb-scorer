@@ -245,6 +245,9 @@
             display: flex;
             gap: 4px;
         }
+        .h2h-total-col {
+            flex: 0 0 70px;
+        }
         .h2h-cell, .h2h-header-cell {
             flex: 1;
             text-align: center;
@@ -2525,11 +2528,11 @@ function renderWinLossGrid() {
                 <h3>${tipH('⚔️ Head-to-Head', 'Compare two players across par × point type categories — color shows who wins each matchup')}</h3>
                 <div class="h2h-selectors">
                     <select id="h2hPlayerA" class="h2h-select" title="Player A" onchange="refreshH2H()">
-                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[0] ? 'selected' : ''}>${name}</option>`).join('')}
+                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === h2hPlayerA ? 'selected' : ''}>${name}</option>`).join('')}
                     </select>
                     <span style="color:#64748b;font-weight:bold;padding:0 8px;">vs</span>
                     <select id="h2hPlayerB" class="h2h-select" title="Player B" onchange="refreshH2H()">
-                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[1] ? 'selected' : ''}>${name}</option>`).join('')}
+                        ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === h2hPlayerB ? 'selected' : ''}>${name}</option>`).join('')}
                     </select>
                     <button class="h2h-refresh-btn" onclick="refreshH2H()" title="Refresh comparison">↻</button>
                 </div>
@@ -2537,22 +2540,70 @@ function renderWinLossGrid() {
                     <div class="h2h-header-row">
                         <div class="h2h-header-cell h2h-corner">Par \ Category</div>
                         ${h2hCategories.map(cat => `<div class="h2h-header-cell">${cat.toUpperCase()}</div>`).join('')}
+                        <div class="h2h-header-cell">A Total</div>
+                        <div class="h2h-header-cell">B Total</div>
                     </div>
-                    ${h2hParRows.map((parRow, parIdx) => `
+                    ${h2hParRows.map((parRow, parIdx) => {
+                        const aParTotals = h2hCategories.map(cat => {
+                            const key = cat + 'PerRound' + h2hParSuffixes[cat][parIdx];
+                            const data = ps[h2hPlayerA] && ps[h2hPlayerA][key];
+                            return data && data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0;
+                        });
+                        const bParTotals = h2hCategories.map(cat => {
+                            const key = cat + 'PerRound' + h2hParSuffixes[cat][parIdx];
+                            const data = ps[h2hPlayerB] && ps[h2hPlayerB][key];
+                            return data && data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0;
+                        });
+                        return `
                         <div class="h2h-row">
                             <div class="h2h-header-cell h2h-par-label">${parRow}</div>
-                            ${h2hCategories.map(cat => {
+                            ${h2hCategories.map((cat, catIdx) => {
                                 const h2hResult = computeH2HCell(
-                                    allPlayers[0],
-                                    allPlayers[1],
+                                    h2hPlayerA || Object.keys(ps)[0],
+                                    h2hPlayerB || Object.keys(ps)[1],
                                     cat,
                                     parIdx,
                                     ps
                                 );
                                 return `<div class="h2h-cell ${h2hResult.cellClass}" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
                             }).join('')}
-                        </div>
-                    `).join('')}
+                            <div class="h2h-cell h2h-a" style="font-weight:600;">${aParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div>
+                            <div class="h2h-cell h2h-b" style="font-weight:600;">${bParTotals.reduce((a, b) => a + b, 0).toFixed(2)}</div>
+                        </div>`;
+                    }).join('')}
+                    <div class="h2h-row" style="border-top: 2px solid #2d3154;">
+                        <div class="h2h-header-cell h2h-par-label">Total</div>
+                        ${h2hCategories.map((cat) => {
+                            const h2hResult = computeH2HCell(
+                                h2hPlayerA || Object.keys(ps)[0],
+                                h2hPlayerB || Object.keys(ps)[1],
+                                cat,
+                                -1,
+                                ps
+                            );
+                            return `<div class="h2h-cell ${h2hResult.cellClass}" style="font-weight:600;" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
+                        }).join('')}
+                        <div class="h2h-cell h2h-a" style="font-weight:600;">${h2hCategories.reduce((sum, cat) => {
+                            let total = 0;
+                            const parIndices = h2hParSuffixes[cat].map(() => true);
+                            parIndices.forEach((_, idx) => {
+                                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
+                                const data = ps[h2hPlayerA] && ps[h2hPlayerA][key];
+                                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
+                            });
+                            return sum + total;
+                        }, 0).toFixed(2)}</div>
+                        <div class="h2h-cell h2h-b" style="font-weight:600;">${h2hCategories.reduce((sum, cat) => {
+                            let total = 0;
+                            const parIndices = h2hParSuffixes[cat].map(() => true);
+                            parIndices.forEach((_, idx) => {
+                                const key = cat + 'PerRound' + h2hParSuffixes[cat][idx];
+                                const data = ps[h2hPlayerB] && ps[h2hPlayerB][key];
+                                if (data && data.length) total += data.reduce((a, b) => a + b, 0) / data.length;
+                            });
+                            return sum + total;
+                        }, 0).toFixed(2)}</div>
+                    </div>
                 </div>
             </div>
 
@@ -3231,7 +3282,17 @@ function renderWeekInReview() {
     }
 
     // ── Head-to-Head ──
+    let h2hPlayerA = sessionStorage.getItem('h2hPlayerA') || '';
+    let h2hPlayerB = sessionStorage.getItem('h2hPlayerB') || '';
+    function getH2HPlayerA() { return h2hPlayerA; }
+    function getH2HPlayerB() { return h2hPlayerB; }
     function refreshH2H() {
+        const selA = document.getElementById('h2hPlayerA');
+        const selB = document.getElementById('h2hPlayerB');
+        if (selA) h2hPlayerA = selA.value;
+        if (selB) h2hPlayerB = selB.value;
+        sessionStorage.setItem('h2hPlayerA', h2hPlayerA);
+        sessionStorage.setItem('h2hPlayerB', h2hPlayerB);
         const playerView = document.getElementById('player-view');
         if (playerView.style.display === 'none') return;
         const player = document.getElementById('playerSelect').value;
