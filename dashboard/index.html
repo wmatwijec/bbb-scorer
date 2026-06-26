@@ -97,8 +97,8 @@
         .improve-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
         .improve-row { display: flex; align-items: center; gap: 10px; }
         .improve-label { font-size: 12px; color: #94a3b8; white-space: nowrap; min-width: 110px; }
-        .improve-bar-track { flex: 1; background: #1e2133; border-radius: 4px; height: 8px; overflow: hidden; }
-        .improve-bar-fill { height: 100%; border-radius: 4px; }
+        .improve-bar-track { flex: 1; position: relative; height: 8px; background: #1e2133; border-radius: 4px; overflow: visible; }
+        .improve-bar-fill { position: absolute; top: 0; height: 100%; border-radius: 4px; }
         .improve-value { font-size: 12px; font-weight: 700; min-width: 70px; text-align: right; }
 
         /* ── Tooltip help mode ── */
@@ -2224,15 +2224,16 @@ function renderWinLossGrid() {
         const diff = (val, avg) => (val - avg).toFixed(1);
         const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
 
-        // Where-to-improve: sort categories by biggest negative gap
+        // Where-to-improve: sort categories by biggest gap (most negative first)
         const improveCategories = [
-            { label: 'First-On', val: stData.foPerRound.length ? stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length : 0, avg: groupAvgFo },
-            { label: 'Greenie', val: stData.grPerRound.length ? stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length : 0, avg: groupAvgGr },
-            { label: 'Closest-to-Pin', val: stData.clPerRound.length ? stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length : 0, avg: groupAvgCl },
-            { label: 'Putt', val: stData.pPerRound.length ? stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length : 0, avg: groupAvgP },
+            { label: 'First-On', gap: stData.foPerRound.length ? stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length : 0, avg: groupAvgFo },
+            { label: 'Greenie', gap: stData.grPerRound.length ? stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length : 0, avg: groupAvgGr },
+            { label: 'Closest-to-Pin', gap: stData.clPerRound.length ? stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length : 0, avg: groupAvgCl },
+            { label: 'Putt', gap: stData.pPerRound.length ? stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length : 0, avg: groupAvgP },
         ];
-        improveCategories.sort((a, b) => (b.avg - b.val) - (a.avg - a.val)); // most negative gap first
-        const maxGap = Math.max(...improveCategories.map(c => Math.abs(c.avg - c.val)), 1);
+        improveCategories.forEach(c => c.diff = c.avg - c.gap);
+        improveCategories.sort((a, b) => b.diff - a.diff);
+        const maxGap = Math.max(...improveCategories.map(c => Math.abs(c.diff)), 0.01);
 
         // Tooltip helpers
         const tipIcon = (text) => tooltipMode ? `<span class="help-icon">?<span class="tooltip">${text}</span></span>` : '';
@@ -2309,22 +2310,22 @@ function renderWinLossGrid() {
             <div class="card">
                 <h3>${tipH('Where to Improve', 'Categories where you score below group average — sorted by biggest gap (most improvement potential first)')}</h3>
                 <div class="improve-list">`;
-        const belowAvg = improveCategories.filter(c => c.avg - c.val > 0);
-        if (belowAvg.length === 0) {
-            html += `<div style="color:#64748b;font-size:13px;text-align:center;padding:12px 0;">You're above average in every category — keep it up!</div>`;
-        } else {
-            for (const cat of belowAvg) {
-                const gap = cat.avg - cat.val;
-                const barWidth = Math.min(gap / maxGap * 100, 100);
-                html += `
+        for (const cat of improveCategories) {
+            const barWidth = Math.abs(cat.diff) / maxGap * 100;
+            const barColor = cat.diff > 0 ? '#f87171' : '#34d399';
+            const valClass = cat.diff > 0 ? 'neg' : 'pos';
+            const sign = cat.diff > 0 ? '+' : '-';
+            const barStyle = cat.diff > 0
+                ? `width:${barWidth}%;background:${barColor};left:50%;`
+                : `width:${barWidth}%;background:${barColor};right:50%;`;
+            html += `
                 <div class="improve-row">
                     <div class="improve-label">${tipC(cat.label, '')}</div>
                     <div class="improve-bar-track">
-                        <div class="improve-bar-fill" style="width:${barWidth}%;background:#f87171;"></div>
+                        <div class="improve-bar-fill" style="${barStyle}"></div>
                     </div>
-                    <div class="improve-value neg">${gap.toFixed(2)}/rnd</div>
+                    <div class="improve-value ${valClass}">${sign}${Math.abs(cat.diff).toFixed(2)}/rnd</div>
                 </div>`;
-            }
         }
         html += `</div></div>`;
 
