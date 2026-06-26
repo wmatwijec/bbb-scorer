@@ -2307,29 +2307,25 @@ function renderWinLossGrid() {
                 </table>
             </div>
 
-            <div class="card">
+              <div class="card">
                 <h3>${tipH('Where to Improve', 'Categories where you score below group average — sorted by biggest gap (most improvement potential first)')}</h3>
-                <div class="improve-list">`;
-        for (const cat of improveCategories) {
-            const barWidth = Math.abs(cat.diff) / maxGap * 100;
-            const barColor = cat.diff > 0 ? '#f87171' : '#34d399';
-            const valClass = cat.diff > 0 ? 'neg' : 'pos';
-            const sign = cat.diff > 0 ? '+' : '-';
-            const barStyle = cat.diff > 0
-                ? `width:${barWidth}%;background:${barColor};left:50%;`
-                : `width:${barWidth}%;background:${barColor};right:50%;`;
-            html += `
-                <div class="improve-row">
-                    <div class="improve-label">${tipC(cat.label, '')}</div>
-                    <div class="improve-bar-track">
-                        <div class="improve-bar-fill" style="${barStyle}"></div>
-                    </div>
-                    <div class="improve-value ${valClass}">${sign}${Math.abs(cat.diff).toFixed(2)}/rnd</div>
-                </div>`;
-        }
-        html += `</div></div>`;
+                <div class="improve-list">${improveCategories.map(cat => {
+                    const barWidth = Math.abs(cat.diff) / maxGap * 100;
+                    const barColor = cat.diff > 0 ? '#f87171' : '#34d399';
+                    const valClass = cat.diff > 0 ? 'neg' : 'pos';
+                    const sign = cat.diff > 0 ? '+' : '-';
+                    const barStyle = cat.diff > 0
+                        ? `width:${barWidth}%;background:${barColor};left:50%;`
+                        : `width:${barWidth}%;background:${barColor};right:50%;`;
+                    return `<div class="improve-row">
+                        <div class="improve-label">${tipC(cat.label, cat.label + ' points per round — compared to group average')}</div>
+                        <div class="improve-bar-track">
+                            <div class="improve-bar-fill" style="${barStyle}"></div>
+                        </div>
+                        <div class="improve-value ${valClass}">${sign}${Math.abs(cat.diff).toFixed(2)}/rnd</div>
+                    </div>`;
+                }).join('')}</div></div>
 
-        html += `
             <div class="card">
                 <h3>${tipH('🔥 Streaks', 'Longest consecutive streaks across the season')}</h3>
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
