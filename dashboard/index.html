@@ -2395,9 +2395,9 @@ function renderWinLossGrid() {
         const h2hCategories = ['fo', 'gr', 'cl', 'p'];
         const h2hParSuffixes = { fo: ['Par3', 'Par4', 'Par5'], gr: ['Par3'], cl: ['Par3', 'Par4', 'Par5'], p: ['Par3', 'Par4', 'Par5'] };
         
-        const computeH2HCell = (playerA, playerB, category, parIdx) => {
-            const playerAData = playerA ? ps[playerA] : null;
-            const playerBData = playerB ? ps[playerB] : null;
+        const computeH2HCell = (playerA, playerB, category, parIdx, psData) => {
+            const playerAData = playerA ? psData[playerA] : null;
+            const playerBData = playerB ? psData[playerB] : null;
             if (!playerAData && !playerBData) return { cellContent: '—', cellClass: 'h2h-tie', title: 'No data' };
             
             const aKey = category + 'PerRound' + h2hParSuffixes[category][parIdx];
@@ -2543,10 +2543,11 @@ function renderWinLossGrid() {
                             <div class="h2h-header-cell h2h-par-label">${parRow}</div>
                             ${h2hCategories.map(cat => {
                                 const h2hResult = computeH2HCell(
-                                    document.getElementById('h2hPlayerA').value,
-                                    document.getElementById('h2hPlayerB').value,
+                                    allPlayers[0],
+                                    allPlayers[1],
                                     cat,
-                                    parIdx
+                                    parIdx,
+                                    ps
                                 );
                                 return `<div class="h2h-cell ${h2hResult.cellClass}" title="${h2hResult.title}">${h2hResult.cellContent}</div>`;
                             }).join('')}
