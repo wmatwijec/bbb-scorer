@@ -1767,7 +1767,7 @@ const dateKey = getRoundLocalDate(round);
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${ss.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                  const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                    const labelEl = document.querySelector('.streak-date-label');
                    if (labelEl) labelEl.textContent = colLabel;
                    const nowNote = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
@@ -1826,7 +1826,7 @@ function renderOtherGrid() {
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                  const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                    const nowNote2 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
                    const allTimeNote2 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
                    const sliderNote2 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
@@ -1883,7 +1883,7 @@ function renderWinLossGrid() {
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
 
-                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                 const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                    const nowNote3 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
                    const allTimeNote3 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
                    const sliderNote3 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
@@ -2072,7 +2072,7 @@ function renderWinLossGrid() {
             <select class="streak-date-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;" title="Select date">
                 ${dateLabels}
             </select>
-            <span class="streak-date-label" style="font-size:12px;color:#60a5fa;font-weight:bold;white-space:nowrap;">Now</span>
+            <span class="streak-date-label" style="font-size:12px;color:#60a5fa;font-weight:bold;white-space:nowrap;">Current Streak</span>
             <select class="card-player-count-select" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:4px 8px;font-size:12px;white-space:nowrap;" title="Players per card">
                 <option value="5">5 Players</option>
                 <option value="10" selected>10 Players</option>
