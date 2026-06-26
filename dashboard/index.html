@@ -241,6 +241,7 @@
    let allRounds = [];
     let allPlayers = [];
     let seasonStats = {};
+    let seasonStatsFiltered = {};
     let playerRoundData = {};
     let cumulativeStreaks = {};
     let allRoundDates = [];
@@ -249,6 +250,7 @@
     let sortState = {};
     let coursePars = {};
     let availableReportWeeks = [];
+    let playerCountFilter = 'all';
 
     // ── Median helper ──
     function median(arr) {
@@ -685,7 +687,21 @@ const dateKey = getRoundLocalDate(round);
                 statusEl.className = 'status error';
                 return;
             }
-                    // Compute per-player per-round stats
+                    // Classify each round by player count (skip 2-player rounds)
+            const excludedPlayersSet = new Set(['Doug', 'Ryan']);
+            for (const round of allRounds) {
+                const playerCount = (round.players || []).filter(p => p && !p.name.toLowerCase().includes('guest')).length;
+                round._playerCount = playerCount;
+                if (playerCount < 2) {
+                    round._skipLeaderboard = true;
+                } else if (playerCount === 2) {
+                    round._skipLeaderboard = true;
+                } else {
+                    round._skipLeaderboard = false;
+                }
+            }
+
+            // Compute per-player per-round stats
             seasonStats = {};
             playerRoundData = {};
             allPlayers.forEach(name => {
@@ -709,6 +725,7 @@ const dateKey = getRoundLocalDate(round);
            let roundIndex = 0;
              for (const round of allRounds) {
                  roundIndex++;
+                if (round._skipLeaderboard) continue;
                 const result = computeRoundStats(round);
       round._playerData = result.playerData;
 
@@ -827,6 +844,7 @@ const dateKey = getRoundLocalDate(round);
                 cumulativeStreaks[name] = [];
                 for (let ri = 0; ri < allRounds.length; ri++) {
                     const round = allRounds[ri];
+                    if (round._skipLeaderboard) continue;
                     const cachedTotals = round._cachedTotals?.[name];
                     if (cachedTotals === undefined) continue;
                     // Normalize to number for backward compat
@@ -1329,17 +1347,91 @@ const dateKey = getRoundLocalDate(round);
      }
 
     // ── Leaderboard rendering ──
+    function getFilteredSeasonStats() {
+        seasonStatsFiltered = {};
+        const filteredRounds = allRounds.filter(r => !r._skipLeaderboard && (playerCountFilter === 'all' || r._playerCount === parseInt(playerCountFilter)));
+        allPlayers.forEach(name => {
+            seasonStatsFiltered[name] = {
+                rounds: 0, totalPoints: 0,
+                foWins: 0, grWins: 0, clWins: 0, pWins: 0,
+                bestRound: 0,
+                pointsPerRound: [], foPerRound: [], grPerRound: [],
+                clPerRound: [], pPerRound: [],
+                longestScoring: 0, longestZero: 0, longestFO: 0, longestClosest: 0,
+                longestPutt: 0, longestClean: 0, maxGreenies: 0, max3PointHoles: 0,
+                totalHolesScored: 0, totalCarryIn: 0, maxHoleScore: 0, total3PtrHoles: 0,
+                wins: 0, losses: 0, winStreak: 0, lossDrought: 0,
+            };
+        });
+        for (const round of filteredRounds) {
+            const result = computeRoundStats(round);
+            const playerScores = Object.entries(result.playerData)
+                .map(([name, data]) => ({ name, totalPts: data.totalPts }))
+                .sort((a, b) => b.totalPts - a.totalPts);
+            const numPlayers = playerScores.length;
+            const isWinner = new Set();
+            if (numPlayers === 2) {
+                if (playerScores[0].totalPts !== playerScores[1].totalPts) isWinner.add(playerScores[0].name);
+            } else if (numPlayers === 3) {
+                isWinner.add(playerScores[0].name);
+                if (playerScores[0].totalPts === playerScores[1].totalPts) isWinner.add(playerScores[1].name);
+            } else if (numPlayers === 4) {
+                isWinner.add(playerScores[0].name);
+                if (playerScores[0].totalPts === playerScores[1].totalPts) isWinner.add(playerScores[1].name);
+                else if (playerScores[1].totalPts === playerScores[2].totalPts) {}
+                else isWinner.add(playerScores[1].name);
+            } else if (numPlayers >= 5) {
+                isWinner.add(playerScores[0].name);
+                if (playerScores[0].totalPts === playerScores[1].totalPts) isWinner.add(playerScores[1].name);
+                else if (playerScores[1].totalPts === playerScores[2].totalPts) {}
+                else isWinner.add(playerScores[1].name);
+            }
+            for (const [name, data] of Object.entries(result.playerData)) {
+                if (!seasonStatsFiltered[name]) continue;
+                const st = seasonStatsFiltered[name];
+                st.rounds++;
+                st.totalPoints += data.totalPts;
+                st.foWins += data.foPts > 0 ? 1 : 0;
+                st.grWins += data.grPts > 0 ? 1 : 0;
+                st.clWins += data.clPts > 0 ? 1 : 0;
+                st.pWins += data.pPts > 0 ? 1 : 0;
+                st.bestRound = Math.max(st.bestRound, data.totalPts);
+                st.pointsPerRound.push(data.totalPts);
+                st.foPerRound.push(data.foPts);
+                st.grPerRound.push(data.grPts);
+                st.clPerRound.push(data.clPts);
+                st.pPerRound.push(data.pPts);
+                if (data.streaks) {
+                    for (const key of ['longestScoring', 'longestZero', 'longestFO', 'longestClosest', 'longestPutt', 'longestClean', 'maxGreenies', 'max3PointHoles']) {
+                        st[key] = Math.max(st[key], data.streaks[key] || 0);
+                    }
+                }
+                st.totalHolesScored += data.holesScored || 0;
+                st.totalCarryIn += data.carryInTotal || 0;
+                st.maxHoleScore = Math.max(st.maxHoleScore, data.maxHole || 0);
+                st.total3PtrHoles += data.threePtrCount || 0;
+                if (isWinner.has(name)) st.wins++;
+                else if (numPlayers >= 2) st.losses++;
+            }
+        }
+        return seasonStatsFiltered;
+    }
+
     function getLeaderboardData() {
+        if (playerCountFilter !== 'all') {
+            getFilteredSeasonStats();
+        }
+        const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
         return allPlayers.map(name => {
-            const st = seasonStats[name];
-            const mean = st.pointsPerRound.length
-                ? st.pointsPerRound.reduce((a, b) => a + b, 0) / st.pointsPerRound.length : 0;
-            const med = median(st.pointsPerRound);
-            const foAvg = st.foPerRound.length ? st.foPerRound.reduce((a, b) => a + b, 0) / st.foPerRound.length : 0;
-            const grAvg = st.grPerRound.length ? st.grPerRound.reduce((a, b) => a + b, 0) / st.grPerRound.length : 0;
-            const clAvg = st.clPerRound.length ? st.clPerRound.reduce((a, b) => a + b, 0) / st.clPerRound.length : 0;
-            const pAvg = st.pPerRound.length ? st.pPerRound.reduce((a, b) => a + b, 0) / st.pPerRound.length : 0;
-            return { name, ...st, mean, median: med, foAvg, grAvg, clAvg, pAvg };
+            const ps = st[name];
+            const mean = ps.pointsPerRound.length
+                ? ps.pointsPerRound.reduce((a, b) => a + b, 0) / ps.pointsPerRound.length : 0;
+            const med = median(ps.pointsPerRound);
+            const foAvg = ps.foPerRound.length ? ps.foPerRound.reduce((a, b) => a + b, 0) / ps.foPerRound.length : 0;
+            const grAvg = ps.grPerRound.length ? ps.grPerRound.reduce((a, b) => a + b, 0) / ps.grPerRound.length : 0;
+            const clAvg = ps.clPerRound.length ? ps.clPerRound.reduce((a, b) => a + b, 0) / ps.clPerRound.length : 0;
+            const pAvg = ps.pPerRound.length ? ps.pPerRound.reduce((a, b) => a + b, 0) / ps.pPerRound.length : 0;
+            return { name, ...ps, mean, median: med, foAvg, grAvg, clAvg, pAvg };
         }).sort((a, b) => b.median - a.median);
     }
    let _streakMode = 'now';
@@ -1439,7 +1531,8 @@ const dateKey = getRoundLocalDate(round);
             if (_streakMode === 'now') {
                 return playerCurrentStreaks[name] ? (playerCurrentStreaks[name][ss.curKey] || 0) : 0;
             } else if (_streakMode === 'season') {
-                return seasonStats[name][ss.statsKey] || 0;
+                const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+                return st[name][ss.statsKey] || 0;
             } else {
                 // Cumulative max streak up to selected date
                 const cum = cumulativeStreaks[name] || [];
@@ -1458,9 +1551,11 @@ const dateKey = getRoundLocalDate(round);
         function getOtherDynVal(name, os) {
             if (_streakMode === 'now') {
                 // These are cumulative stats, not live counters — show season best
-                return seasonStats[name][os.key] || 0;
+                const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+                return st[name][os.key] || 0;
             } else if (_streakMode === 'season') {
-                return seasonStats[name][os.key] || 0;
+                const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+                return st[name][os.key] || 0;
             } else {
                 const cum = cumulativeStreaks[name] || [];
                 const slider2 = document.querySelector('.streak-slider');
@@ -1477,17 +1572,18 @@ const dateKey = getRoundLocalDate(round);
         }
 
         function getWinLossDynVal(name, wl) {
+            const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
             if (_streakMode === 'now') {
                 // These are cumulative stats, not live counters — show season best
                 if (wl.sort === 'ratio') {
-                    return seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0;
+                    return st[name].rounds > 0 ? st[name].wins / st[name].rounds : 0;
                 }
-                return seasonStats[name][wl.key] || 0;
+                return st[name][wl.key] || 0;
             } else if (_streakMode === 'season') {
                 if (wl.sort === 'ratio') {
-                    return seasonStats[name].rounds > 0 ? seasonStats[name].wins / seasonStats[name].rounds : 0;
+                    return st[name].rounds > 0 ? st[name].wins / st[name].rounds : 0;
                 }
-                return seasonStats[name][wl.key] || 0;
+                return st[name][wl.key] || 0;
             } else {
                 const cum = cumulativeStreaks[name] || [];
                 const slider3 = document.querySelector('.streak-slider');
@@ -1674,6 +1770,16 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         const lb = getLeaderboardData();
         const container = document.getElementById('leaderboard-container');
 
+        // Player count filter selector
+        const filterHtml = `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;padding:10px 16px;margin:0 0 15px 0;display:flex;align-items:center;gap:10px;">
+            <label style="color:#60a5fa;font-size:14px;font-weight:bold;">Player Count:</label>
+            <select id="playerCountFilterSelect" onchange="onPlayerCountFilterChange(this.value)" style="background:#0f111a;color:#e2e8f0;border:1px solid #60a5fa;border-radius:4px;padding:6px 10px;font-size:13px;cursor:pointer;">
+                <option value="all" ${playerCountFilter === 'all' ? 'selected' : ''}>All Rounds (${lb.reduce((s,e)=>s+e.rounds,0)})</option>
+                <option value="4" ${playerCountFilter === '4' ? 'selected' : ''}>4 Players (${(() => { const r = allRounds.filter(rl => !rl._skipLeaderboard && rl._playerCount === 4); return r.length; })()})</option>
+                <option value="3" ${playerCountFilter === '3' ? 'selected' : ''}>3 Players (${(() => { const r = allRounds.filter(rl => !rl._skipLeaderboard && rl._playerCount === 3); return r.length; })()})</option>
+            </select>
+        </div>`;
+
         // Apply current sort
         let sorted = [...lb];
         switch (currentSort) {
@@ -1712,6 +1818,10 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
         }).join('');
 
         let html = '';
+
+        // Player count filter
+        html += filterHtml;
+        html += `<div style="margin-bottom:15px;"></div>`;
 
         // Streak Leaders cards
         html += `<h3 style="margin:10px 0 5px;">🔥 Streak Leaders</h3><p style="color:#64748b;font-size:11px;margin:-5px 0 8px;">Season best + dynamic value</p>`;
@@ -1837,22 +1947,28 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
 
     // ── Streak Leaders ──
   function getStreakLeaders() {
-         return allPlayers.map(name => ({
-             name,
-             scoreStreak: seasonStats[name].longestScoring,
-             drought: seasonStats[name].longestZero,
-             foStreak: seasonStats[name].longestFO,
-             closestStreak: seasonStats[name].longestClosest,
-             puttStreak: seasonStats[name].longestPutt,
-             cleanStreak: seasonStats[name].longestClean,
-             greenieRun: seasonStats[name].maxGreenies,
-             threePtStreak: seasonStats[name].max3PointHoles,
-             moxHole: seasonStats[name].maxHoleScore,
-             wins: seasonStats[name].wins,
-             winStreak: seasonStats[name].winStreak,
-             lossDrought: seasonStats[name].lossDrought,
-         }));
-   }
+          const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+          return allPlayers.map(name => ({
+              name,
+              scoreStreak: st[name].longestScoring,
+              drought: st[name].longestZero,
+              foStreak: st[name].longestFO,
+              closestStreak: st[name].longestClosest,
+              puttStreak: st[name].longestPutt,
+              cleanStreak: st[name].longestClean,
+              greenieRun: st[name].maxGreenies,
+              threePtStreak: st[name].max3PointHoles,
+              moxHole: st[name].maxHoleScore,
+              wins: st[name].wins,
+              winStreak: st[name].winStreak,
+              lossDrought: st[name].lossDrought,
+          }));
+    }
+
+    function onPlayerCountFilterChange(value) {
+        playerCountFilter = value;
+        renderLeaderboard();
+    }
 
     // ── Player selector ──
     function populatePlayerSelector() {
@@ -1933,41 +2049,46 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
 
     // ── Player detail view ──
     function renderPlayerDetail(name) {
-        const st = seasonStats[name];
-        const mean = st.pointsPerRound.length
-            ? st.pointsPerRound.reduce((a, b) => a + b, 0) / st.pointsPerRound.length : 0;
-        const med = median(st.pointsPerRound);
+        const st = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+        if (playerCountFilter !== 'all') {
+            getFilteredSeasonStats();
+        }
+        const ps = playerCountFilter !== 'all' ? seasonStatsFiltered : seasonStats;
+        const stData = ps[name];
+        const mean = stData.pointsPerRound.length
+            ? stData.pointsPerRound.reduce((a, b) => a + b, 0) / stData.pointsPerRound.length : 0;
+        const med = median(stData.pointsPerRound);
 
         // Group medians and means
         const allMeans = allPlayers.map(p => {
-            const ps = seasonStats[p];
-            return ps.pointsPerRound.length
-                ? ps.pointsPerRound.reduce((a, b) => a + b, 0) / ps.pointsPerRound.length : 0;
+            const pss = ps[p];
+            return pss.pointsPerRound.length
+                ? pss.pointsPerRound.reduce((a, b) => a + b, 0) / pss.pointsPerRound.length : 0;
         });
-        const allMedians = allPlayers.map(p => median(seasonStats[p].pointsPerRound));
+        const allMedians = allPlayers.map(p => median(ps[p].pointsPerRound));
 
         const medRank = allMedians.slice().sort((a, b) => b - a).indexOf(med) + 1;
         const meanRank = allMeans.slice().sort((a, b) => b - a).indexOf(mean) + 1;
 
         // Group category stats
         const groupAvgFo = allPlayers.reduce((sum, p) => {
-            const ps = seasonStats[p];
-            return sum + (ps.foPerRound.length ? ps.foPerRound.reduce((a, b) => a + b, 0) / ps.foPerRound.length : 0);
+            const pss = ps[p];
+            return sum + (pss.foPerRound.length ? pss.foPerRound.reduce((a, b) => a + b, 0) / pss.foPerRound.length : 0);
         }, 0) / allPlayers.length;
 
         const groupAvgGr = allPlayers.reduce((sum, p) => {
-            const ps = seasonStats[p];
-            return sum + (ps.grPerRound.length ? ps.grPerRound.reduce((a, b) => a + b, 0) / ps.grPerRound.length : 0);
+            const pss = ps[p];
+            return sum + (pss.grPerRound.length ? pss.grPerRound.reduce((a, b) => a + b, 0) / pss.grPerRound.length : 0);
         }, 0) / allPlayers.length;
 
         const groupAvgCl = allPlayers.reduce((sum, p) => {
-            const ps = seasonStats[p];
-            return sum + (ps.clPerRound.length ? ps.clPerRound.reduce((a, b) => a + b, 0) / ps.clPerRound.length : 0);
+            const pss = ps[p];
+            return sum + (pss.clPerRound.length ? pss.clPerRound.reduce((a, b) => a + b, 0) / pss.clPerRound.length : 0);
         }, 0) / allPlayers.length;
 
         const groupAvgP = allPlayers.reduce((sum, p) => {
-            const ps = seasonStats[p];
-            return sum + (ps.pPerRound.length ? ps.pPerRound.reduce((a, b) => a + b, 0) / ps.pPerRound.length : 0);
+            const pss = ps[p];
+            return sum + (pss.pPerRound.length ? pss.pPerRound.reduce((a, b) => a + b, 0) / pss.pPerRound.length : 0);
         }, 0) / allPlayers.length;
 
         const diff = (val, avg) => (val - avg).toFixed(1);
@@ -1979,11 +2100,11 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             <div class="stat-row">
                 <div class="stat-card">
                     <div class="label">Rounds</div>
-                    <div class="value">${st.rounds}</div>
+                    <div class="value">${stData.rounds}</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Total Points</div>
-                    <div class="value">${st.totalPoints}</div>
+                    <div class="value">${stData.totalPoints}</div>
                 </div>
                 <div class="stat-card">
                     <div class="label">Median/Rnd</div>
@@ -1997,7 +2118,7 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                 </div>
                 <div class="stat-card">
                     <div class="label">Best Round</div>
-                    <div class="value pos">${st.bestRound}</div>
+                    <div class="value pos">${stData.bestRound}</div>
                 </div>
             </div>
 
@@ -2010,31 +2131,31 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                     <tbody>
                         <tr>
                             <td>FO Wins</td>
-                            <td>${st.foWins}</td>
-                            <td>${st.foPerRound.length ? (st.foPerRound.reduce((a,b) => a+b,0)/st.foPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${stData.foWins}</td>
+                            <td>${stData.foPerRound.length ? (stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgFo.toFixed(1)}</td>
-                            <td class="${diffClass(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}">${diff(st.foPerRound.length ? st.foPerRound.reduce((a,b)=>a+b,0)/st.foPerRound.length : 0, groupAvgFo)}</td>
+                            <td class="${diffClass(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}">${diff(stData.foPerRound.length ? stData.foPerRound.reduce((a,b)=>a+b,0)/stData.foPerRound.length : 0, groupAvgFo)}</td>
                         </tr>
                         <tr>
                             <td>Greenie Wins</td>
-                            <td>${st.grWins}</td>
-                            <td>${st.grPerRound.length ? (st.grPerRound.reduce((a,b) => a+b,0)/st.grPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${stData.grWins}</td>
+                            <td>${stData.grPerRound.length ? (stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgGr.toFixed(1)}</td>
-                            <td class="${diffClass(st.grPerRound.length ? st.grPerRound.reduce((a,b)=>a+b,0)/st.grPerRound.length : 0, groupAvgGr)}">${diff(st.grPerRound.length ? st.grPerRound.reduce((a,b)=>a+b,0)/st.grPerRound.length : 0, groupAvgGr)}</td>
+                            <td class="${diffClass(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}">${diff(stData.grPerRound.length ? stData.grPerRound.reduce((a,b)=>a+b,0)/stData.grPerRound.length : 0, groupAvgGr)}</td>
                         </tr>
                         <tr>
                             <td>Closest Wins</td>
-                            <td>${st.clWins}</td>
-                            <td>${st.clPerRound.length ? (st.clPerRound.reduce((a,b) => a+b,0)/st.clPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${stData.clWins}</td>
+                            <td>${stData.clPerRound.length ? (stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgCl.toFixed(1)}</td>
-                            <td class="${diffClass(st.clPerRound.length ? st.clPerRound.reduce((a,b)=>a+b,0)/st.clPerRound.length : 0, groupAvgCl)}">${diff(st.clPerRound.length ? st.clPerRound.reduce((a,b)=>a+b,0)/st.clPerRound.length : 0, groupAvgCl)}</td>
+                            <td class="${diffClass(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}">${diff(stData.clPerRound.length ? stData.clPerRound.reduce((a,b)=>a+b,0)/stData.clPerRound.length : 0, groupAvgCl)}</td>
                         </tr>
                         <tr>
                             <td>Putt Wins</td>
-                            <td>${st.pWins}</td>
-                            <td>${st.pPerRound.length ? (st.pPerRound.reduce((a,b) => a+b,0)/st.pPerRound.length).toFixed(1) : '—'}</td>
+                            <td>${stData.pWins}</td>
+                            <td>${stData.pPerRound.length ? (stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length).toFixed(1) : '—'}</td>
                             <td>${groupAvgP.toFixed(1)}</td>
-                            <td class="${diffClass(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}">${diff(st.pPerRound.length ? st.pPerRound.reduce((a,b)=>a+b,0)/st.pPerRound.length : 0, groupAvgP)}</td>
+                            <td class="${diffClass(stData.pPerRound.length ? stData.pPerRound.reduce((a,b)=>a+b,0)/stData.pPerRound.length : 0, groupAvgP)}">${diff(stData.pPerRound.length ? stData.pPerRound.reduce((a,b)=>a+b,0)/stData.pPerRound.length : 0, groupAvgP)}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -2045,31 +2166,31 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
                     <div class="stat-card">
                         <div class="label">Score Streak<div class="sub">consecutive holes scoring any point</div></div>
-                        <div class="value">${st.longestScoring}</div>
+                        <div class="value">${stData.longestScoring}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Drought<div class="sub">consecutive holes with zero points</div></div>
-                        <div class="value">${st.longestZero}</div>
+                        <div class="value">${stData.longestZero}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">FO Streak<div class="sub">consecutive par-4/5 first-ons</div></div>
-                        <div class="value">${st.longestFO}</div>
+                        <div class="value">${stData.longestFO}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Closest Streak<div class="sub">consecutive closest-to-pin</div></div>
-                        <div class="value">${st.longestClosest}</div>
+                        <div class="value">${stData.longestClosest}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Putt Streak<div class="sub">consecutive putting points</div></div>
-                        <div class="value">${st.longestPutt}</div>
+                        <div class="value">${stData.longestPutt}</div>
                     </div>
               <div class="stat-card">
                         <div class="label">Best Greenie Run<div class="sub">most consecutive par-3 FO in one round</div></div>
-                        <div class="value">${st.maxGreenies}</div>
+                        <div class="value">${stData.maxGreenies}</div>
                     </div>
               <div class="stat-card">
                         <div class="label">3-Ptr Streak<div class="sub">FO + Closest + Putt on same hole</div></div>
-                        <div class="value">${st.max3PointHoles}</div>
+                        <div class="value">${stData.max3PointHoles}</div>
                     </div>
                 </div>
             </div>
@@ -2078,40 +2199,40 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                 <h3>📊 Season Summary</h3>
                 <div class="stat-row" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
                     <div class="stat-card">
-                        <div class="label">Holes Scored<div class="sub">of ${st.rounds * 18} total</div></div>
-                        <div class="value">${st.totalHolesScored}</div>
+                        <div class="label">Holes Scored<div class="sub">of ${stData.rounds * 18} total</div></div>
+                        <div class="value">${stData.totalHolesScored}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Score Rate<div class="sub">holes with points</div></div>
-                        <div class="value">${st.rounds > 0 ? ((st.totalHolesScored / (st.rounds * 18)) * 100).toFixed(0) : 0}%</div>
+                        <div class="value">${stData.rounds > 0 ? ((stData.totalHolesScored / (stData.rounds * 18)) * 100).toFixed(0) : 0}%</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Carry-In Pts<div class="sub">bonus points earned</div></div>
-                        <div class="value">${st.totalCarryIn}</div>
+                        <div class="value">${stData.totalCarryIn}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Max Hole Score<div class="sub">highest pts in one hole</div></div>
-                        <div class="value">${st.maxHoleScore}</div>
+                        <div class="value">${stData.maxHoleScore}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">3-Ptr Holes<div class="sub">FO+Closest+Putt same hole</div></div>
-                        <div class="value">${st.total3PtrHoles}</div>
+                        <div class="value">${stData.total3PtrHoles}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Wins<div class="sub">rounds won as % of total points</div></div>
-                        <div class="value">${st.wins}</div>
+                        <div class="value">${stData.wins}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Losses<div class="sub">rounds lost (all teammates scored higher)</div></div>
-                        <div class="value">${st.losses}</div>
+                        <div class="value">${stData.losses}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Win Streak<div class="sub">most consecutive wins in a row</div></div>
-                        <div class="value">${st.winStreak}</div>
+                        <div class="value">${stData.winStreak}</div>
                     </div>
                     <div class="stat-card">
                         <div class="label">Loss Streak<div class="sub">most consecutive losses</div></div>
-                        <div class="value">${st.lossDrought}</div>
+                        <div class="value">${stData.lossDrought}</div>
                     </div>
                 </div>
             </div>
@@ -2126,7 +2247,7 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                     <tbody>`;
 
         playerRoundData[name]?.forEach((r, i) => {
-            const best = r.total === st.bestRound ? ' class="pos"' : '';
+            const best = r.total === stData.bestRound ? ' class="pos"' : '';
             const courseCell = hasCourse ? `<td style="font-size:11px;">${r.course || '—'}</td>` : '';
             html += `<tr><td>${i + 1}</td><td style="font-size:11px;color:#64748b;">${r.date}</td>${courseCell}<td${best}>${r.total}</td><td>${r.fo}</td><td>${r.gr}</td><td>${r.cl}</td><td>${r.p}</td></tr>`;
         });
