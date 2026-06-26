@@ -2524,11 +2524,11 @@ function renderWinLossGrid() {
             <div class="card">
                 <h3>${tipH('⚔️ Head-to-Head', 'Compare two players across par × point type categories — color shows who wins each matchup')}</h3>
                 <div class="h2h-selectors">
-                    <select id="h2hPlayerA" class="h2h-select" title="Player A">
+                    <select id="h2hPlayerA" class="h2h-select" title="Player A" onchange="refreshH2H()">
                         ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[0] ? 'selected' : ''}>${name}</option>`).join('')}
                     </select>
                     <span style="color:#64748b;font-weight:bold;padding:0 8px;">vs</span>
-                    <select id="h2hPlayerB" class="h2h-select" title="Player B">
+                    <select id="h2hPlayerB" class="h2h-select" title="Player B" onchange="refreshH2H()">
                         ${Object.keys(ps).sort().map(name => `<option value="${name}" ${name === allPlayers[1] ? 'selected' : ''}>${name}</option>`).join('')}
                     </select>
                     <button class="h2h-refresh-btn" onclick="refreshH2H()" title="Refresh comparison">↻</button>
