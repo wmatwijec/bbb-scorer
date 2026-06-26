@@ -1812,7 +1812,7 @@ function renderWinLossGrid() {
         const filterHtml = `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;padding:10px 16px;margin:0 0 15px 0;display:flex;align-items:center;gap:10px;">
             <label style="color:#60a5fa;font-size:14px;font-weight:bold;">Player Count:</label>
             <select id="playerCountFilterSelect" onchange="onPlayerCountFilterChange(this.value)" style="background:#0f111a;color:#e2e8f0;border:1px solid #60a5fa;border-radius:4px;padding:6px 10px;font-size:13px;cursor:pointer;">
-                <option value="all" ${playerCountFilter === 'all' ? 'selected' : ''}>All Rounds (${lb.reduce((s,e)=>s+e.rounds,0)})</option>
+                <option value="all" ${playerCountFilter === 'all' ? 'selected' : ''}>All Rounds (${(() => { return allRounds.filter(rl => !rl._skipLeaderboard).length; })()})</option>
                 <option value="4" ${playerCountFilter === '4' ? 'selected' : ''}>4 Players (${(() => { const r = allRounds.filter(rl => !rl._skipLeaderboard && rl._playerCount === 4); return r.length; })()})</option>
                 <option value="3" ${playerCountFilter === '3' ? 'selected' : ''}>3 Players (${(() => { const r = allRounds.filter(rl => !rl._skipLeaderboard && rl._playerCount === 3); return r.length; })()})</option>
             </select>
