@@ -1884,10 +1884,9 @@ const dateKey = getRoundLocalDate(round);
                   const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
                    const labelEl = document.querySelector('.streak-date-label');
                    if (labelEl) labelEl.textContent = colLabel;
-                   const nowNote = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
                    const allTimeNote = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
-                   const sliderNote = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
-                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
+                    const sliderNote = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                    html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
                    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
                    // All-Time column
                    html += `<div>`;
@@ -1941,10 +1940,9 @@ function renderOtherGrid() {
                    if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
                   const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
-                   const nowNote2 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
                    const allTimeNote2 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
-                   const sliderNote2 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
-                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+                    const sliderNote2 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                    html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
                    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
                    html += `<div>`;
                    html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time${allTimeNote2}</div>`;
@@ -1998,10 +1996,9 @@ function renderWinLossGrid() {
                    if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
 
                  const colLabel = _streakMode === 'now' ? 'Current Streak' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
-                   const nowNote3 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
-                   const allTimeNote3 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
-                   const sliderNote3 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
-                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
+                  const allTimeNote3 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(26-season best)</span>' : '';
+                    const sliderNote3 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                    html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
                    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
                    html += `<div>`;
                    html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time${allTimeNote3}</div>`;
