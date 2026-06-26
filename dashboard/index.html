@@ -156,6 +156,34 @@
             table { font-size: 11px; }
             th, td { padding: 6px 8px; }
         }
+        /* ── Help sidebar ── */
+        #help-sidebar {
+            position: fixed; top: 0; right: -480px; width: 480px; height: 100vh;
+            background: #1a1d2e; border-left: 1px solid #2d3154; z-index: 2000;
+            transition: right 0.3s ease; overflow-y: auto; padding: 24px;
+            box-shadow: -4px 0 16px rgba(0,0,0,0.5);
+        }
+        #help-sidebar.open { right: 0; }
+        #help-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1999; display: none;
+        }
+        #help-overlay.open { display: block; }
+        .help-section { margin-bottom: 20px; }
+        .help-section h4 { color: #60a5fa; font-size: 14px; margin-bottom: 8px; border-bottom: 1px solid #2d3154; padding-bottom: 4px; }
+        .help-section p, .help-section li { color: #94a3b8; font-size: 12px; line-height: 1.6; }
+        .help-section ul { padding-left: 18px; }
+        .help-section li { margin-bottom: 4px; }
+        .help-section strong { color: #e2e8f0; }
+        .help-close {
+            position: absolute; top: 16px; right: 16px; background: none; border: none;
+            color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;
+        }
+        .help-close:hover { color: #e2e8f0; }
+        .help-badge {
+            display: inline-block; background: #2d3154; color: #60a5fa;
+            font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 4px;
+        }
     </style>
 </head>
 <body>
@@ -166,7 +194,8 @@
             <button class="btn btn-nav" id="btn-player" onclick="showView('player')">Player Stats</button>
             <button class="btn btn-nav" id="btn-round" onclick="showView('roundCard')">Round Card</button>
              <button class="btn btn-nav" id="btn-weekly" onclick="showView('weekly')">Round Report</button>
-            <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
+             <button class="btn btn-nav" id="btn-help" onclick="toggleHelp()" style="margin-left:4px;">❓ Help</button>
+             <label style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin-left:8px;">
                 Highlight:
                 <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
             </label>
@@ -1623,14 +1652,17 @@ const dateKey = getRoundLocalDate(round);
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${ss.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
-                  const labelEl = document.querySelector('.streak-date-label');
-                  if (labelEl) labelEl.textContent = colLabel;
-                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
-                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
-                  // All-Time column
-                  html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
+                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const labelEl = document.querySelector('.streak-date-label');
+                   if (labelEl) labelEl.textContent = colLabel;
+                   const nowNote = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
+                   const allTimeNote = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(season best)</span>' : '';
+                   const sliderNote = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${ss.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${ss.desc}</div>`;
+                   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                   // All-Time column
+                   html += `<div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time${allTimeNote}</div>`;
                   seasonTop10.forEach((entry, i) => {
                       const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
@@ -1638,11 +1670,11 @@ const dateKey = getRoundLocalDate(round);
                   });
                   if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
                   html += `</div>`;
-                  // Current column
-                  html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
-                  currentTop10.forEach((entry, i) => {
-                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                 // Current column
+                   html += `<div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote}${sliderNote}</div>`;
+                   currentTop10.forEach((entry, i) => {
+                       const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
                       html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
                   });
@@ -1678,11 +1710,14 @@ function renderOtherGrid() {
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${os.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${e.seasonVal}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${e.dynamicVal}`).join(', '));
 
-                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
-                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
-                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
-                  html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
+                  const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const nowNote2 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
+                   const allTimeNote2 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(season best)</span>' : '';
+                   const sliderNote2 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${os.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${os.desc}</div>`;
+                   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                   html += `<div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time${allTimeNote2}</div>`;
                   seasonTop10.forEach((entry, i) => {
                       const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
@@ -1691,17 +1726,17 @@ function renderOtherGrid() {
                   if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
                   html += `</div>`;
                   html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
-                  currentTop10.forEach((entry, i) => {
-                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
-                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
-                  });
-                  if (currentTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
-                  html += `</div>`;
-                  html += `</div></div>`;
-             }
-const otherGridEl = document.querySelector('.other-leaders-grid');
+                html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote2}${sliderNote2}</div>`;
+                   currentTop10.forEach((entry, i) => {
+                       const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                       html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${entry.dynamicVal}</span></div>`;
+                   });
+                   if (currentTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                   html += `</div>`;
+                   html += `</div></div>`;
+              }
+ const otherGridEl = document.querySelector('.other-leaders-grid');
              if (otherGridEl) otherGridEl.innerHTML = html;
              if (shouldLog) console.groupEnd();
              _hasLoggedInitial = true;
@@ -1731,30 +1766,33 @@ function renderWinLossGrid() {
                    if (seasonTop10.length === 0 && currentTop10.length === 0) continue;
                    if (shouldLog) console.log(`${wl.label}: seasonTop=`, seasonTop10.slice(0,3).map(e => `${e.name}:${fmt(e.seasonVal)}`).join(', '), `| currentTop=`, currentTop10.slice(0,3).map(e => `${e.name}:${fmt(e.dynamicVal)}`).join(', '));
 
-                   const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
-                  html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
-                  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
-                  html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time</div>`;
-                  seasonTop10.forEach((entry, i) => {
-                      const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
-                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.seasonVal)}</span></div>`;
-                  });
-                  if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
-                  html += `</div>`;
-                  html += `<div>`;
-                  html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}</div>`;
-                  currentTop10.forEach((entry, i) => {
-                      const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
-                      const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
-                      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.dynamicVal)}</span></div>`;
-                  });
-                  if (currentTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
-                  html += `</div>`;
-                  html += `</div></div>`;
-             }
-const winLossGridEl = document.querySelector('.winloss-leaders-grid');
+                 const colLabel = _streakMode === 'now' ? 'Now' : (_streakMode === 'season' ? 'All-Time' : slider ? new Date(allRoundDates[parseInt(slider.value)]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'All-Time');
+                   const nowNote3 = _streakMode === 'now' ? ' <span style="color:#475569;font-size:9px;">(current running streaks)</span>' : '';
+                   const allTimeNote3 = _streakMode === 'season' ? ' <span style="color:#475569;font-size:9px;">(season best)</span>' : '';
+                   const sliderNote3 = _streakMode === 'date' ? ' <span style="color:#475569;font-size:9px;">(cumulative to date)</span>' : '';
+                   html += `<div style="background:#1a1d2e;border:1px solid #2d3154;border-radius:8px;padding:10px;"><div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">${wl.label}</div><div style="font-size:10px;color:#475569;margin-bottom:6px;">${wl.desc}</div>`;
+                   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">`;
+                   html += `<div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">All-Time${allTimeNote3}</div>`;
+                   seasonTop10.forEach((entry, i) => {
+                       const label = (i === 0 && entry.seasonVal > 0) ? '★ ' : (i + 1) + '. ';
+                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                       html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.seasonVal)}</span></div>`;
+                   });
+                   if (seasonTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                   html += `</div>`;
+                   html += `<div>`;
+                   html += `<div style="font-size:10px;color:#60a5fa;text-transform:uppercase;margin-bottom:4px;text-align:center;">${colLabel}${nowNote3}${sliderNote3}</div>`;
+                   currentTop10.forEach((entry, i) => {
+                       const label = (i === 0 && entry.dynamicVal > 0) ? '★ ' : (i + 1) + '. ';
+                       const rowBg = (i % 2 === 0) ? '' : 'background:#0f111a;';
+                       html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid #2d3154;${rowBg}"><span style="width:70px;text-align:left;color:#94a3b8;">${label}${entry.name}</span><span style="text-align:center;color:#60a5fa;">${fmt(entry.dynamicVal)}</span></div>`;
+                   });
+                   if (currentTop10.length === 0) html += `<div style="font-size:11px;color:#475569;text-align:center;padding:8px 0;">None</div>`;
+                   html += `</div>`;
+                   html += `</div></div>`;
+              }
+ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
             if (winLossGridEl) winLossGridEl.innerHTML = html;
            if (shouldLog) console.groupEnd();
              _hasLoggedInitial = true;
@@ -1844,13 +1882,13 @@ const winLossGridEl = document.querySelector('.winloss-leaders-grid');
                     <th class="sortable${sortIcon('name')}" onclick="sortBy('name')">Player</th>
                     <th class="sortable${sortIcon('rounds')}" onclick="sortBy('rounds')">Rds</th>
                     <th class="sortable${sortIcon('total')}" onclick="sortBy('total')">Total</th>
-                    <th class="sortable${sortIcon('median_desc')}" onclick="sortBy('median')">Median/Rnd</th>
-                    <th class="sortable${sortIcon('mean')}" onclick="sortBy('mean')">Mean/Rnd</th>
+                    <th class="sortable${sortIcon('median_desc')}" onclick="sortBy('median')">Median/R</th>
+                    <th class="sortable${sortIcon('mean')}" onclick="sortBy('mean')">Mean/R</th>
                     <th class="sortable${sortIcon('best')}" onclick="sortBy('best')">Best</th>
-                    <th class="sortable${sortIcon('fo')}" onclick="sortBy('fo')">FO</th>
-                    <th class="sortable${sortIcon('gr')}" onclick="sortBy('gr')">GR</th>
-                    <th class="sortable${sortIcon('cl')}" onclick="sortBy('cl')">CL</th>
-                    <th class="sortable${sortIcon('p')}" onclick="sortBy('p')">P</th>
+                    <th class="sortable${sortIcon('fo')}" onclick="sortBy('fo')" title="Wins / Avg points per round">FO</th>
+                    <th class="sortable${sortIcon('gr')}" onclick="sortBy('gr')" title="Wins / Avg points per round">GR</th>
+                    <th class="sortable${sortIcon('cl')}" onclick="sortBy('cl')" title="Wins / Avg points per round">CL</th>
+                    <th class="sortable${sortIcon('p')}" onclick="sortBy('p')" title="Wins / Avg points per round">P</th>
   
                     <th>Med Rk</th>
                     <th>Mean Rk</th>
@@ -2797,6 +2835,126 @@ function renderWeekInReview() {
 
     // ── Init ──
     loadData();
+
+    // ── Help sidebar ──
+    function toggleHelp() {
+        const sidebar = document.getElementById('help-sidebar');
+        const overlay = document.getElementById('help-overlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+    }
+    function closeHelp() {
+        document.getElementById('help-sidebar').classList.remove('open');
+        document.getElementById('help-overlay').classList.remove('open');
+        // Remove ?help=1 from URL
+        const url = new URL(window.location);
+        url.searchParams.delete('help');
+        window.history.replaceState({}, '', url);
+    }
+    // Open help if URL has ?help=1
+    if (new URLSearchParams(window.location.search).get('help') === '1') {
+        setTimeout(toggleHelp, 1000);
+    }
     </script>
+
+    <div id="help-overlay" onclick="closeHelp()"></div>
+    <div id="help-sidebar">
+        <button class="help-close" onclick="closeHelp()">✕</button>
+        <h2 style="color:#60a5fa;margin-bottom:20px;">📖 BBB Stats Help</h2>
+
+        <div class="help-section">
+            <h4>Scoring System</h4>
+            <p>BBB uses a point-based scoring system. Here's how points are earned each round:</p>
+            <ul>
+                <li><strong>FO (First On):</strong> 1 point for hitting the green in the regulated number of strokes (par-4: 2nd shot or earlier, par-5: 3rd shot or earlier). Putt-out for 1 point adds another.</li>
+                <li><strong>GR (Greenie):</strong> 1 bonus point for hitting a par-3 green in regulation (first shot on). Awarded at the end of the round.</li>
+                <li><strong>CL (Closest to Pin):</strong> 1 point for having the ball closest to the hole on par-3s (or par-4s/5s when a greenie is awarded). Putt-out for 1 point adds another.</li>
+                <li><strong>P (Putt):</strong> 1 point for making a putt of 20+ feet. Shorter putts are worth nothing.</li>
+                <li><strong>Carry-In:</strong> Points from balls that carry greens but don't stop on them. Awarded at the end of each hole when applicable.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Streak Categories</h4>
+            <ul>
+                <li><strong>Score Streak:</strong> Consecutive holes where you scored any point (FO, CL, P, Carry-In, or Greenie).</li>
+                <li><strong>Zero Streak (Drought):</strong> Consecutive holes where you scored zero points. Capped at 18 holes (a full round).</li>
+                <li><strong>FO Streak:</strong> Consecutive par-4 or par-5 holes where you hit the green in regulation.</li>
+                <li><strong>Closest Streak:</strong> Consecutive holes where you won closest-to-pin.</li>
+                <li><strong>Putt Streak:</strong> Consecutive putts of 20+ feet that you made.</li>
+                <li><strong>Greenie Run:</strong> Most consecutive par-3 holes where you hit the green in regulation within a single round.</li>
+                <li><strong>3-Ptr Streak:</strong> Most holes where you earned FO + Closest + Putt on the same hole (within a round).</li>
+                <li><strong>Max Hole Score:</strong> Highest total points scored on a single hole in one round (e.g., FO + CL + P + Carry-In = up to 6 points).</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Other Stats</h4>
+            <ul>
+                <li><strong>Holes Scored:</strong> Total holes where you earned any points during the season.</li>
+                <li><strong>Carry-In Points:</strong> Total bonus points earned from carry-in shots across the season.</li>
+                <li><strong>Max Hole Score:</strong> Highest points scored on a single hole in one round.</li>
+                <li><strong>3-Ptr Holes:</strong> Total holes where FO + Closest + Putt were all earned in the same hole.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Win/Loss</h4>
+            <ul>
+                <li><strong>Wins:</strong> Rounds where you scored the highest total points. Ties at the top are shared (e.g., 2 players tie for 1st = both get a win).</li>
+                <li><strong>Win %:</strong> Wins divided by rounds played.</li>
+                <li><strong>Win Streak:</strong> Most consecutive rounds won.</li>
+                <li><strong>Loss Streak:</strong> Most consecutive rounds not won.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Streak Modes (bottom bar)</h4>
+            <ul>
+                <li><strong><span class="help-badge">NOW</span> Current Running Streaks</strong><br>
+                Shows live hole-level streaks that are actively building right now. These reset if you miss a hole. This is what's "happening at this moment."</li>
+                <li><strong><span class="help-badge">SEASON</span> Season Best</strong><br>
+                Shows the best single-season record for each stat. "All-Time" in the left column means the best ever in this season — your personal season record.</li>
+                <li><strong><span class="help-badge">SLIDER</span> Date Slider</strong><br>
+                Drag the slider to a specific date to see cumulative stats as of that date. The right column shows stats built up round-by-round through that date. This is useful for seeing how streaks developed over the season.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>All Player Leaderboard Columns</h4>
+            <ul>
+                <li><strong>Rds:</strong> Number of rounds played (filtered by player count selection).</li>
+                <li><strong>Total:</strong> Sum of all points scored across all rounds.</li>
+                <li><strong>Median/Rnd:</strong> Median points per round — the middle value when all round scores are sorted. More robust than mean for small samples.</li>
+                <li><strong>Mean/Rnd:</strong> Average (arithmetic mean) points per round. Total divided by rounds.</li>
+                <li><strong>Best:</strong> Highest single-round score.</li>
+                <li><strong>FO (wins/avg):</strong> <span class="help-badge">FO</span> = number of rounds with a first-on point; <span class="help-badge">avg</span> = average FO points per round. Example: <code>12 (1.8)</code> means 12 FO wins, 1.8 avg FO points per round.</li>
+                <li><strong>GR (wins/avg):</strong> Greenie wins / avg greenie points per round.</li>
+                <li><strong>CL (wins/avg):</strong> Closest-to-pin wins / avg CL points per round.</li>
+                <li><strong>P (wins/avg):</strong> Putt wins / avg putt points per round.</li>
+                <li><strong>Med Rk:</strong> Ranking by Median/Rnd (higher = better rank). #1 means highest median.</li>
+                <li><strong>Mean Rk:</strong> Ranking by Mean/Rnd (higher = better rank).</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Player Count Filter</h4>
+            <p>Rounds are split into 3-player and 4-player categories because carry-in dynamics differ: 3-player rounds typically award more points per player due to fewer competitors for greens. We do not average or normalize between the two — each is shown separately. The "All Rounds" view combines both.</p>
+        </div>
+
+        <div class="help-section">
+            <h4>How Winners Are Determined</h4>
+            <ul>
+                <li><strong>3 Players:</strong> Highest scorer wins. If 2+ tie at the top, all tied players get a win.</li>
+                <li><strong>4 Players:</strong> Top 2 players get a win. If tied at 1st, all tied players get a win. If tied at 2nd, neither tied player gets a win (tie at 2nd doesn't share).</li>
+                <li><strong>5+ Players (including guests):</strong> Same logic as 4-player — top 2 win, ties at 1st share, ties at 2nd don't.</li>
+            </ul>
+        </div>
+
+        <div class="help-section">
+            <h4>Guests</h4>
+            <p>Guest players are aggregated into a single "Guests" row on the leaderboard. They are counted as real players in winner determination and round player-count classification, but do not appear individually in the player selector.</p>
+        </div>
+    </div>
 </body>
 </html>
