@@ -181,6 +181,26 @@
         .tooltip-btn:hover { color: #e2e8f0; }
         .tooltip-btn.active { background: #1e3a5f; border-color: #60a5fa; color: #60a5fa; }
 
+        /* ── Compare toggle ── */
+        .compare-btn {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+            border: 1px solid #2d3154;
+            background: #1a1d2e;
+            color: #94a3b8;
+            cursor: pointer;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+        .compare-btn.active {
+            background: #60a5fa;
+            color: #fff;
+            border-color: #60a5fa;
+        }
+
         /* ── Tables ── */
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
         th, td { padding: 8px 12px; text-align: center; border-bottom: 1px solid #2d3154; }
@@ -2224,12 +2244,19 @@ function renderWinLossGrid() {
         const diff = (val, avg) => (val - avg).toFixed(1);
         const diffClass = (val, avg) => (val >= avg) ? 'pos' : 'neg';
 
+     // Where-to-improve: compute top-5 group averages by win percentage
+        const top5Players = Object.keys(ps).filter(p => ps[p].rounds > 0 && !p.toLowerCase().includes('guest')).sort((a, b) => (ps[b].wins / ps[b].rounds) - (ps[a].wins / ps[a].rounds)).slice(0, 5);
+        const top5AvgFo = top5Players.reduce((sum, p) => sum + (ps[p].foPerRound.length ? ps[p].foPerRound.reduce((a,b)=>a+b,0)/ps[p].foPerRound.length : 0), 0) / top5Players.length;
+        const top5AvgGr = top5Players.reduce((sum, p) => sum + (ps[p].grPerRound.length ? ps[p].grPerRound.reduce((a,b)=>a+b,0)/ps[p].grPerRound.length : 0), 0) / top5Players.length;
+        const top5AvgCl = top5Players.reduce((sum, p) => sum + (ps[p].clPerRound.length ? ps[p].clPerRound.reduce((a,b)=>a+b,0)/ps[p].clPerRound.length : 0), 0) / top5Players.length;
+        const top5AvgP = top5Players.reduce((sum, p) => sum + (ps[p].pPerRound.length ? ps[p].pPerRound.reduce((a,b)=>a+b,0)/ps[p].pPerRound.length : 0), 0) / top5Players.length;
+
         // Where-to-improve: sort categories by biggest gap (most negative first)
         const improveCategories = [
-            { label: 'First-On', gap: stData.foPerRound.length ? stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length : 0, avg: groupAvgFo },
-            { label: 'Greenie', gap: stData.grPerRound.length ? stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length : 0, avg: groupAvgGr },
-            { label: 'Closest-to-Pin', gap: stData.clPerRound.length ? stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length : 0, avg: groupAvgCl },
-            { label: 'Putt', gap: stData.pPerRound.length ? stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length : 0, avg: groupAvgP },
+            { label: 'First-On', gap: stData.foPerRound.length ? stData.foPerRound.reduce((a,b) => a+b,0)/stData.foPerRound.length : 0, avg: compareTop5 ? top5AvgFo : groupAvgFo },
+            { label: 'Greenie', gap: stData.grPerRound.length ? stData.grPerRound.reduce((a,b) => a+b,0)/stData.grPerRound.length : 0, avg: compareTop5 ? top5AvgGr : groupAvgGr },
+            { label: 'Closest-to-Pin', gap: stData.clPerRound.length ? stData.clPerRound.reduce((a,b) => a+b,0)/stData.clPerRound.length : 0, avg: compareTop5 ? top5AvgCl : groupAvgCl },
+            { label: 'Putt', gap: stData.pPerRound.length ? stData.pPerRound.reduce((a,b) => a+b,0)/stData.pPerRound.length : 0, avg: compareTop5 ? top5AvgP : groupAvgP },
         ];
         improveCategories.forEach(c => c.diff = c.avg - c.gap);
         improveCategories.sort((a, b) => b.diff - a.diff);
@@ -2308,7 +2335,7 @@ function renderWinLossGrid() {
             </div>
 
               <div class="card">
-                <h3>${tipH('Where to Improve', 'Categories where you score below group average — sorted by biggest gap (most improvement potential first)')}</h3>
+                <h3>${tipH('Where to Improve', 'Categories where you score below group average — sorted by biggest gap (most improvement potential first)')}${renderCompareToggle()}</h3>
                 <div class="improve-list">${improveCategories.map(cat => {
                     const barWidth = Math.abs(cat.diff) / maxGap * 100;
                     const barColor = cat.diff > 0 ? '#f87171' : '#34d399';
@@ -2317,8 +2344,11 @@ function renderWinLossGrid() {
                     const barStyle = cat.diff > 0
                         ? `width:${barWidth}%;background:${barColor};left:50%;`
                         : `width:${barWidth}%;background:${barColor};right:50%;`;
+                    const compareLabel = compareTop5
+                        ? cat.label + ' points per round — compared to top 5 players by win %'
+                        : cat.label + ' points per round — compared to group average';
                     return `<div class="improve-row">
-                        <div class="improve-label">${tipC(cat.label, cat.label + ' points per round — compared to group average')}</div>
+                        <div class="improve-label">${tipC(cat.label, compareLabel)}</div>
                         <div class="improve-bar-track">
                             <div class="improve-bar-fill" style="${barStyle}"></div>
                         </div>
@@ -2963,7 +2993,7 @@ function renderWeekInReview() {
    // ── Init ──
     loadData();
 
-    // ── Tooltip mode ──
+     // ── Tooltip mode ──
     let tooltipMode = sessionStorage.getItem('tooltipMode') === 'true';
     function toggleTooltipMode() {
         tooltipMode = !tooltipMode;
@@ -2981,6 +3011,20 @@ function renderWeekInReview() {
     if (tooltipMode) {
         const btn = document.getElementById('tooltipToggleBtn');
         if (btn) btn.classList.add('active');
+    }
+
+    // ── Compare toggle ──
+    let compareTop5 = sessionStorage.getItem('compareTop5') === 'true';
+    function toggleCompareTop5() {
+        compareTop5 = !compareTop5;
+        sessionStorage.setItem('compareTop5', compareTop5);
+        renderPlayerDetail(document.getElementById('playerSelect').value);
+    }
+    function renderCompareToggle() {
+        const active = compareTop5 ? 'active' : '';
+        const title = compareTop5 ? 'Compare vs all players' : 'Compare vs top 5 by win %';
+        const btn = `<button onclick="toggleCompareTop5()" class="compare-btn ${active}" title="${title}">${compareTop5 ? 'T5' : 'ALL'}</button>`;
+        return btn + ' ';
     }
 
     // ── Help sidebar ──
