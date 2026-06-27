@@ -1313,15 +1313,28 @@ return carry;
   }
 
 function getRunningTotal(player) {
-let sum = 0;
-for (let h = 1; h <= HOLES; h++) {
-  const idx = h - 1;
-  if (player.scores[idx]) {
-    sum += player._cachedHoleTotals?.[idx] || 0;
-  }
-}
-return sum;
-  }
+ let sum = 0;
+ const sequence = holeSequence.length > 0 ? holeSequence : Array.from({length: HOLES}, (_, i) => i + 1);
+ const currentIdx = sequence.indexOf(currentHole);
+ if (currentIdx === -1) {
+   for (let i = 0; i < sequence.length; i++) {
+     const h = sequence[i];
+     const idx = h - 1;
+     if (player.scores[idx] && finishedHoles.has(h)) {
+       sum += player._cachedHoleTotals?.[idx] || 0;
+     }
+   }
+   return sum;
+ }
+ for (let i = 0; i <= currentIdx; i++) {
+   const h = sequence[i];
+   const idx = h - 1;
+   if (player.scores[idx] && finishedHoles.has(h)) {
+     sum += player._cachedHoleTotals?.[idx] || 0;
+   }
+ }
+ return sum;
+   }
 
 function precomputeAllTotals() {
   players.forEach(p => {
