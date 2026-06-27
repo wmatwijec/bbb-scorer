@@ -1069,7 +1069,7 @@ function sortPlayersAlphabetically() {
       const prevBtn = document.getElementById('prevHole');
       const nextBtn = document.getElementById('nextHole');
 
-      const canPrev = currentHole > 1;
+      const canPrev = currentHole > 1 || (currentHole === 1 && holeSequence.length > 0);
       const canNext = currentHole < HOLES || (currentHole === HOLES && finishedHoles.has(currentHole));
 
       if (prevBtn) prevBtn.disabled = !canPrev;
@@ -1953,13 +1953,21 @@ function attachNavListeners() {
   if (prev) {
 prev.onclick = null;
 prev.addEventListener('click', () => {
-  if (currentHole > 1) {
-    currentHole--;
-    updateHole();
-    updateCourseInfoBar();
-    console.log(`PREV → HOLE ${currentHole}`);
-  }
-});
+   if (currentHole === 1 && holeSequence.length > 0) {
+     const lastHole = holeSequence[holeSequence.length - 1];
+     if (finishedHoles.has(lastHole)) {
+       currentHole = lastHole;
+       updateHole();
+       updateCourseInfoBar();
+       console.log(`PREV → WRAP TO HOLE ${currentHole}`);
+     }
+   } else if (currentHole > 1) {
+     currentHole--;
+     updateHole();
+     updateCourseInfoBar();
+     console.log(`PREV → HOLE ${currentHole}`);
+   }
+ });
   }
 
   // Next
