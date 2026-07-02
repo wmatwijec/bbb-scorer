@@ -46,7 +46,7 @@
         <p>Stats from completed rounds only. Select a player to see details and comparisons.</p>
 
         <div id="playerSelectArea">
-            <label for="playerSelect"><strong>Select Player:</strong></label><br>
+            <label for="playerSelect"><strong>Choose Rounds:</strong></label><br>
             <select id="playerSelect">
                 <option value="">-- Loading players --</option>
             </select>
@@ -220,7 +220,7 @@
 
                 select.addEventListener('change', e => showStats(e.target.value));
 
-                document.getElementById('status').textContent = `Loaded ${allRounds.length} valid completed rounds • ${uniquePlayers.length} players`;
+                document.getElementById('status').textContent = `Loaded ${allRounds.length} valid completed rounds`;
             } catch (err) {
                 console.error(err);
                 document.getElementById('status').textContent = `Error loading data: ${err.message}`;

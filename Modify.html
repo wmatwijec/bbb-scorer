@@ -239,7 +239,27 @@
         }
     }
 
-    window.onload = loadAllRounds;
+    window.onload = async function() {
+  await loadAllRounds();
+  await loadRoundFromLocalStorage();
+};
+
+async function loadRoundFromLocalStorage() {
+  const roundData = localStorage.getItem('roundData');
+  if (roundData) {
+    const data = JSON.parse(roundData);
+    currentMatchId = data.matchId;
+    currentCourse = data.currentCourse;
+    currentHole = data.currentHole;
+    players = data.players;
+    finishedHoles = new Set(data.finishedHoles);
+    holeSequence = data.holeSequence;
+    scores = data.scores;
+    _cachedTotals = data._cachedTotals;
+    console.log('Round loaded from localStorage:', data);
+  }
+}
+
 </script>
 </body>
 </html>
