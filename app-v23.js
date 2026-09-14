@@ -864,11 +864,11 @@ function renderHoleSummary() {
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;   // unlocks Next
-
+  // Keep locked until finish is fully processed
   precomputeAllTotals();
   updateHole();
   logScreen('FINISHED HOLE ' + currentHole);
+  isHoleInProgress = false;   // unlocks Next AFTER update
 }
 
 

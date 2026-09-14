@@ -1070,7 +1070,7 @@ function sortPlayersAlphabetically() {
       const nextBtn = document.getElementById('nextHole');
 
       const canPrev = currentHole > 1 || (currentHole === 1 && holeSequence.length > 0);
-      const canNext = currentHole < HOLES || (currentHole === HOLES && finishedHoles.has(currentHole));
+      const canNext = finishedHoles.has(currentHole) && (currentHole < HOLES);
 
       if (prevBtn) prevBtn.disabled = !canPrev;
       if (nextBtn) nextBtn.disabled = !canNext;
@@ -1680,12 +1680,12 @@ text = `<strong>Open Carry: 0</strong>`;
 
 function toggleScore(player, holeIdx, point) {
 const currentHoleIdx = currentHole - 1;
-if (holeIdx === currentHoleIdx) {
+if (holeIdx === currentHoleIdx && !isHoleInProgress) {
+  isHoleInProgress = true;  // lock nav while scoring
   const hasAnyScore = players.some(p => {
     const s = p.scores[holeIdx] || {};
     return s.firstOn || s.closest || s.putt;
   });
-  
 }
 
 const score = player.scores[holeIdx];
@@ -1710,6 +1710,7 @@ updateHole();
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
+  isHoleInProgress = false;  // unlock nav
   
    // ADD THIS LINE - track play order for wrap-around carry
   if (!holeSequence.includes(currentHole)) {

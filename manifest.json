@@ -1,7 +1,7 @@
 {
   "name": "Bingo Bango Bongo",
   "short_name": "BBB",
-  "start_url": "/bbb-golf-scorer/?v=20251121",
+  "start_url": "/bbb-golf-scorer/?v=20260914",
   "scope": "/bbb-golf-scorer/",
   "display": "browser",
   "background_color": "#1a3e1a",
