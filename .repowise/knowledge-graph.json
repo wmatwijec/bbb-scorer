@@ -1,0 +1,906 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "bbb-scorer",
+    "is_monorepo": false,
+    "total_files": 12,
+    "entry_points": [],
+    "tech_stack": [
+      {
+        "name": "Node.js",
+        "version": null,
+        "category": "language"
+      }
+    ],
+    "entry_candidates": [],
+    "graph_mode": "flow"
+  },
+  "nodes": [
+    {
+      "id": "file:AGENTS.md",
+      "type": "document",
+      "filePath": "AGENTS.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 27,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 0,
+      "tags": [
+        "low_signal_summary"
+      ],
+      "summary": "Documentation: AGENTS.md."
+    },
+    {
+      "id": "file:README.md",
+      "type": "document",
+      "filePath": "README.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 2,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 1,
+      "tags": [],
+      "summary": "Project overview and entry point for new readers."
+    },
+    {
+      "id": "file:Workflow.md",
+      "type": "document",
+      "filePath": "Workflow.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 54,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 2,
+      "tags": [
+        "low_signal_summary"
+      ],
+      "summary": "Documentation: Workflow.md."
+    },
+    {
+      "id": "file:app-v23.js",
+      "type": "file",
+      "filePath": "app-v23.js",
+      "language": "javascript",
+      "symbolCount": 25,
+      "lineCount": 879,
+      "complexity": "complex",
+      "pagerank": 0.083333,
+      "communityId": 3,
+      "tags": [],
+      "summary": "Application module app-v23 defining getWaltPhone, loadDataFromBackend, logScreen.",
+      "primaryOwner": "Walt Matwijec"
+    },
+    {
+      "id": "file:knowledge/_data/bbb-golf/scoring-engine-audit.md",
+      "type": "document",
+      "filePath": "knowledge/_data/bbb-golf/scoring-engine-audit.md",
+      "language": "markdown",
+      "symbolCount": 0,
+      "lineCount": 141,
+      "complexity": "moderate",
+      "pagerank": 0.083333,
+      "communityId": 4,
+      "tags": [
+        "low_signal_summary"
+      ],
+      "summary": "Documentation: scoring-engine-audit.md."
+    },
+    {
+      "id": "file:manifest.json",
+      "type": "config",
+      "filePath": "manifest.json",
+      "language": "json",
+      "symbolCount": 0,
+      "lineCount": 8,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 5,
+      "tags": [
+        "config",
+        "low_signal_summary"
+      ],
+      "summary": "Configuration file: manifest.json."
+    },
+    {
+      "id": "file:package.json",
+      "type": "config",
+      "filePath": "package.json",
+      "language": "json",
+      "symbolCount": 0,
+      "lineCount": 1,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 6,
+      "tags": [
+        "config"
+      ],
+      "summary": "Node package manifest: dependencies, scripts, and metadata."
+    },
+    {
+      "id": "file:regenerate_reports.py",
+      "type": "file",
+      "filePath": "regenerate_reports.py",
+      "language": "python",
+      "symbolCount": 18,
+      "lineCount": 625,
+      "complexity": "complex",
+      "pagerank": 0.083333,
+      "communityId": 7,
+      "tags": [],
+      "summary": "Application module regenerate_reports defining build_hole_sequence, get_carry_in_for_hole, compute_round_stats.",
+      "primaryOwner": "Walt Matwijec"
+    },
+    {
+      "id": "file:rounds-backups/rounds_backup_2026-06-25T20-34-40.json",
+      "type": "config",
+      "filePath": "rounds-backups/rounds_backup_2026-06-25T20-34-40.json",
+      "language": "json",
+      "symbolCount": 0,
+      "lineCount": 6467,
+      "complexity": "complex",
+      "pagerank": 0.083333,
+      "communityId": 8,
+      "tags": [
+        "config",
+        "low_signal_summary"
+      ],
+      "summary": "Configuration file: rounds_backup_2026-06-25T20-34-40.json."
+    },
+    {
+      "id": "file:rounds-backups/rounds_backup_2026-07-02T23-42-35.json",
+      "type": "config",
+      "filePath": "rounds-backups/rounds_backup_2026-07-02T23-42-35.json",
+      "language": "json",
+      "symbolCount": 0,
+      "lineCount": 7041,
+      "complexity": "complex",
+      "pagerank": 0.083333,
+      "communityId": 9,
+      "tags": [
+        "config",
+        "low_signal_summary"
+      ],
+      "summary": "Configuration file: rounds_backup_2026-07-02T23-42-35.json."
+    },
+    {
+      "id": "file:sw.js",
+      "type": "file",
+      "filePath": "sw.js",
+      "language": "javascript",
+      "symbolCount": 2,
+      "lineCount": 32,
+      "complexity": "simple",
+      "pagerank": 0.083333,
+      "communityId": 10,
+      "tags": [],
+      "summary": "Application module sw (2 symbols).",
+      "primaryOwner": "Walt Matwijec"
+    },
+    {
+      "id": "file:weekly_summary.py",
+      "type": "file",
+      "filePath": "weekly_summary.py",
+      "language": "python",
+      "symbolCount": 25,
+      "lineCount": 1025,
+      "complexity": "complex",
+      "pagerank": 0.083333,
+      "communityId": 11,
+      "tags": [],
+      "summary": "Application module weekly_summary defining build_hole_sequence, get_carry_in_for_hole, compute_round_stats.",
+      "primaryOwner": "Walt Matwijec"
+    },
+    {
+      "id": "function:app-v23.js:getWaltPhone",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "getWaltPhone",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:loadDataFromBackend",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "loadDataFromBackend",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:lockNavigation",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "lockNavigation",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:logScreen",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "logScreen",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:parseCSV",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "parseCSV",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:renderCourseSelect",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "renderCourseSelect",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:sortPlayersAlphabetically",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "sortPlayersAlphabetically",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:unlockNavigation",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "unlockNavigation",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:app-v23.js:updateNavButtons",
+      "type": "function",
+      "filePath": "app-v23.js",
+      "name": "updateNavButtons",
+      "language": "javascript",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:build_hole_sequence",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "build_hole_sequence",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:build_round_prompt",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "build_round_prompt",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:call_llm",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "call_llm",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:compute_round_stats",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "compute_round_stats",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:fetch_rounds",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "fetch_rounds",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:filter_and_dedup",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "filter_and_dedup",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:generate_round_prose",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "generate_round_prose",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:get_carry_in_for_hole",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "get_carry_in_for_hole",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:get_iso_week_key",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "get_iso_week_key",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:get_week_range",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "get_week_range",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:iso_week_end",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "iso_week_end",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:iso_week_start",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "iso_week_start",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:regenerate_reports.py:main",
+      "type": "function",
+      "filePath": "regenerate_reports.py",
+      "name": "main",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:build_hole_sequence",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "build_hole_sequence",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:build_round_prompt",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "build_round_prompt",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:call_llm",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "call_llm",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:compute_round_stats",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "compute_round_stats",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:fetch_rounds",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "fetch_rounds",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:filter_rounds_by_week",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "filter_rounds_by_week",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:format_output",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "format_output",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:get_carry_in_for_hole",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "get_carry_in_for_hole",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:get_category_totals",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "get_category_totals",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:get_point_total",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "get_point_total",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:get_week_in_review",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "get_week_in_review",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:get_week_range",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "get_week_range",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:iso_week_end",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "iso_week_end",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:iso_week_start",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "iso_week_start",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:main",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "main",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    },
+    {
+      "id": "function:weekly_summary.py:select_round_comment",
+      "type": "function",
+      "filePath": "weekly_summary.py",
+      "name": "select_round_comment",
+      "language": "python",
+      "tags": [],
+      "summary": ""
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:getWaltPhone",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:loadDataFromBackend",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:lockNavigation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:logScreen",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:parseCSV",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:renderCourseSelect",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:sortPlayersAlphabetically",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:unlockNavigation",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:app-v23.js",
+      "target": "function:app-v23.js:updateNavButtons",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:build_hole_sequence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:build_round_prompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:call_llm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:compute_round_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:fetch_rounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:filter_and_dedup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:generate_round_prose",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:get_carry_in_for_hole",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:get_iso_week_key",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:get_week_range",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:iso_week_end",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:iso_week_start",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:regenerate_reports.py",
+      "target": "function:regenerate_reports.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:build_hole_sequence",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:build_round_prompt",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:call_llm",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:compute_round_stats",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:fetch_rounds",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:filter_rounds_by_week",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:format_output",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:get_carry_in_for_hole",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:get_category_totals",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:get_point_total",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:get_week_in_review",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:get_week_range",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:iso_week_end",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:iso_week_start",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:main",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    },
+    {
+      "source": "file:weekly_summary.py",
+      "target": "function:weekly_summary.py:select_round_comment",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1.0
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:application",
+      "name": "Application Root",
+      "description": "Top-level project structure containing documentation, build configuration, service worker, PWA manifest, backup archives, and operational scripts.",
+      "nodeIds": [
+        "file:AGENTS.md",
+        "file:README.md",
+        "file:Workflow.md",
+        "file:app-v23.js",
+        "file:knowledge/_data/bbb-golf/scoring-engine-audit.md",
+        "file:manifest.json",
+        "file:package.json",
+        "file:regenerate_reports.py",
+        "file:rounds-backups/rounds_backup_2026-06-25T20-34-40.json",
+        "file:rounds-backups/rounds_backup_2026-07-02T23-42-35.json",
+        "file:sw.js",
+        "file:weekly_summary.py"
+      ],
+      "display_order": 0,
+      "order_basis": "canonical"
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "target_path": "README.md",
+      "page_type": "repo_overview",
+      "title": "README.md",
+      "depth": 0,
+      "kind": "overview",
+      "reason": "Start here for the end-to-end picture before diving into the code.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 2,
+      "target_path": "app-v23.js",
+      "page_type": "file_page",
+      "title": "app-v23.js",
+      "depth": 0,
+      "kind": "code",
+      "reason": "The walk's anchor \u2014 its imports fan out the widest in a repo with no single entry point.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 3,
+      "target_path": "regenerate_reports.py",
+      "page_type": "file_page",
+      "title": "regenerate_reports.py",
+      "depth": 1,
+      "kind": "code",
+      "reason": "Off the import paths walked above \u2014 a standalone or supporting file.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 4,
+      "target_path": "sw.js",
+      "page_type": "file_page",
+      "title": "sw.js",
+      "depth": 1,
+      "kind": "code",
+      "reason": "Off the import paths walked above \u2014 a standalone or supporting file.",
+      "layer_id": "layer:application"
+    },
+    {
+      "order": 5,
+      "target_path": "weekly_summary.py",
+      "page_type": "file_page",
+      "title": "weekly_summary.py",
+      "depth": 1,
+      "kind": "code",
+      "reason": "Off the import paths walked above \u2014 a standalone or supporting file.",
+      "layer_id": "layer:application"
+    }
+  ],
+  "modules": [
+    {
+      "id": "module:application",
+      "name": "Application",
+      "path": "",
+      "layerId": "layer:application",
+      "nodeIds": [
+        "file:AGENTS.md",
+        "file:README.md",
+        "file:Workflow.md",
+        "file:app-v23.js",
+        "file:knowledge/_data/bbb-golf/scoring-engine-audit.md",
+        "file:manifest.json",
+        "file:package.json",
+        "file:regenerate_reports.py",
+        "file:rounds-backups/rounds_backup_2026-06-25T20-34-40.json",
+        "file:rounds-backups/rounds_backup_2026-07-02T23-42-35.json",
+        "file:sw.js",
+        "file:weekly_summary.py"
+      ],
+      "wholeLayer": true,
+      "language": "json"
+    }
+  ]
+}

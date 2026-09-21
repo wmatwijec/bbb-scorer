@@ -394,7 +394,8 @@
                 Highlight:
                 <input type="color" id="highlightColor" value="#60a5fa" onchange="onHighlightColorChange(this.value)" style="width:28px;height:24px;border:1px solid #2d3154;border-radius:4px;background:#0f111a;cursor:pointer;padding:2px;">
             </label>
-            <a href="/" class="btn btn-primary btn-sm" style="margin-left:8px;">⛳ Scorer</a>
+            <a href="/bbb-golf-scorer/" class="btn btn-primary btn-sm" style="margin-left:8px;">⛳ Scorer</a>
+            <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="openDateCorrector()">🛠 Fix Date</button>
         </div>
     </div>
 
@@ -569,6 +570,90 @@ function renderReportSections(prose) {
         } catch (e) {
             console.log('Could not load report weeks:', e);
             availableReportWeeks = [];
+        }
+    }
+
+    // ── Date Corrector Modal ──
+    let _dateCorrectorRounds = [];
+    let _dateCorrectorWrongDate = '';
+
+    function openDateCorrector() {
+        document.getElementById('dateCorrectorWrongDate').value = '';
+        document.getElementById('dateCorrectorResults').style.display = 'none';
+        document.getElementById('dateCorrectorModal').style.display = 'block';
+        document.getElementById('dateCorrectorWrongDate').focus();
+    }
+
+    function closeDateCorrector() {
+        document.getElementById('dateCorrectorModal').style.display = 'none';
+        _dateCorrectorRounds = [];
+        _dateCorrectorWrongDate = '';
+    }
+
+    async function loadDateCorrectorRounds() {
+        const wrongDate = document.getElementById('dateCorrectorWrongDate').value;
+        if (!wrongDate) return alert('Pick a date');
+
+        document.getElementById('dateCorrectorResults').style.display = 'none';
+
+        try {
+            const res = await fetch(`${BACKEND}/rounds?date=${wrongDate}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const rounds = data.rounds || [];
+
+            _dateCorrectorRounds = rounds;
+            _dateCorrectorWrongDate = wrongDate;
+
+            if (rounds.length === 0) {
+                document.getElementById('dateCorrectorCount').textContent = `No rounds found on ${wrongDate}`;
+            } else {
+                document.getElementById('dateCorrectorCount').textContent = `${rounds.length} round(s) saved on ${wrongDate}`;
+                const cards = document.getElementById('dateCorrectorCards');
+                cards.innerHTML = rounds.map(round => {
+                    const players = (round.players || []).map(p => p.name).join(', ') || '—';
+                    const course = round.courseName || 'Unknown';
+                    const matchId = round.matchId || '';
+                    const newDate = new Date(wrongDate);
+                    return `
+                        <div style="background:#0f111a;border:1px solid #2d3154;border-radius:8px;padding:12px;margin:8px 0;">
+                            <p style="margin:0 0 8px;"><strong>${course}</strong> • ${players} • ${matchId}</p>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <label style="font-size:12px;color:#94a3b8;">Correct date:</label>
+                                <input type="date" id="dcc-${matchId}" value="${wrongDate}" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:4px;padding:6px 8px;font-size:13px;">
+                                <button onclick="correctRoundDate('${matchId}')" style="background:#2563eb;color:#fff;border:none;padding:6px 12px;border-radius:4px;font-size:12px;cursor:pointer;">Fix</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            document.getElementById('dateCorrectorResults').style.display = 'block';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    async function correctRoundDate(matchId) {
+        const newDateInput = document.getElementById(`dcc-${matchId}`);
+        const newDate = newDateInput.value;
+        if (!newDate) return alert('Pick a new date');
+        if (!confirm(`Change this round's date to ${newDate}?`)) return;
+
+        try {
+            const res = await fetch(`${BACKEND}/update-round-date`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matchId, newDate })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert(`✅ Date corrected to ${newDate}`);
+                loadDateCorrectorRounds();
+            } else {
+                alert('Error: ' + (result.error || 'Unknown'));
+            }
+        } catch (e) {
+            alert('Network error: ' + e.message);
         }
     }
 
@@ -3444,6 +3529,26 @@ function renderWeekInReview() {
             <h4>Guests</h4>
             <p>Guest players are aggregated into a single "Guests" row on the leaderboard. They are counted as real players in winner determination and round player-count classification, but do not appear individually in the player selector.</p>
         </div>
+
     </div>
+
+    <!-- ── Date Corrector Modal ── -->
+    <div id="dateCorrectorModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;" onclick="if(event.target===this)closeDateCorrector()">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1d2e;border:1px solid #2d3154;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:18px;">🛠 Fix Round Date</h2>
+                <button onclick="closeDateCorrector()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:20px;">✕</button>
+            </div>
+            <div id="dateCorrectorDatePick" style="margin-bottom:12px;">
+                <label style="font-size:13px;color:#94a3b8;display:block;margin-bottom:6px;">Wrong save date (day entered):</label>
+                <input type="date" id="dateCorrectorWrongDate" style="background:#0f111a;color:#e2e8f0;border:1px solid #2d3154;border-radius:6px;padding:8px 12px;font-size:13px;width:200px;">
+                <button onclick="loadDateCorrectorRounds()" style="background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;margin-left:8px;">Load Rounds</button>
+                <div id="dateCorrectorResults" style="display:none;">
+                <p style="color:#64748b;font-size:12px;margin-bottom:8px;" id="dateCorrectorCount"></p>
+                <div id="dateCorrectorCards"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

@@ -1,0 +1,43 @@
+{
+  "last_sync_commit": "3f8abec61944d4281c6ef66d5388155a9d7f5157",
+  "total_pages": 12,
+  "provider": "opencode",
+  "model": "opencode/default",
+  "docs_enabled": true,
+  "run_mode": "standard",
+  "git_tier": "full",
+  "include_submodules": false,
+  "total_tokens": 245594,
+  "phase_timings": {
+    "traverse": 0.23,
+    "co_change": 0.02,
+    "git": 0.28,
+    "parse": 0.48,
+    "tsconfig": 0.0,
+    "graph.ts_index": 0.0,
+    "graph.imports": 0.0,
+    "graph.type_refs": 0.0,
+    "graph.heritage": 0.0,
+    "graph.calls": 0.0,
+    "dynamic_hints": 0.02,
+    "graph.metrics": 0.27,
+    "graph.communities": 0.02,
+    "external_systems": 0.01,
+    "dead_code": 0.05,
+    "health": 0.66,
+    "decisions": 300.0,
+    "knowledge_graph.skeleton": 0.0,
+    "graph.flows": 0.0
+  },
+  "knowledge_graph": {
+    "version": "1.0.0",
+    "node_count": 50,
+    "layer_count": 1,
+    "tour_steps": 5,
+    "has_summaries": true,
+    "fingerprint": "de0edc8582cf4ddf"
+  },
+  "store_format_version": 1,
+  "written_by_version": "0.27.0",
+  "config_fingerprint": "ebe475fb2edf710ba67681461bec4687c99c70ba7b39bbcf6b390f0abd88478d"
+}

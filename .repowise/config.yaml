@@ -1,0 +1,9 @@
+editor_files:
+  claude_md: false
+provider: opencode
+model: opencode/default
+embedder: openai
+reasoning: auto
+distill:
+  commands:
+    enabled: false
