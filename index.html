@@ -558,6 +558,48 @@ font-size: 0.95rem !important;
 
 #courseSetup.hidden { height:0 !important; overflow:hidden !important; padding:0 !important; margin:0 !important; }
 
+/* === ROUND COMPLETE ACTION BAR === */
+#roundCompleteBar {
+  max-width: 800px;
+  margin: 0.6rem auto 0.8rem auto;
+  padding: 1rem;
+  border-radius: 14px;
+  text-align: center;
+  background: linear-gradient(135deg, #00e000, #00a800);
+  color: #000;
+  border: 3px solid #063;
+  box-shadow: 0 6px 18px rgba(0, 170, 0, 0.45);
+}
+#roundCompleteBar .rcb-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 0.7rem;
+}
+#roundCompleteBar .rcb-cta {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  background: #063;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  animation: rcbPulse 1.6s ease-in-out infinite;
+}
+#roundCompleteBar .rcb-cta:active { transform: scale(0.97); }
+#roundCompleteBar .rcb-sub {
+  margin-top: 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.9;
+}
+@keyframes rcbPulse {
+  0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.3), 0 0 0 0 rgba(0, 80, 0, 0.6); }
+  50%      { box-shadow: 0 4px 10px rgba(0,0,0,0.3), 0 0 0 12px rgba(0, 80, 0, 0); }
+}
+
 </style>
 </head>
 
@@ -869,7 +911,9 @@ function attachCourseSelectListener() {
 
   if (!courseSelect) return;
 
-  courseSelect.addEventListener('change', () => {
+  // onclick (not addEventListener): renderPlayerSelect() re-runs these on every
+  // visit to the player screen, which would otherwise stack duplicate handlers.
+  courseSelect.onchange = () => {
     const val = courseSelect.value;
     console.log('Course selected:', val);
 
@@ -881,7 +925,7 @@ function attachCourseSelectListener() {
       localStorage.setItem('bbb_currentCourse', currentCourse);
       if (nextBtn) nextBtn.disabled = false;
     }
-  });
+  };
 }
 // === END FUNCTION ===
 
@@ -890,7 +934,7 @@ function attachNextToPlayersListener() {
   const nextBtn = document.getElementById('nextToPlayers');
   if (!nextBtn) return;
 
-  nextBtn.addEventListener('click', () => {
+  nextBtn.onclick = () => {
     if (currentCourse === null) {
       alert('Please select a course first');
       return;
@@ -907,7 +951,7 @@ function attachNextToPlayersListener() {
       playerSetup.classList.remove('hidden');
       renderPlayerSelect();   // We'll add this function next if needed
     }
-  });
+  };
 }
 // === END FUNCTION ===
 
@@ -982,10 +1026,9 @@ function hideAll() {
   screens.forEach(screen => {
  if (screen) screen.classList.add('hidden');
   });
-  // Remove any lingering round complete banner
-  const oldBanner = document.getElementById('roundCompleteBanner');
-  oldBanner?.remove();
-  document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
+  // Remove any lingering round complete action bar
+  document.getElementById('roundCompleteBar')?.remove();
+  document.getElementById('completeRound')?.style.removeProperty('transform');
 }
 // === END FUNCTION ===
 
@@ -1022,15 +1065,7 @@ function sortPlayersAlphabetically() {
       }
 
       if (completeBtn) {
-        completeBtn.onclick = () => {
-          if (finishedHoles.size !== HOLES) {
-            alert(`Please finish all ${HOLES} holes first.`);
-            return;
-          }
-          precomputeAllTotals();
-          showSummary();   // We'll add showSummary next if missing
-          console.log('Round completed with BBB COMP');
-        };
+        completeBtn.onclick = completeRound;
       }
 
       if (exitBtn) {
@@ -1069,13 +1104,21 @@ function sortPlayersAlphabetically() {
       const prevBtn = document.getElementById('prevHole');
       const nextBtn = document.getElementById('nextHole');
 
-      const canPrev = currentHole > 1 || (currentHole === 1 && holeSequence.length > 0);
-      const canNext = finishedHoles.has(currentHole) && (currentHole < HOLES);
+      // A hole must be settled (finished) before it can be left in EITHER direction.
+      // Editing a hole removes it from finishedHoles, which re-locks both buttons
+      // until the hole is re-scored and re-finished.
+      const holeSettled = finishedHoles.has(currentHole);
+      // Prev wraps back to the last hole played, but only when that is a real
+      // earlier play -- not when the newest entry is the hole we're already on.
+      const wrapTarget = holeSequence[holeSequence.length - 1];
+      const canPrev = holeSettled && (currentHole > 1 || (wrapTarget !== undefined && wrapTarget !== currentHole));
+      // Enabled once the hole is done — including hole 18, where it wraps back to 1.
+      const canNext = holeSettled;
 
       if (prevBtn) prevBtn.disabled = !canPrev;
       if (nextBtn) nextBtn.disabled = !canNext;
 
-      console.log('Nav buttons updated - Prev:', canPrev, 'Next:', canNext);
+      console.log('Nav buttons updated - settled:', holeSettled, '| Prev:', canPrev, '| Next:', canNext);
     }
 // === END FUNCTION ===
 
@@ -1420,44 +1463,60 @@ const carryIn = getCarryInForHole(currentHole);
   // ---- HOLE & ROUND SUMMARIES — ALWAYS CORRECT AFTER EDITS ----
   renderHoleSummary();      // ← current hole carry summary
   renderRoundSummary();     // ← bottom round summary (Wins / C_Car / O_Car)
-
-  updateCourseInfoBar();
+updateCourseInfoBar();
   updateNavButtons();
 
-  const isLastHoleInSequence = currentHole === HOLES && finishedHoles.has(currentHole);
-  const showWrapBanner = isLastHoleInSequence;
-
-  if (showWrapBanner) {
-  let banner = document.getElementById('roundCompleteBanner');
-  if (!banner) {
-banner = document.createElement('div');
-banner.id = 'roundCompleteBanner';
-banner.style.cssText = `
-  background:#0f0;color:#000;padding:1rem;margin:1rem auto;
-  border-radius:12px;text-align:center;font-weight:bold;font-size:1.2rem;
-  max-width:800px;box-shadow:0 4px 12px rgba(0,255,0,0.3);
-`;
-banner.innerHTML = `
-  🎉 Last hole played complete! 🎉<br>
-  Next: wrap to Hole 1 with carry-in intact
-`;
-document.getElementById('game').insertBefore(banner, document.getElementById('scoreTable'));
-document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1.1)');
-  }
-  document.getElementById('nextHole')?.classList.remove('hidden');
-} else {
-  const oldBanner = document.getElementById('roundCompleteBanner');
-  if (oldBanner) {
-    oldBanner.remove();
-    document.getElementById('completeRound')?.style.setProperty('transform', 'scale(1)');
-  }
-}
+  // State-driven (finishedHoles.size === HOLES), so it stays put while you
+  // Prev back to review an earlier hole.
+  updateRoundCompleteBar();
 
    saveRoundEverywhere();
   if (debugMode) renderDebugCarryTable();
  
   
+ 
 }
+
+// === ROUND COMPLETE ACTION BAR ===
+function updateRoundCompleteBar() {
+  const gameEl = document.getElementById('game');
+  const tableEl = document.getElementById('scoreTable');
+  const bar = document.getElementById('roundCompleteBar');
+  const completeBtn = document.getElementById('completeRound');
+
+  if (finishedHoles.size !== HOLES) {
+    if (bar) bar.remove();
+    completeBtn?.style.removeProperty('transform');
+    return;
+  }
+
+  if (!bar && gameEl && tableEl) {
+    const el = document.createElement('div');
+    el.id = 'roundCompleteBar';
+    el.innerHTML = `
+      <div class="rcb-title">ROUND COMPLETE &mdash; 18/18 HOLES</div>
+      <button type="button" class="rcb-cta" id="rcbComplete">COMPLETE ROUND</button>
+      <div class="rcb-sub">Tap <strong>Next</strong> / <strong>Prev</strong> first if you want to review or edit any hole</div>
+    `;
+    gameEl.insertBefore(el, tableEl);
+    el.querySelector('#rcbComplete').onclick = completeRound;
+  }
+
+  completeBtn?.style.setProperty('transform', 'scale(1.08)');
+}
+// === END FUNCTION ===
+
+// === COMPLETE ROUND ===
+function completeRound() {
+  if (finishedHoles.size !== HOLES) {
+    alert(`Please finish all ${HOLES} holes first.`);
+    return;
+  }
+  precomputeAllTotals();
+  showSummary();
+  console.log('Round completed with BBB COMP');
+}
+// === END FUNCTION ===
 
 function updateCourseInfoBar() {
   if (!inRound || !currentCourse) {
@@ -1679,15 +1738,6 @@ text = `<strong>Open Carry: 0</strong>`;
 }
 
 function toggleScore(player, holeIdx, point) {
-const currentHoleIdx = currentHole - 1;
-if (holeIdx === currentHoleIdx && !isHoleInProgress) {
-  isHoleInProgress = true;  // lock nav while scoring
-  const hasAnyScore = players.some(p => {
-    const s = p.scores[holeIdx] || {};
-    return s.firstOn || s.closest || s.putt;
-  });
-}
-
 const score = player.scores[holeIdx];
 const wasChecked = !!score[point];
 const willBeChecked = !wasChecked;
@@ -1710,7 +1760,6 @@ updateHole();
 
 function finishCurrentHole() {
   finishedHoles.add(currentHole);
-  isHoleInProgress = false;  // unlock nav
   
    // ADD THIS LINE - track play order for wrap-around carry
   if (!holeSequence.includes(currentHole)) {
@@ -1881,7 +1930,8 @@ function resetRound() {
  currentCourse = null;
  currentHole = 1;
  finishedHoles.clear();
-  }
+ holeSequence = [];
+ }
 
 async function saveRoundEverywhere() {
   if (!inRound) return;
@@ -1949,59 +1999,56 @@ function attachFinishHoleListener() {
 }
 
 function attachNavListeners() {
-  // Prev
+  // NOTE: use onclick (NOT addEventListener). These are attached from both
+  // startRoundWithHole() and resumeRound(); addEventListener would stack a
+  // second copy each time, and one tap would then advance two holes.
   const prev = document.getElementById('prevHole');
   if (prev) {
-prev.onclick = null;
-prev.addEventListener('click', () => {
-   if (currentHole === 1 && holeSequence.length > 0) {
-     const lastHole = holeSequence[holeSequence.length - 1];
-     if (finishedHoles.has(lastHole)) {
-       currentHole = lastHole;
-       updateHole();
-       updateCourseInfoBar();
-       console.log(`PREV → WRAP TO HOLE ${currentHole}`);
-     }
-   } else if (currentHole > 1) {
-     currentHole--;
-     updateHole();
-     updateCourseInfoBar();
-     console.log(`PREV → HOLE ${currentHole}`);
-   }
- });
+    prev.onclick = () => {
+      if (!finishedHoles.has(currentHole)) return;
+      if (currentHole === 1) {
+const lastHole = holeSequence[holeSequence.length - 1];
+    if (lastHole !== undefined && lastHole !== currentHole && finishedHoles.has(lastHole)) {
+          currentHole = lastHole;
+          updateHole();
+          updateCourseInfoBar();
+          console.log(`PREV -> WRAP TO HOLE ${currentHole}`);
+        }
+      } else {
+        currentHole--;
+        updateHole();
+        updateCourseInfoBar();
+        console.log(`PREV -> HOLE ${currentHole}`);
+      }
+    };
   }
 
   // Next
   const next = document.getElementById('nextHole');
   if (next) {
-next.onclick = null;
-next.addEventListener('click', () => {
-  if (currentHole < HOLES) {
-    currentHole++;
-    updateHole();
-    updateCourseInfoBar();
-    console.log(`NEXT → HOLE ${currentHole}`);
-  } else if (finishedHoles.has(currentHole)) {
-    currentHole = 1;
-    updateHole();
-    updateCourseInfoBar();
-    console.log(`NEXT → WRAP TO HOLE ${currentHole}`);
-  }
-});
+    next.onclick = () => {
+      if (!finishedHoles.has(currentHole)) return;
+      currentHole = currentHole < HOLES ? currentHole + 1 : 1;
+      updateHole();
+      updateCourseInfoBar();
+      console.log(`NEXT -> HOLE ${currentHole}`);
+    };
   }
 
   // Edit
   const edit = document.getElementById('editHole');
   if (edit) {
-edit.onclick = null;
-edit.addEventListener('click', () => {
-  if (finishedHoles.has(currentHole)) {
-    finishedHoles.delete(currentHole);
-    precomputeAllTotals();
-    updateHole();
-    console.log('EDIT MODE');
-  }
-});
+    edit.onclick = () => {
+      if (!finishedHoles.has(currentHole)) return;
+      finishedHoles.delete(currentHole);
+      // Drop it from the play-order sequence too, so re-finishing pushes it
+      // to its NEW position and the carry / running totals stay in play order.
+      const seqIdx = holeSequence.indexOf(currentHole);
+      if (seqIdx > -1) holeSequence.splice(seqIdx, 1);
+      precomputeAllTotals();
+      updateHole();
+      console.log('EDIT MODE - re-finish this hole before moving on');
+    };
   }
 }
 

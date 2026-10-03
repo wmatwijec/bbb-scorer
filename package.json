@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "test": "node tests/hole-lifecycle.test.mjs",
+    "test:known-issues": "node tests/wrap-carry.mjs"
+  },
   "dependencies": {
     "acorn": "^8.17.0"
   }
