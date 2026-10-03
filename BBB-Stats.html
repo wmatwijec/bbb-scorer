@@ -103,10 +103,25 @@
         let statsCache = {};
 
         // === CARRY-IN FUNCTION ===
-        function getCarryInForHole(holeScores, pars, holeNumber) {
+        // holeSequence is the ORDER PLAYED. A round started on hole 10 is stored
+        // as [10..18,1..9]; accumulating over 1..holeNumber-1 instead would
+        // credit the wrong holes and change the totals for both halves.
+        function buildHoleSequence(round) {
+            const seq = round.holeSequence;
+            if (Array.isArray(seq) && seq.length > 0) return seq.slice();
+            // Legacy rounds saved before holeSequence was persisted.
+            return (round.finishedHoles || []).slice().sort((a,b) => a - b);
+        }
+
+        function getCarryInForHole(holeScores, pars, holeNumber, holeSequence) {
             const carry = { firstOn: 0, closest: 0, putt: 0, greenie: 0 };
-            for (let h = 1; h < holeNumber; h++) {
-                const idx = h - 1;
+            const seq = (holeSequence && holeSequence.length > 0)
+                ? holeSequence
+                : Array.from({ length: pars.length }, (_, i) => i + 1);
+            const seqIdx = seq.indexOf(holeNumber);
+            if (seqIdx === -1) return carry;
+            for (let i = 0; i < seqIdx; i++) {
+                const idx = seq[i] - 1;
                 if (!holeScores[idx]) continue;
                 const par = pars[idx] || 4;
                 const isPar3 = par === 3;
@@ -269,8 +284,10 @@
                     let playerPoints = 0;
                     let fo = 0, cl = 0, p = 0, carry = 0;
 
+                    const holeSequence = buildHoleSequence(r);
+
                     for (let idx = 0; idx < 18; idx++) {
-                        const carryIn = getCarryInForHole(holeScores, DEFAULT_PARS, idx + 1);
+                        const carryIn = getCarryInForHole(holeScores, DEFAULT_PARS, idx + 1, holeSequence);
                         const s = holeScores[idx][name] || {};
                         const par = DEFAULT_PARS[idx];
                         const isPar3 = par === 3;

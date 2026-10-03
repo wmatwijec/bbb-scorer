@@ -678,11 +678,15 @@ function renderReportSections(prose) {
 
     // ── Scoring: sequence-aware carry-in (from Summarizer.html) ──
  function buildHoleSequence(round) {
-        const finished = round.finishedHoles || [];
-        if (finished.length === 18) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
-        const hasFullScores = round.scores && Object.values(round.scores).every(arr => Array.isArray(arr) && arr.length === 18);
-        if (hasFullScores) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
-        return finished.slice().sort((a, b) => a - b);
+        // The ORDER PLAYED is authoritative, not the hole numbers. A round
+        // started on hole 10 is stored as [10..18,1..9], and carry-in must be
+        // accumulated in that order -- computing it as 1..18 changes the totals
+        // for both halves of the round.
+        const seq = round.holeSequence;
+        if (Array.isArray(seq) && seq.length > 0) return seq.slice();
+        // Legacy rounds saved before holeSequence was persisted: all we can do is
+        // assume ascending order. Left as-is rather than backfilled.
+        return (round.finishedHoles || []).slice().sort((a, b) => a - b);
     }
 
     function getCarryInForHole(holeScores, pars, holeNumber, holeSequence) {

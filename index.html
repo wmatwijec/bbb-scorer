@@ -2006,16 +2006,26 @@ function attachNavListeners() {
   if (prev) {
     prev.onclick = () => {
       if (!finishedHoles.has(currentHole)) return;
-      if (currentHole === 1) {
-const lastHole = holeSequence[holeSequence.length - 1];
-    if (lastHole !== undefined && lastHole !== currentHole && finishedHoles.has(lastHole)) {
+      // Step back by POSITION IN THE ORDER PLAYED, not by hole number. In a
+      // back-nine-first round the sequence is [10..18,1..9], so hole 1 is the
+      // 10th hole played and must step back to 18 -- it must not wrap to 9.
+      // Legacy rounds saved before holeSequence existed fall back to the
+      // finished holes in ascending order.
+      const seq = holeSequence.length > 0
+        ? holeSequence
+        : Array.from(finishedHoles).sort((a, b) => a - b);
+      const seqIdx = seq.indexOf(currentHole);
+      if (seqIdx <= 0) {
+        // First hole played -> wrap back to the most recently played hole.
+        const lastHole = seq[seq.length - 1];
+        if (lastHole !== undefined && lastHole !== currentHole && finishedHoles.has(lastHole)) {
           currentHole = lastHole;
           updateHole();
           updateCourseInfoBar();
           console.log(`PREV -> WRAP TO HOLE ${currentHole}`);
         }
       } else {
-        currentHole--;
+        currentHole = seq[seqIdx - 1];
         updateHole();
         updateCourseInfoBar();
         console.log(`PREV -> HOLE ${currentHole}`);

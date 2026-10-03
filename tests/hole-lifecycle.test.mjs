@@ -30,8 +30,12 @@ function ok(cond, msg) {
   else { fail++; console.log(`  FAIL  ${msg}`); }
 }
 
-function newState() {
-  return { currentHole: 1, finishedHoles: new Set(), holeSequence: [], navListeners: 1 };
+function eq(actual, expected, msg) {
+  ok(actual === expected, msg + `  [got ${actual}]`);
+}
+
+function newState(startHole = 1) {
+  return { currentHole: startHole, finishedHoles: new Set(), holeSequence: [], navListeners: 1 };
 }
 
 // --- index.html updateNavButtons (fixed) ---
@@ -52,11 +56,17 @@ function tapNext(st) {
 }
 function tapPrev(st) {
   if (!canPrev(st)) return false;
-  if (st.currentHole === 1) {
-    const last = st.holeSequence[st.holeSequence.length - 1];
+  // Step back by POSITION IN THE ORDER PLAYED, not by hole number. In a
+  // back-nine-first round hole 1 is played 10th and must step back to 18.
+  const seq = st.holeSequence.length > 0
+    ? st.holeSequence
+    : Array.from(st.finishedHoles).sort((a, b) => a - b);
+  const seqIdx = seq.indexOf(st.currentHole);
+  if (seqIdx <= 0) {
+    const last = seq[seq.length - 1];
     if (last === undefined || last === st.currentHole || !st.finishedHoles.has(last)) return false;
     st.currentHole = last;
-  } else st.currentHole--;
+  } else st.currentHole = seq[seqIdx - 1];
   return true;
 }
 function finishHole(st) {
@@ -150,6 +160,39 @@ console.log('\n[6] bar tracks state, not the hole being viewed');
   st.currentHole = 18;
   ok(barVisible(st), 'bar visible back at hole 18');
   ok(st.finishedHoles.size === 18, 'BBB COMP gate satisfied -> can close out');
+}
+
+// ===[ 7 ] back-nine-first round: nav must follow the ORDER PLAYED =========
+// index.html's Prev handler used `currentHole === 1` to detect "first hole
+// played". That is only true when the round starts on hole 1. In a
+// back-nine-first round hole 1 is the 10th hole played, so Prev from hole 1
+// jumped to hole 9 (the 18th hole played) instead of hole 18 (the 9th).
+console.log('\n[7] start on hole 10: navigation follows play order');
+{
+  const st = newState(10);
+  ok(tapNext(st) === false && tapPrev(st) === false, 'hole 10 fresh: both buttons locked');
+
+  // Play the whole round forward from hole 10: finish, then step.
+  for (let i = 0; i < HOLES - 1; i++) { finishHole(st); tapNext(st); }
+  finishHole(st);
+  eq(st.holeSequence.join(','), '10,11,12,13,14,15,16,17,18,1,2,3,4,5,6,7,8,9',
+     'order played is the back nine then the front nine');
+  eq(st.finishedHoles.size, HOLES, 'all 18 holes finished');
+
+  // Land on hole 1 (played 10th) and step back: must reach hole 18.
+  st.currentHole = 1;
+  ok(tapPrev(st), 'Prev accepted on hole 1');
+  eq(st.currentHole, 18, 'Prev from hole 1 goes to hole 18 (previous hole PLAYED), not hole 9');
+
+  // Forward from hole 18 (played 9th) goes to hole 1 (played 10th).
+  st.currentHole = 18;
+  ok(tapNext(st), 'Next accepted on hole 18');
+  eq(st.currentHole, 1, 'Next from hole 18 goes to hole 1');
+
+  // First hole played wraps back to the most recently played hole.
+  st.currentHole = 10;
+  ok(tapPrev(st), 'Prev accepted on hole 10');
+  eq(st.currentHole, 9, 'Prev on the first hole played wraps back to the last played (hole 9)');
 }
 
 console.log(`\n================  ${pass} passed, ${fail} failed  ================`);

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node tests/hole-lifecycle.test.mjs",
+    "test": "node tests/hole-lifecycle.test.mjs && node tests/carry-order.test.mjs",
     "test:known-issues": "node tests/wrap-carry.mjs"
   },
   "dependencies": {
