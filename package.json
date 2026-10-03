@@ -1,7 +1,8 @@
 {
   "scripts": {
-    "test": "node tests/hole-lifecycle.test.mjs && node tests/carry-order.test.mjs",
-    "test:known-issues": "node tests/wrap-carry.mjs"
+    "test": "node tests/hole-lifecycle.test.mjs && node tests/carry-order.test.mjs && node tests/build-stamp.test.mjs",
+    "test:known-issues": "node tests/wrap-carry.mjs",
+    "stamp": "node scripts/stamp.mjs"
   },
   "dependencies": {
     "acorn": "^8.17.0"
