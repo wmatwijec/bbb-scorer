@@ -730,6 +730,11 @@ async function loadDataFromBackend() {
       email: p.Email?.trim()
     })).filter(p => p.name);
 
+    // Required: sets waltShadowPhone. finishCurrentHole() gates the Pushover
+    // notification on waltShadowPhone, so without this call the gate is
+    // permanently false and no per-hole update is ever sent.
+    getWaltPhone();
+
     sortPlayersAlphabetically()
 
     courses = parseCSV(coursesCSV).map(c => {
