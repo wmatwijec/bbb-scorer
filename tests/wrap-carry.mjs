@@ -1,11 +1,14 @@
 /**
- * KNOWN DEFECT -- documents why wrap-around ("carry keeps running past 18")
- * cannot work in the current data model. Run for a readable report:
+ * OUT OF SCOPE -- NOT A BUG. Documents why a second lap ("carry keeps running
+ * past 18") cannot work in the current data model, and records that the
+ * scenario does not occur. Run for a readable report:
  *
- *   node tests/wrap-carry.mjs      -> exits 1 while the defect is present
+ *   node tests/wrap-carry.mjs      -> exits 1, always
  *
- * This is NOT a passing test. It is here so the root cause is not rediscovered
- * from scratch, and so the eventual fix can be verified against it.
+ * Rounds are always a fresh 18 holes with a new matchId. Nobody plays past 18,
+ * so this is an unsupported scenario rather than a defect: there is no fix to
+ * wait for and the exit code will not go to 0. It is kept so the root cause is
+ * not rediscovered from scratch by someone treating it as a bug.
  *
  * Summary
  * --------
@@ -24,7 +27,8 @@
  * only equivalent while play order equals 1..18, which is why every other course
  * and every single-lap round behaves correctly.
  *
- * A real fix re-keys state by play STEP rather than hole number:
+ * If multi-lap play ever became a real requirement, state would have to be
+ * re-keyed by play STEP rather than hole number:
  *     scores[i] = { hole: <number>, firstOn, closest, putt }
  * with carry accumulated over steps < i. That also makes "start on hole 10" and
  * out-of-order play correct. It changes the persisted round format, so
@@ -87,8 +91,8 @@ console.log(`  carry-in for hole 1 on 2nd lap: FO=${c1.firstOn} GR=${c1.greenie}
 console.log('  EXPECTED if carry carries over: FO=17 GR=4 CL=17 (nobody won all 18)');
 
 const carryWorks = c1.firstOn === 17 && c1.greenie === 4 && c1.closest === 17;
-console.log(`  -> ${carryWorks ? 'OK' : 'BROKEN: wrap carry is lost'}`);
+console.log(`  -> ${carryWorks ? 'OK' : 'UNSUPPORTED: carry is lost on a 2nd lap'}`);
 console.log(carryWorks
-  ? '\nWrap-around carry now works; update the header comment in this file.'
-  : '\nDefect still present. See the header comment for the root cause.');
+  ? '\nMulti-lap carry now works; update the header comment in this file.'
+  : '\nMulti-lap remains unsupported (expected -- rounds never lap). See the header comment.');
 process.exit(carryWorks ? 0 : 1);
