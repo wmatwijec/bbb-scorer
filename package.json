@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node tests/hole-lifecycle.test.mjs && node tests/carry-order.test.mjs && node tests/build-stamp.test.mjs",
+    "test": "node tests/hole-lifecycle.test.mjs && node tests/carry-order.test.mjs && node tests/build-stamp.test.mjs && node tests/round-card.test.mjs",
     "test:known-issues": "node tests/wrap-carry.mjs",
     "stamp": "node scripts/stamp.mjs"
   },

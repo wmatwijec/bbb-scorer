@@ -1323,16 +1323,19 @@ const dateKey = getRoundLocalDate(round);
                 const playerNames = (r.players || []).filter(p => p && p.name).map(p => p.name);
                 return playerNames.includes(playerFilter);
             });
-        const dateMap = new Map();
+        // Key AND value must be the LOCAL date string. Storing r.date (a UTC
+        // timestamp) here put an evening round on the next calendar day, so the
+        // option's data-date disagreed with the getRoundLocalDate() filter in
+        // populateRoundSelect and the round could not be found.
+        const dateKeys = new Set();
         filtered.forEach(r => {
             const dateKey = getRoundLocalDate(r);
-            if (!dateMap.has(dateKey)) dateMap.set(dateKey, r.date);
+            if (dateKey) dateKeys.add(dateKey);
         });
-        roundDatesByDate = Array.from(dateMap.values()).sort();
+        roundDatesByDate = Array.from(dateKeys).sort();
         console.log('RoundCard dates:', roundDatesByDate.length, 'last:', roundDatesByDate[roundDatesByDate.length-1]);
         const sel = document.getElementById('roundDateSelect');
-       sel.innerHTML = roundDatesByDate.map((d, i) => {
-            const dateKey = d.slice(0, 10);
+       sel.innerHTML = roundDatesByDate.map((dateKey, i) => {
             const date = new Date(dateKey + 'T12:00:00');
             return `<option value="${i}" data-date="${dateKey}">${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</option>`;
         }).join('');
@@ -1415,12 +1418,26 @@ const dateKey = getRoundLocalDate(round);
              holePars[h-1] = pars[h-1] || 4;
          }
 
-         // Get player holeDetails from _playerData
+          // Get player holeDetails from _playerData
           const playerDetails = {};
           players.forEach(name => {
  playerDetails[name] = (round._playerData && round._playerData[name] && round._playerData[name].holeDetails)
                    ? round._playerData[name].holeDetails
                    : [];
+          });
+
+          // holeDetails is in PLAY ORDER (computeRoundStats walks holeSequence),
+          // but the scorecard columns below are HOLE NUMBERS. Index a per-player
+          // copy by hole for the grid. playerDetails itself stays play-ordered
+          // because computeStreaksFromHoles depends on consecutive-played order.
+          // Blank cells carry points:0 so the Out/In sums stay numeric.
+          const detailByHole = {};
+          players.forEach(name => {
+              const byHole = Array.from({ length: 18 }, () => ({ points: 0 }));
+              (playerDetails[name] || []).forEach(h => {
+                  if (h && h.hole >= 1 && h.hole <= 18) byHole[h.hole - 1] = h;
+              });
+              detailByHole[name] = byHole;
           });
 
           // Build group holeScores map and compute per-hole carry-in state
@@ -1506,6 +1523,7 @@ const dateKey = getRoundLocalDate(round);
              const isHighlighted = name === _selectedPlayer;
              const bgColor = isHighlighted ? 'var(--hl-bg)' : ((pIdx % 2 === 0) ? '' : 'background:#0f111a;');
              const detail = playerDetails[name] || [];
+             const grid = detailByHole[name] || [];
              const totalPts = detail.reduce((s, h) => s + h.points, 0);
 
              html += `<tr style="border-bottom:1px solid #2d3154;${bgColor}">`;
@@ -1513,7 +1531,7 @@ const dateKey = getRoundLocalDate(round);
 
              // Front nine (holes 1-9)
              for (let h = 1; h <= 9; h++) {
-                 const hd = detail[h-1] || {};
+                 const hd = grid[h-1] || {};
                  const code = getScoringCode(hd.fo || 0, hd.gr || 0, hd.cl || 0, hd.p || 0);
                  const pts = hd.points || 0;
                  html += `<td style="padding:4px;text-align:center;font-size:12px;background:${isHighlighted ? 'var(--hl-bg)' : ''};">
@@ -1526,7 +1544,7 @@ const dateKey = getRoundLocalDate(round);
 
              // Back nine (holes 10-18)
              for (let h = 10; h <= 18; h++) {
-                 const hd = detail[h-1] || {};
+                 const hd = grid[h-1] || {};
                  const code = getScoringCode(hd.fo || 0, hd.gr || 0, hd.cl || 0, hd.p || 0);
                  const pts = hd.points || 0;
                  html += `<td style="padding:4px;text-align:center;font-size:12px;background:${isHighlighted ? 'var(--hl-bg)' : ''};">
@@ -1645,7 +1663,7 @@ const dateKey = getRoundLocalDate(round);
           html += `<div style="margin-top:10px;padding:10px;background:#1a1d2e;border:1px solid #2d3154;border-radius:6px;">`;
           players.forEach((name, pIdx) => {
               const color = PLAYER_COLORS[pIdx % PLAYER_COLORS.length];
-              const detail = playerDetails[name] || [];
+              const detail = detailByHole[name] || [];
               const out9 = detail.slice(0, 9).reduce((s, h) => s + h.points, 0);
               const in9 = detail.slice(9, 18).reduce((s, h) => s + h.points, 0);
               const total = out9 + in9;
@@ -3554,6 +3572,6 @@ function renderWeekInReview() {
         </div>
     </div>
 
-  <script src="version.js?v=1"></script>
+  <script src="../version.js?v=1"></script>
 </body>
 </html>

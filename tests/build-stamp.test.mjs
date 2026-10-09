@@ -56,10 +56,21 @@ console.log('\n[2] version.js must stay out of the service-worker cache');
   chk(!/\/version\.js/.test(SW), 'sw.js STATIC_FILES does not list version.js');
 }
 
-console.log('\n[3] every page loads version.js');
+console.log('\n[3] every page loads version.js, and its path resolves to it');
 for (const f of ['index.html', 'Summarizer.html', 'BBB-Stats.html', 'dashboard/index.html']) {
   const html = readFileSync(join(ROOT, f), 'utf8');
-  chk(/<script src="version\.js\?v=\d+"><\/script>/.test(html), `${f} loads it with a cache-buster`);
+  const m = html.match(/<script src="([^"]*version\.js)\?v=\d+"><\/script>/);
+  chk(!!m, `${f} loads it with a cache-buster`);
+  if (m) {
+    // Resolve the relative src against the page's own directory and require it
+    // to land on the repo-root version.js. A bare "version.js" inside dashboard/
+    // resolves to dashboard/version.js, which does not exist; Cloudflare's HTML
+    // fallback then hands index.html to a <script> tag and the stamp dies
+    // silently. The old literal-string check passed straight through that, so
+    // the dashboard ran without a stamp until the ../ was added.
+    const resolved = join(dirname(f), m[1]);
+    chk(resolved === 'version.js', `${f} resolves to version.js (got ${resolved})`);
+  }
 }
 
 console.log('\n[4] the stamp reports the running build');
