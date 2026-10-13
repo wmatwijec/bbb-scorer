@@ -27,6 +27,8 @@
         .unrep { color:#dc2626; font-size:12px; }
         input { padding:8px; border:1px solid #ccc; border-radius:8px; font-size:16px; }
         .row-flex { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+        .recip { display:flex; gap:16px; margin:10px 0; font-size:14px; align-items:center; }
+        .recip label { display:flex; align-items:center; gap:4px; cursor:pointer; }
     </style>
 </head>
 <body>
@@ -39,7 +41,12 @@
                 <button id="sendBtn" disabled>Send Report (email)</button>
                 <label><input type="checkbox" id="force"> force resend</label>
             </div>
-            <div class="meta">Emails the scorecard + records + winners to wmatwijec@gmail.com. Highlights are optional and only added when the on-prem LLM step runs.</div>
+            <div class="recip">
+                <span>Send to:</span>
+                <label><input type="radio" name="recip" id="recipMe" checked> Just me</label>
+                <label><input type="radio" name="recip" id="recipAll"> Everyone who played</label>
+            </div>
+            <div class="meta">Emails the day's rounds (combined into one email). "Everyone who played" resolves emails from players.csv; pick "Just me" to test first. Once sent, the 5 PM automatic report is skipped.</div>
         </div>
         <div id="status" class="status">Pick a date to see the days rounds.</div>
         <div id="results"></div>
@@ -113,16 +120,23 @@
             sendBtn.disabled = true;
             statusEl.textContent = 'Sending...';
             try {
+                const sendToPlayers = document.getElementById('recipAll').checked;
                 const res = await fetch(`${BACKEND}/round-report`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date, force: !!forceEl.checked })
+                    body: JSON.stringify({
+                        date,
+                        combined: true,
+                        sendToPlayers,
+                        force: !!forceEl.checked
+                    })
                 });
                 const j = await res.json();
                 if (!res.ok || !j.success) { statusEl.textContent = `Error: ${j.error || res.status}`; }
                 else {
                     const sent = j.sent.map(s => s.matchId).join(', ');
-                    statusEl.textContent = `Sent: ${sent || '(none, already reported)'}.`;
+                    const who = sendToPlayers ? 'everyone who played' : 'you';
+                    statusEl.textContent = `Sent to ${who}: ${sent || '(none, already reported)'}.`;
                 }
                 sendBtn.disabled = false;
                 load();
