@@ -8,7 +8,7 @@
 // rewrites it from git HEAD; run that after committing app code, then commit
 // the result. Because the stamp commit touches only this file, the displayed
 // SHA identifies the app code exactly.
-const BUILD_ID = '07c7967';
+const BUILD_ID = 'f73b505';
 
 (function () {
   var STAMP_CLASS = 'build-stamp';
