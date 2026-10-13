@@ -1,0 +1,9 @@
+{
+  "name": "BBB Round Report",
+  "short_name": "Round Report",
+  "start_url": "/bbb-scorer/round-report-pwa/",
+  "scope": "/bbb-scorer/round-report-pwa/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#0d6efd"
+}

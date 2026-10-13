@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BBB Round Report</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background:#f8f9fa; margin:0; padding:20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #0d6efd; }
+        button { background:#0d6efd; color:white; border:none; padding:12px 24px; font-size:16px; border-radius:10px; cursor:pointer; margin:12px 6px 4px 0; }
+        button:disabled { background:#9ec5ff; cursor:not-allowed; }
+        button.danger { background:#dc3545; }
+        .card { background:white; padding:18px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); margin:16px 0; }
+        .status { text-align:center; margin:30px 0; color:#555; font-style:italic; }
+        .meta { color:#555; font-size:13px; }
+        .winner { background:#dcfce7; border:1px solid #86efac; color:#166534; padding:8px 12px; border-radius:8px; font-size:15px; margin:8px 0; }
+        .legend { color:#475569; font-size:12px; margin:8px 0; }
+        table { border-collapse:collapse; margin:8px 0; width:100%; }
+        td { border:1px solid #e2e8f0; padding:2px 4px; text-align:center; font-size:11px; min-width:26px; }
+        td.name { text-align:left; background:#f8fafc; font-weight:600; white-space:nowrap; }
+        td.tot { background:#f1f5f9; font-size:13px; font-weight:700; }
+        td.par { background:#f8fafc; color:#64748b; font-weight:700; }
+        .let { font-weight:700; color:#0f172a; }
+        .pts { font-size:9px; color:#64748b; margin-left:1px; }
+        .rep { color:#16a34a; font-size:12px; }
+        .unrep { color:#dc2626; font-size:12px; }
+        input { padding:8px; border:1px solid #ccc; border-radius:8px; font-size:16px; }
+        .row-flex { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BBB Round Report</h1>
+        <div class="card">
+            <div class="row-flex">
+                <input type="date" id="date">
+                <button id="loadBtn">Load</button>
+                <button id="sendBtn" disabled>Send Report (email)</button>
+                <label><input type="checkbox" id="force"> force resend</label>
+            </div>
+            <div class="meta">Emails the scorecard + records + winners to wmatwijec@gmail.com. Highlights are optional and only added when the on-prem LLM step runs.</div>
+        </div>
+        <div id="status" class="status">Pick a date to see the days rounds.</div>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const BACKEND = 'https://pwa-players-backend.onrender.com';
+        const dateEl = document.getElementById('date');
+        const loadBtn = document.getElementById('loadBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const forceEl = document.getElementById('force');
+        const statusEl = document.getElementById('status');
+        const resultsEl = document.getElementById('results');
+
+        // default to today
+        const now = new Date();
+        dateEl.value = now.toISOString().slice(0,10);
+
+        function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function renderRound(r) {
+            const status = r.reportedAt
+                ? `<span class="rep">reported ${r.reportedAt.slice(0,16).replace('T',' ')}</span>`
+                : '<span class="unrep">not yet reported</span>';
+            let rows = '';
+            r.grid.forEach(row => {
+                let cells = '';
+                row.cells.forEach(c => {
+                    const letter = c.text ? `<span class="let">${esc(c.text)}</span>` : '';
+                    const pts = c.pts ? `<span class="pts">${c.pts}</span>` : '';
+                    cells += `<td>${letter}${pts}</td>`;
+                });
+                rows += `<tr><td class="name">${esc(row.name)}</td>${cells}<td class="tot">${row.total}</td></tr>`;
+            });
+            let records = r.records.length
+                ? r.records.map(x => `${esc(x.player)} ${x.kind} ${esc(x.category)} (${x.was}→${x.now})`).join('; ')
+                : 'none';
+            return `<div class="card">
+                <h3>${esc(r.course)} — ${esc(r.date)} ${status}</h3>
+                <div class="winner">${esc(r.winnersText)}</div>
+                <div class="legend"><b>F</b> First On · <b>G</b> Greenie (par 3) · <b>CL</b> Closest · <b>P</b> Putt · repeated = carry · small number = points</div>
+                <table>
+                    <tr>${'<td class="par">h</td>' + r.pars.map((p,i)=>`<td class="par">${i+1}</td>`).join('') + '<td class="par">tot</td>'}</tr>
+                    ${rows}
+                </table>
+                <div class="meta">Records: ${records} &nbsp;·&nbsp; totals: ${Object.entries(r.totals).map(([n,p])=>`${esc(n)} ${p}`).join(', ')}</div>
+            </div>`;
+        }
+
+        async function load() {
+            const date = dateEl.value;
+            if (!date) return;
+            resultsEl.innerHTML = '';
+            statusEl.textContent = 'Loading...';
+            try {
+                const res = await fetch(`${BACKEND}/round-report/preview?date=${date}`);
+                const j = await res.json();
+                if (!res.ok || !j.success) { statusEl.textContent = `Error: ${j.error || res.status}`; return; }
+                if (!j.rounds.length) { statusEl.textContent = 'No rounds for that date.'; sendBtn.disabled = true; return; }
+                resultsEl.innerHTML = j.rounds.map(renderRound).join('');
+                sendBtn.disabled = false;
+                statusEl.textContent = `${j.rounds.length} round(s) for ${date}.`;
+            } catch (e) {
+                statusEl.textContent = 'Network error: ' + e.message;
+            }
+        }
+
+        async function send() {
+            const date = dateEl.value;
+            if (!date) return;
+            sendBtn.disabled = true;
+            statusEl.textContent = 'Sending...';
+            try {
+                const res = await fetch(`${BACKEND}/round-report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date, force: !!forceEl.checked })
+                });
+                const j = await res.json();
+                if (!res.ok || !j.success) { statusEl.textContent = `Error: ${j.error || res.status}`; }
+                else {
+                    const sent = j.sent.map(s => s.matchId).join(', ');
+                    statusEl.textContent = `Sent: ${sent || '(none, already reported)'}.`;
+                }
+                sendBtn.disabled = false;
+                load();
+            } catch (e) {
+                statusEl.textContent = 'Network error: ' + e.message;
+                sendBtn.disabled = false;
+            }
+        }
+
+        loadBtn.addEventListener('click', load);
+        sendBtn.addEventListener('click', send);
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/bbb-scorer/round-report-pwa/sw.js').catch(err => console.log('SW:', err));
+        }
+        load();
+    </script>
+</body>
+</html>
