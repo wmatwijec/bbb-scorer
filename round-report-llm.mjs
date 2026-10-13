@@ -84,9 +84,9 @@ async function main() {
   for (let i = 0; i < needs.length; i++) {
     const r = needs[i];
     console.log(`  generating highlight for ${r.matchId} (${r.course})...`);
-    const prompt = `You are the recap writer for a friendly golf betting game called BBB. This is NOT traditional golf scoring: teams do not want the LOWEST score. Players EARN points on each hole: First On (par 4/5), Greenie (the First On spot on par 3s — no F exists on a par 3), Closest to the pin, and Putt made. The MORE points, the BETTER. Beginners confuse low with good like in golf, but here the winner is the player with the HIGHEST total; the lowest totals lose. Winning a carry on a hole adds 1 + the running carry-level, so carries stack and make combos like "PP" (a putt with one carry won).
+    const prompt = `Short recap of a BBB round (friends' golf points game, NOT regular golf -- most points wins). Never mention beer, alcohol, or liquor. Never mention 'clean streak' or 'no-carry' records.
 
-Write a fun, punchy 3-5 sentence recap of this round. Mention who won (highest total) and by how much, any records broken, momentum shifts, and anything notable. Keep it casual and light (buddies betting beer). The losers buy the winners BEER — only beer, never liquor, never a liquor store run. Use first names only. No markdown, no emojis, no asterisks. Answer immediately with just the recap.
+3 short factual sentences: winner + totals, momentum (who led / who pushed), one highlight. No jokes, no meta talk.
 
 ROUND DATA:
 Course: ${r.course}
