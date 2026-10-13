@@ -152,7 +152,7 @@
                                 <div class="hole-grid">${holesHtml}</div>
                             </details>`;
                     }).join('') || '<p style="color:#777;">No players</p>'}
-                    <button onclick="saveCarries('${round.matchId}')">Save Carries →</button>
+                    <button onclick="saveCarries('${round.matchId}')">Update Round Score →</button>
                 </div>
 
                 <button class="danger" onclick="deleteRound('${round.matchId}')">Delete Round</button>
@@ -189,7 +189,7 @@
         return { name: player.name, scores: newScores };
     });
 
-    if (!confirm(`Update carry markers for ${matchId}? Points will be recalculated on server.`)) return;
+    if (!confirm(`Update round score for ${matchId}? Points will be recalculated on server.`)) return;
 
     try {
         const res = await fetch('https://pwa-players-backend.onrender.com/update-round-carries', {
@@ -205,7 +205,7 @@
 
         const result = await res.json();
         if (result.success) {
-            alert('Carries updated — totals refreshed');
+            alert('Round score updated — totals refreshed');
             loadAllRounds();
         } else {
             alert('Failed: ' + (result.error || 'Unknown'));
