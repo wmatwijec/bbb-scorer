@@ -1518,6 +1518,7 @@ function completeRound() {
     return;
   }
   precomputeAllTotals();
+  saveRoundEverywhere();   // force the final 18-hole save to reach the backend
   showSummary();
   console.log('Round completed with BBB COMP');
 }
@@ -1963,12 +1964,19 @@ _cachedTotals: players.reduce((acc, p) => {
   // 1. Save locally (instant)
   await saveRoundLocal(roundData).catch(() => {});
 
-  // 2. Save to cloud (fire-and-forget)
+  // 2. Save to cloud. keepalive lets the request survive a page unload; failures
+  //    are logged (never swallowed), so a lost round is visible instead of silent.
   fetch('https://pwa-players-backend.onrender.com/save-round', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(roundData)
-  }).catch(() => {});
+body: JSON.stringify(roundData),
+keepalive: true
+  })
+    .then(res => {
+      if (!res.ok) console.error(`CLOUD SAVE FAILED ${currentMatchId}: HTTP ${res.status}`);
+      else console.log(`Cloud save OK: ${currentMatchId} (${(roundData.finishedHoles || []).length} holes)`);
+    })
+    .catch(err => console.error(`CLOUD SAVE FAILED ${currentMatchId}:`, err));
 }
 
 function exportToCSV() {
@@ -2181,6 +2189,13 @@ if (cloudRounds.length > 0) {
   window.showSummary = showSummary;
   window.resetRound = resetRound;
   window.saveRoundEverywhere = saveRoundEverywhere;
+
+  // Belt-and-braces: if the phone/tab is closed or backgrounded mid-round, push
+  // one last cloud save so the round cannot be lost with the final hole unsaved.
+  window.addEventListener('pagehide', () => { if (inRound) saveRoundEverywhere(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && inRound) saveRoundEverywhere();
+  });
   window.simulateRound = simulateRound;
   window.exportToCSV = exportToCSV;
   window.updateNavButtons = updateNavButtons;

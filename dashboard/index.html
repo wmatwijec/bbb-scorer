@@ -396,6 +396,7 @@
             </label>
             <a href="/bbb-golf-scorer/" class="btn btn-primary btn-sm" style="margin-left:8px;">⛳ Scorer</a>
             <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="openDateCorrector()">🛠 Fix Date</button>
+            <button class="btn btn-primary btn-sm" style="margin-left:8px;" onclick="runCleanup()" title="Remove empty rounds older than 48h (writes a backup first)">🧹 Cleanup</button>
         </div>
     </div>
 
@@ -896,25 +897,33 @@ function renderReportSections(prose) {
         return result;
     }
 
+   // ── Manual cleanup (deliberate, never automatic) ──
+   // Removes only empty rounds older than 48h on the backend; played rounds are
+   // never touched. Guarded by a confirm() so it cannot fire by accident.
+    async function runCleanup() {
+        if (!confirm('Run cleanup on the backend?\n\nRemoves only rounds with 0 finished holes older than 48h. Played rounds are never deleted. A backup is written first.')) return;
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = 'Cleaning up...';
+        try {
+            const res = await fetch(`${BACKEND}/cleanup-rounds`, { method: 'POST' });
+            const out = await res.json();
+            if (!res.ok || !out.success) throw new Error(out.error || `HTTP ${res.status}`);
+            statusEl.textContent = `Cleanup done: ${out.before} → ${out.after} (removed ${out.deleted}). Backup: ${out.backup}`;
+        } catch (e) {
+            statusEl.textContent = `Cleanup failed: ${e.message}`;
+        }
+    }
+
    // ── Data loading ──
     async function loadData() {
         const statusEl = document.getElementById('status');
         statusEl.textContent = 'Fetching season data...';
         statusEl.className = 'status';
 
-        // Run dedup on backend (removes zero-hole and low-score partials)
-        try {
-            const cleanupRes = await fetch(`${BACKEND}/cleanup-rounds`, { method: 'POST' });
-            if (cleanupRes.ok) {
-                const cleanup = await cleanupRes.json();
-                if (cleanup.deleted > 0) {
-                    console.log(`Cleanup: removed ${cleanup.deleted} partials (${cleanup.before} → ${cleanup.after}), backup: ${cleanup.backup}`);
-                    statusEl.textContent = `Cleaning up partial rounds... (${cleanup.before} → ${cleanup.after})`;
-                }
-            }
-        } catch(e) {
-            console.warn('Cleanup failed:', e.message);
-        }
+        // NOTE: cleanup is NOT run here. This used to call POST /cleanup-rounds on
+        // every page load, which deleted rounds that were still being played (a live
+        // round was wiped on 2026-10-15). Cleanup is now a deliberate manual action
+        // (runCleanup(), wired to the 🧹 Cleanup button). Never re-add it to loadData().
 
          try {
              const res = await fetch(`${BACKEND}/rounds`);
