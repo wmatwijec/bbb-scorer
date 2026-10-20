@@ -14,6 +14,7 @@
 //   BACKEND=https://... node round-report-llm.mjs                  # today
 //   BACKEND=https://... node round-report-llm.mjs 2026-10-12       # specific day
 //   BACKEND=https://... node round-report-llm.mjs 2026-10-12 --force  # re-send even if reported
+//   BACKEND=https://... node round-report-llm.mjs 2026-10-12 --force --combined --to-players  # one email to all players
 
 const BACKEND = process.env.BACKEND || 'https://pwa-players-backend.onrender.com';
 const LLM_URL = process.env.LLM_URL || 'http://127.0.0.1:8899/v1/chat/completions';
@@ -89,6 +90,8 @@ async function callLlm(prompt) {
 async function main() {
   const args = process.argv.slice(2);
   const force = args.includes('--force');
+  const combined = args.includes('--combined');
+  const sendToPlayers = args.includes('--to-players');
   const date = args.find(a => !a.startsWith('--')) || centralToday();
   console.log(`Fetching preview for ${date} from ${BACKEND}...`);
 
@@ -132,7 +135,7 @@ Write the recap now inside <recap></recap>. Exactly 3 short sentences. No workin
   const sendResp = await fetch(`${BACKEND}/round-report`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(force ? { date, highlights, force: true } : { date, highlights }),
+    body: JSON.stringify({ date, highlights, ...(force ? { force: true } : {}), ...(combined ? { combined: true } : {}), ...(sendToPlayers ? { sendToPlayers: true } : {}) }),
   });
   const body = await sendResp.json();
   console.log(`Sent: ${JSON.stringify(body)}`);
