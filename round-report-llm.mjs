@@ -13,6 +13,7 @@
 // Usage:
 //   BACKEND=https://... node round-report-llm.mjs                  # today
 //   BACKEND=https://... node round-report-llm.mjs 2026-10-12       # specific day
+//   BACKEND=https://... node round-report-llm.mjs 2026-10-12 --force  # re-send even if reported
 
 const BACKEND = process.env.BACKEND || 'https://pwa-players-backend.onrender.com';
 const LLM_URL = process.env.LLM_URL || 'http://127.0.0.1:8899/v1/chat/completions';
@@ -65,7 +66,9 @@ async function callLlm(prompt) {
 }
 
 async function main() {
-  const date = process.argv[2] || centralToday();
+  const args = process.argv.slice(2);
+  const force = args.includes('--force');
+  const date = args.find(a => !a.startsWith('--')) || centralToday();
   console.log(`Fetching preview for ${date} from ${BACKEND}...`);
 
   const previewResp = await fetch(`${BACKEND}/round-report/preview?date=${encodeURIComponent(date)}`);
@@ -76,8 +79,9 @@ async function main() {
   }
   const { rounds } = await previewResp.json();
 
-  const needs = rounds.filter(r => !r.reportedAt);
+  const needs = force ? rounds : rounds.filter(r => !r.reportedAt);
   if (!needs.length) { console.log(`All ${rounds.length} round(s) already reported — skipping.`); process.exit(0); }
+  if (force) console.log(`--force: re-sending ${needs.length} round(s).`);
   console.log(`${needs.length} round(s) need highlights.`);
 
   const highlights = {};
@@ -105,7 +109,7 @@ Records: ${r.records.length ? r.records.map(x => `${x.player} ${x.kind} ${x.cate
   const sendResp = await fetch(`${BACKEND}/round-report`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ date, highlights }),
+    body: JSON.stringify(force ? { date, highlights, force: true } : { date, highlights }),
   });
   const body = await sendResp.json();
   console.log(`Sent: ${JSON.stringify(body)}`);
