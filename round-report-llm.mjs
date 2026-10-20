@@ -36,33 +36,54 @@ function scorecardsToText(grid) {
   }).join('\n');
 }
 
+// Strip leaked chain-of-thought and keep only the recap prose. Reasoning models
+// (bonsai) sometimes emit working, arithmetic, and "YES!" checks in content.
+function cleanRecap(raw) {
+  let t = String(raw || '').trim();
+  const m = t.match(/<recap>([\s\S]*?)<\/recap>/i);
+  if (m) t = m[1].trim();
+  const lines = t.split('\n').map(l => l.trim()).filter(Boolean).filter(l =>
+    !/^(let me|i(‘|\x27)?ll|ok\b|okay|first\b|next\b|checklist|step\b|hmm\b)/i.test(l) &&
+    !/^\s*[-*]\s/.test(l) && !/^\s*\d+[.):]\s/.test(l) &&
+    !/=/.test(l) && !/\bcarr(y|ied|ies) (value|adds?)\b/i.test(l) &&
+    !/\b(YES|NO|WAIT|total:|let me check|that works)\b/i.test(l)
+  );
+  let out = lines.join(' ').replace(/\s+/g, ' ').trim();
+  if (!out) {
+    out = t.replace(/\s+/g, ' ').split(/(?<=[.!?])\s+/).filter(s => !/=/.test(s)).slice(-3).join(' ').trim();
+  }
+  return out.slice(0, 700);
+}
+
 async function callLlm(prompt) {
+  const system = 'You write terse recaps of a friends\' golf points game (MOST POINTS WINS). ' +
+    'Output ONLY the final 3-sentence recap wrapped in <recap></recap>. ' +
+    'Never show working, arithmetic, checking, or deliberation. ' +
+    'Never mention beer, alcohol, liquor, "clean streak", or "no-carry". ' +
+    'No jokes, no meta, no questions.';
   const resp = await fetch(LLM_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: LLM_MODEL, messages: [{ role: 'user', content: prompt }], max_tokens: MAX_TOKENS, temperature: 0.8 }),
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: MAX_TOKENS,
+      temperature: 0.4,
+    }),
   });
   if (!resp.ok) throw new Error(`LLM HTTP ${resp.status}: ${await resp.text()}`);
   const j = await resp.json();
   const choice = j.choices && j.choices[0];
   if (!choice) throw new Error('LLM returned no choices');
   const msg = choice.message || {};
-  // The model (bonsai, reasoning-effort medium) spends most of its budget on
-  // chain-of-thought in reasoning_content and puts the final recap in content.
-  // Only if content never arrives do we fall back to a trimmed reasoning tail.
-  let content = (msg.content || '').trim();
-  if (!content && msg.reasoning_content) {
-    const reas = String(msg.reasoning_content).trim();
-    // Take the last few sentences, dropping "Let me"/checklist preamble.
-    content = reas.split('\n').filter(l => /[.!?]\s*$/.test(l)).slice(-4).join(' ') || reas.slice(-300);
-  }
-  // Drop any leaked CoT preamble: leading "Let me ..." / checklist lines.
-  const lines = content.split('\n').filter(l => {
-    const t = l.trim();
-    return t && !/^(let me|i(‘|\x27)?ll|ok|okay|first|next|checklist:)/i.test(t) && !/^\s*[-*]\s*(\w+:)/.test(t) && !/^\s*\d+[.:]\s*\w+/.test(t);
-  });
-  content = lines.join('\n');
-  return content.slice(0, 700);
+  // Prefer the recap block in content; fall back to the reasoning tail only if
+  // content is empty. Both paths pass through cleanRecap().
+  let content = cleanRecap(msg.content || '');
+  if (!content && msg.reasoning_content) content = cleanRecap(msg.reasoning_content);
+  return content;
 }
 
 async function main() {
@@ -100,7 +121,9 @@ Totals: ${Object.entries(r.totals).map(([n, p]) => `${n} ${p}`).join(', ')}
 Result: ${r.winnersText}
 Scorecard (H1-H18 in scorecard order; repeated letters = carry):
 ${scorecardsToText(r.grid)}
-Records: ${r.records.length ? r.records.map(x => `${x.player} ${x.kind} ${x.category} (was ${x.was}) -> ${x.now}`).join('; ') : 'none'}`;
+Records: ${r.records.length ? r.records.map(x => `${x.player} ${x.kind} ${x.category} (was ${x.was}) -> ${x.now}`).join('; ') : 'none'}
+
+Write the recap now inside <recap></recap>. Exactly 3 short sentences. No working shown.`;
 
     highlights[r.matchId] = await callLlm(prompt);
     console.log(`    -> ${highlights[r.matchId].slice(0, 120)}...`);
