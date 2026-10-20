@@ -1166,9 +1166,29 @@ async function clearRoundLocal() {
 }
 
 
+// US Central play date (UTC-5). Using UTC here made the evening (after ~7 PM
+// CDT) query "tomorrow", so today's rounds were not found for resume.
+function centralToday() {
+  const d = new Date();
+  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
+  const c = new Date(utcMs + (-5 * 60) * 60000);
+  return `${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}-${String(c.getDate()).padStart(2, '0')}`;
+}
+
+// A round is resumable only if it is genuinely mid-round: some holes are done
+// but not all. Empty shells (0 finished, no markers) and finished rounds are
+// not offered, so they cannot produce spurious resume prompts.
+function isResumable(round) {
+  const finished = round.finishedHoles?.length || 0;
+  if (finished > 0 && finished < 18) return true;
+  const hasMarkers = Object.values(round.scores || {}).some(arr =>
+    Array.isArray(arr) && arr.some(s => s && (s.firstOn || s.closest || s.putt)));
+  return hasMarkers && finished < 18;
+}
+
 async function loadCloudRounds() {
   try {
-const today = new Date().toISOString().slice(0, 10);
+const today = centralToday();
 const res = await fetch(`${BACKEND}/rounds?date=${today}`);
 if (!res.ok) return [];
 const data = await res.json();
@@ -1180,10 +1200,7 @@ return [];
 }
 
 function showRoundSelection(rounds) {
-  const incomplete = rounds.filter(r => {
-const finished = r.finishedHoles?.length || 0;
-return finished < 18;
-  });
+  const incomplete = rounds.filter(isResumable);
   if (incomplete.length === 0) {
 els.courseSetup.classList.remove('hidden');
 return;
@@ -1519,6 +1536,8 @@ function completeRound() {
   }
   precomputeAllTotals();
   saveRoundEverywhere();   // force the final 18-hole save to reach the backend
+  // Completed rounds must not be offered for resume on the next launch.
+  clearRoundLocal().catch(() => {});
   showSummary();
   console.log('Round completed with BBB COMP');
 }
@@ -1930,6 +1949,9 @@ els.leaderboard.parentElement.appendChild(carryDiv);
 
 function resetRound() {
  localStorage.removeItem('bbb');
+ // Also drop the local IndexedDB copy, otherwise the next launch offers to
+ // "resume" a round that is already finished or abandoned.
+ clearRoundLocal().catch(() => {});
  inRound = false;
  currentMatchId = null;
  players = [];
@@ -2149,7 +2171,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // === EXPOSE GAME FUNCTIONS TO GLOBAL SCOPE (immediately available) ===
 // Check for saved local round first
-const saved = await loadRoundLocal();
+let saved = await loadRoundLocal();
+// A finished or empty local round is stale — drop it so it never prompts.
+if (saved && !isResumable(saved)) { await clearRoundLocal(); saved = null; }
 // Try to get cloud rounds for selection
 cloudRounds = await loadCloudRounds();
 
@@ -2158,18 +2182,27 @@ attachStartGameListener();
 attachCourseSelectListener();
 attachNextToPlayersListener();
 
-if (cloudRounds.length > 0) {
-  // Show selection UI (handles 0, 1, or multiple)
-  showRoundSelection(cloudRounds);
-  return;  // showRoundSelection will handle what to show
-} else if (saved) {
-  // Fallback to local-only if no cloud rounds
-  if (confirm(`Resume round from ${new Date(saved.date).toLocaleDateString()} at ${saved.courseName || 'Unknown Course'}?`)) {
-    resumeRound(saved);
-  }
+// The local copy is the freshest (it is written on every hole, before the
+// cloud push). If it is a genuine mid-round, offer it once and stop asking.
+if (saved && isResumable(saved)) {
+  const ok = confirm(
+    `Resume round in progress?\n\n` +
+    `Course: ${saved.courseName || 'Unknown'}\n` +
+    `Holes: ${(saved.finishedHoles || []).length}/18\n` +
+    `Date: ${new Date(saved.date).toLocaleDateString()}`
+  );
+  if (ok) { resumeRound(saved); return; }
+  // Declined: settle the state so it does not prompt again on every launch.
+  await clearRoundLocal();
 }
 
-// Fresh start — show course picker
+if (cloudRounds.length > 0) {
+  // Show selection UI (handles 0, 1, or multiple resumable rounds)
+  showRoundSelection(cloudRounds);
+  return;  // showRoundSelection will handle what to show
+}
+
+// Fresh start — show course picker. Drop any stale (finished/empty) local copy.
   if (saved) await clearRoundLocal();
 
   // === EXPOSE GAME FUNCTIONS GLOBALLY ===
