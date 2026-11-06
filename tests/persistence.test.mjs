@@ -29,8 +29,16 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'PASS' : 'FAIL'
 function extractFn(name) {
   const i = SRC.indexOf(`function ${name}(`);
   if (i === -1) return null;
-  const j = SRC.indexOf('{', i);
-  let depth = 0, k = j;
+  // Walk the parameter list to its closing ')' first: a default parameter
+  // like `{ retries = 1 }` otherwise looks like the function body.
+  const p = SRC.indexOf('(', i);
+  let pd = 0, j = p;
+  for (; j < SRC.length; j++) {
+    if (SRC[j] === '(') pd++;
+    else if (SRC[j] === ')') { pd--; if (pd === 0) { j++; break; } }
+  }
+  const b = SRC.indexOf('{', j);
+  let depth = 0, k = b;
   for (; k < SRC.length; k++) {
     if (SRC[k] === '{') depth++;
     else if (SRC[k] === '}') { depth--; if (depth === 0) { k++; break; } }
@@ -88,6 +96,36 @@ console.log('\n[5] startup offers the freshest local round once, then settles');
   ok(/isResumable\(saved\)/.test(startup), 'startup checks the local round with isResumable()');
   ok(/Resume round in progress\?/.test(startup), 'startup prompts once to resume in-progress local round');
   ok(/saved && !isResumable\(saved\)/.test(startup), 'startup drops a stale (finished/empty) local round');
+}
+
+console.log('\n[6] cloud save: await, retry, and keep the phone copy until confirmed');
+{
+  ok(SRC.includes('async function completeRound'), 'completeRound() is async');
+  const complete = extractFn('completeRound');
+  ok(/await saveRoundEverywhere/.test(complete), 'completeRound() awaits the cloud save');
+  ok(/result\.ok/.test(complete), 'completeRound() reads the save result');
+  ok(/if \(result\.ok\)[\s\S]*clearRoundLocal/.test(complete), 'completeRound() clears the phone copy only after the server confirms');
+  ok(!/saveRoundEverywhere\(\);[\s\S]{0,80}clearRoundLocal/.test(complete), 'completeRound() no longer deletes before the save');
+
+  const upload = extractFn('uploadRound');
+  ok(!!upload, 'uploadRound() exists');
+  ok(/BACKEND\}\/save-round/.test(upload), 'uploadRound() posts to the backend');
+  ok(/AbortController/.test(upload), 'uploadRound() has a timeout');
+  ok(/attempt < retries/.test(upload), 'uploadRound() retries');
+
+  const save = extractFn('saveRoundEverywhere');
+  ok(/await uploadRound/.test(save), 'saveRoundEverywhere() awaits the upload result');
+  ok(/pendingUpload = true/.test(save), 'saveRoundEverywhere() marks the phone copy pending');
+  ok(/pendingUpload = false/.test(save), 'saveRoundEverywhere() clears pending only after success');
+  ok(/function syncPendingRound/.test(SRC), 'syncPendingRound() exists for retries on launch/online');
+
+  const local = extractFn('saveRoundLocal');
+  ok(/idbDone/.test(local), 'saveRoundLocal() waits on the real transaction event');
+  ok(!/tx\.complete/.test(SRC), 'no transaction.complete usages remain');
+
+  const startup = SRC.slice(SRC.indexOf('Check for saved local round first'));
+  ok(/pendingUpload/.test(startup), 'startup retries a pending upload');
+  ok(!/if \(saved && !isResumable\(saved\)\) \{ await clearRoundLocal/.test(startup), 'startup does not blindly delete a pending round');
 }
 
 console.log(`\n================  ${pass} passed, ${fail} failed  ================`);

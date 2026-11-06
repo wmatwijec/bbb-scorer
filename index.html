@@ -1142,11 +1142,21 @@ req.onerror = e => reject(e);
   });
 }
 
+// IndexedDB has no `transaction.complete`; resolve on the real 'complete'
+// event so callers never race the write (and the delete-after-save path).
+function idbDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 async function saveRoundLocal(data) {
   if (!db) await openDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
   tx.objectStore(STORE_NAME).put({ id: 'current', data, savedAt: Date.now() });
-  return tx.complete;
+  return idbDone(tx);
 }
 
 async function loadRoundLocal() {
@@ -1162,7 +1172,7 @@ async function clearRoundLocal() {
   if (!db) await openDB();
   const tx = db.transaction(STORE_NAME, 'readwrite');
   tx.objectStore(STORE_NAME).delete('current');
-  return tx.complete;
+  return idbDone(tx);
 }
 
 
@@ -1529,17 +1539,31 @@ function updateRoundCompleteBar() {
 // === END FUNCTION ===
 
 // === COMPLETE ROUND ===
-function completeRound() {
+async function completeRound() {
   if (finishedHoles.size !== HOLES) {
     alert(`Please finish all ${HOLES} holes first.`);
     return;
   }
+  const btns = [...document.querySelectorAll('#rcbComplete, #completeRound')];
+  const labels = btns.map(b => b.textContent);
+  btns.forEach(b => { b.disabled = true; b.textContent = 'Saving…'; });
+
   precomputeAllTotals();
-  saveRoundEverywhere();   // force the final 18-hole save to reach the backend
-  // Completed rounds must not be offered for resume on the next launch.
-  clearRoundLocal().catch(() => {});
+  // Await the cloud save. The phone copy is deleted only after the server
+  // confirms, so a failed final save stays on the phone and uploads later.
+  const result = await saveRoundEverywhere({ final: true, retries: 4, timeoutMs: 20000, keepalive: false });
+
+  if (result.ok) {
+    await clearRoundLocal().catch(() => {});
+  }
+
+  btns.forEach((b, i) => { b.disabled = false; b.textContent = labels[i]; });
+  inRound = false;
   showSummary();
-  console.log('Round completed with BBB COMP');
+  if (!result.ok) {
+    alert("Saved on this phone, but the server did not confirm it.\n\nIt will upload automatically the next time you open the app with a connection.");
+  }
+  console.log('Round completed with BBB COMP', result);
 }
 // === END FUNCTION ===
 
@@ -1961,8 +1985,56 @@ function resetRound() {
  holeSequence = [];
  }
 
-async function saveRoundEverywhere() {
-  if (!inRound) return;
+// Push one round to the backend. Returns {ok, error} and never throws, so the
+// caller can decide whether to keep the phone copy. Retries cover a Render
+// cold start; a timeout stops a dead request from blocking forever.
+async function uploadRound(data, { retries = 1, timeoutMs = 12000, keepalive = true } = {}) {
+  let lastErr = 'unknown';
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${BACKEND}/save-round`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        signal: ctrl.signal,
+        keepalive
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log(`Cloud save OK: ${data.matchId} (${(data.finishedHoles || []).length} holes)`);
+      return { ok: true };
+    } catch (e) {
+      lastErr = e.name === 'AbortError' ? 'timeout' : e.message;
+      console.error(`CLOUD SAVE FAILED ${data.matchId} (attempt ${attempt + 1}):`, lastErr);
+      if (attempt < retries) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return { ok: false, error: lastErr };
+}
+
+// Retry a round that never reached the server. Called on launch and when the
+// phone regains a connection. Never touches a round that is still in play.
+async function syncPendingRound() {
+  if (inRound) return;
+  const local = await loadRoundLocal();
+  if (!local || !local.pendingUpload) return;
+  const r = await uploadRound(local, { retries: 2, timeoutMs: 15000, keepalive: false });
+  if (r.ok) await clearRoundLocal().catch(() => {});
+}
+
+// Round saves are serialized. A slow hole-6 request must never land after the
+// final hole-18 save and roll the server copy back. A queued snapshot that a
+// newer save already replaced is skipped, so an offline burst cannot pile up.
+let saveQueue = Promise.resolve();
+let saveSeq = 0;
+
+function saveRoundEverywhere(options = {}) {
+  if (!inRound) return Promise.resolve({ ok: false, skipped: true });
+  const { final = false, retries = 0, timeoutMs = 8000, keepalive = true } = options;
+  const seq = ++saveSeq;
 
   const roundData = {
   matchId: currentMatchId,
@@ -1983,22 +2055,32 @@ _cachedTotals: players.reduce((acc, p) => {
   }, {})
   };
 
-  // 1. Save locally (instant)
-  await saveRoundLocal(roundData).catch(() => {});
+  const run = async () => {
+    // A newer snapshot has already superseded this one; only the final save
+    // is guaranteed to run.
+    if (!final && seq !== saveSeq) return { ok: false, superseded: true };
 
-  // 2. Save to cloud. keepalive lets the request survive a page unload; failures
-  //    are logged (never swallowed), so a lost round is visible instead of silent.
-  fetch('https://pwa-players-backend.onrender.com/save-round', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(roundData),
-keepalive: true
-  })
-    .then(res => {
-      if (!res.ok) console.error(`CLOUD SAVE FAILED ${currentMatchId}: HTTP ${res.status}`);
-      else console.log(`Cloud save OK: ${currentMatchId} (${(roundData.finishedHoles || []).length} holes)`);
-    })
-    .catch(err => console.error(`CLOUD SAVE FAILED ${currentMatchId}:`, err));
+    // 1. Save locally first, flagged pending. If the cloud call fails, this
+    //    copy is the backup that syncPendingRound uploads on the next launch.
+    roundData.pendingUpload = true;
+    await saveRoundLocal(roundData).catch(() => {});
+
+    // 2. Save to the cloud. The per-hole call is fire-and-forget (keepalive);
+    //    completeRound passes keepalive:false and retries so it can await it.
+    const result = await uploadRound(roundData, { retries, timeoutMs, keepalive });
+
+    // 3. Clear the pending flag only after the server confirms.
+    if (result.ok) {
+      roundData.pendingUpload = false;
+      await saveRoundLocal(roundData).catch(() => {});
+    }
+
+    return result;
+  };
+
+  const p = saveQueue.then(run, run);
+  saveQueue = p.catch(() => {});
+  return p;
 }
 
 function exportToCSV() {
@@ -2172,8 +2254,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   // === EXPOSE GAME FUNCTIONS TO GLOBAL SCOPE (immediately available) ===
 // Check for saved local round first
 let saved = await loadRoundLocal();
-// A finished or empty local round is stale — drop it so it never prompts.
-if (saved && !isResumable(saved)) { await clearRoundLocal(); saved = null; }
+// A finished or empty local round is normally stale. But a round that never
+// reached the server (pendingUpload) is kept and retried — deleting it here
+// is how a completed round used to disappear.
+if (saved && !isResumable(saved)) {
+  if (saved.pendingUpload) {
+    const r = await uploadRound(saved, { retries: 2, timeoutMs: 15000, keepalive: false });
+    if (r.ok) await clearRoundLocal();
+    // On failure keep the local copy; 'online' and the next launch retry it.
+  } else {
+    await clearRoundLocal();
+  }
+  saved = null;
+}
 // Try to get cloud rounds for selection
 cloudRounds = await loadCloudRounds();
 
@@ -2228,7 +2321,11 @@ if (cloudRounds.length > 0) {
   window.addEventListener('pagehide', () => { if (inRound) saveRoundEverywhere(); });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && inRound) saveRoundEverywhere();
+    if (document.visibilityState === 'visible') syncPendingRound();
   });
+  // Retry an unsynced round as soon as the phone has a connection again.
+  window.addEventListener('online', syncPendingRound);
+  syncPendingRound();
   window.simulateRound = simulateRound;
   window.exportToCSV = exportToCSV;
   window.updateNavButtons = updateNavButtons;
