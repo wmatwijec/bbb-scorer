@@ -1311,6 +1311,7 @@ if (player) player.scores = round.scores[name];
   });
   currentHole = round.currentHole || 1;
   currentCourse = round.currentCourse;
+  currentMatchId = round.matchId || currentMatchId || `BBB-${new Date().toISOString().slice(0,10)}-${Math.random().toString(36).substr(2,5)}`;
   finishedHoles = new Set(round.finishedHoles || []);
   holeSequence = round.holeSequence && round.holeSequence.length > 0
 ? round.holeSequence
@@ -1802,7 +1803,6 @@ if (willBeChecked) {
 }
 
 score[point] = willBeChecked;
-save();
 precomputeAllTotals();
 updateHole();
   }
@@ -2155,7 +2155,15 @@ function attachNavListeners() {
   if (next) {
     next.onclick = () => {
       if (!finishedHoles.has(currentHole)) return;
-      currentHole = currentHole < HOLES ? currentHole + 1 : 1;
+      const seq = holeSequence.length > 0
+        ? holeSequence
+        : Array.from(finishedHoles).sort((a, b) => a - b);
+      const seqIdx = seq.indexOf(currentHole);
+      if (seqIdx >= 0 && seqIdx < seq.length - 1) {
+        currentHole = seq[seqIdx + 1];
+      } else {
+        currentHole = currentHole < HOLES ? currentHole + 1 : 1;
+      }
       updateHole();
       updateCourseInfoBar();
       console.log(`NEXT -> HOLE ${currentHole}`);
@@ -2168,10 +2176,8 @@ function attachNavListeners() {
     edit.onclick = () => {
       if (!finishedHoles.has(currentHole)) return;
       finishedHoles.delete(currentHole);
-      // Drop it from the play-order sequence too, so re-finishing pushes it
-      // to its NEW position and the carry / running totals stay in play order.
-      const seqIdx = holeSequence.indexOf(currentHole);
-      if (seqIdx > -1) holeSequence.splice(seqIdx, 1);
+      // Keep the hole in its original play-order position. Removing it here
+      // makes re-finish append it last, which shifts carries and running totals.
       precomputeAllTotals();
       updateHole();
       console.log('EDIT MODE - re-finish this hole before moving on');

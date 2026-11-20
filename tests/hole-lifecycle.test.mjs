@@ -15,12 +15,14 @@
  *      the handler twice and skipped a hole (holes went 1,3,5,7...18,2,4,6...).
  *   2. canNext included `&& (currentHole < HOLES)`, which permanently disabled Next
  *      on hole 18 and killed the wrap, so rounds could not be closed out.
- *   3. Edit removed a hole from finishedHoles but left it in holeSequence, so carry
- *      and running totals were computed against the wrong play order.
+ *   3. Edit removed a hole from holeSequence, so re-finishing appended it last
+ *      and changed the play order used by carries, totals and Prev/Next.
  *   4. The Next handler had no finishedHoles guard; only the disabled attribute
  *      prevented skipping.
  *   5. The round-complete banner was keyed to "viewing hole 18" rather than
  *      finishedHoles.size === HOLES, so it vanished when reviewing an earlier hole.
+ *   6. Next advanced by hole number only. In a back-nine-first round, the last
+ *      played hole (9) wrapped to hole 1 instead of the first played hole (10).
  */
 const HOLES = 18;
 let pass = 0, fail = 0;
@@ -49,8 +51,16 @@ const canNext = st => settled(st);
 // --- index.html attachNavListeners (fixed: onclick, so always exactly 1 copy) ---
 function tapNext(st) {
   if (!canNext(st)) return false;
+  const seq = st.holeSequence.length > 0
+    ? st.holeSequence
+    : Array.from(st.finishedHoles).sort((a, b) => a - b);
   for (let i = 0; i < st.navListeners; i++) {
-    st.currentHole = st.currentHole < HOLES ? st.currentHole + 1 : 1;
+    const seqIdx = seq.indexOf(st.currentHole);
+    if (seqIdx >= 0 && seqIdx < seq.length - 1) {
+      st.currentHole = seq[seqIdx + 1];
+    } else {
+      st.currentHole = st.currentHole < HOLES ? st.currentHole + 1 : 1;
+    }
   }
   return true;
 }
@@ -76,8 +86,6 @@ function finishHole(st) {
 function editHole(st) {
   if (!st.finishedHoles.has(st.currentHole)) return false;
   st.finishedHoles.delete(st.currentHole);
-  const i = st.holeSequence.indexOf(st.currentHole);
-  if (i > -1) st.holeSequence.splice(i, 1);
   return true;
 }
 const barVisible = st => st.finishedHoles.size === HOLES;
@@ -141,14 +149,17 @@ console.log('\n[5] edit a prior hole, then move forward');
   st.currentHole = 3;                       // walk back with Prev to review
   ok(editHole(st), 'Edit accepted on finished hole 3');
   ok(st.finishedHoles.size === 4, `hole 3 removed from finished (got ${st.finishedHoles.size})`);
-  ok(!st.holeSequence.includes(3), `hole 3 dropped from sequence (got [${st.holeSequence}])`);
+  eq(st.holeSequence.join(','), '1,2,3,4,5', 'hole 3 stays in its original play-order position');
   ok(!canNext(st) && !canPrev(st), 'both nav buttons locked until re-finished');
   ok(tapNext(st) === false, 'cannot skip forward while hole 3 is open');
   finishHole(st);
-  ok(st.holeSequence[st.holeSequence.length - 1] === 3, `re-finish appends hole 3 at the END (got [${st.holeSequence}])`);
+  eq(st.holeSequence.join(','), '1,2,3,4,5', 're-finish keeps the original play order');
   ok(canNext(st), 'nav unlocked after re-finish');
+  tapPrev(st);
+  ok(st.currentHole === 2, `Prev after edit goes to the prior played hole (got ${st.currentHole})`);
+  st.currentHole = 3;
   tapNext(st);
-  ok(st.currentHole === 4, `forward resumes from 3 -> 4 (got ${st.currentHole})`);
+  ok(st.currentHole === 4, `Next after edit goes to the next played hole (got ${st.currentHole})`);
 }
 
 console.log('\n[6] bar tracks state, not the hole being viewed');
@@ -193,6 +204,11 @@ console.log('\n[7] start on hole 10: navigation follows play order');
   st.currentHole = 10;
   ok(tapPrev(st), 'Prev accepted on hole 10');
   eq(st.currentHole, 9, 'Prev on the first hole played wraps back to the last played (hole 9)');
+
+  // Last hole played wraps forward to the first hole played, not to hole 1.
+  st.currentHole = 9;
+  ok(tapNext(st), 'Next accepted on hole 9');
+  eq(st.currentHole, 10, 'Next on the last played hole wraps to the first played (hole 10)');
 }
 
 console.log(`\n================  ${pass} passed, ${fail} failed  ================`);

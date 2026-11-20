@@ -14,6 +14,9 @@
  *      so today's rounds were not found and evening recovery broke.
  *   5. The startup flow re-prompted on every launch until a fresh round was
  *      started, so it took more than one "continue (or not)" to move on.
+ *   6. Edit removed the hole from holeSequence, shifting carries and totals;
+ *      toggleScore also wrote a stale local snapshot before the full save.
+ *   7. resumeRound() did not restore matchId, and Next ignored play order.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -126,6 +129,27 @@ console.log('\n[6] cloud save: await, retry, and keep the phone copy until confi
   const startup = SRC.slice(SRC.indexOf('Check for saved local round first'));
   ok(/pendingUpload/.test(startup), 'startup retries a pending upload');
   ok(!/if \(saved && !isResumable\(saved\)\) \{ await clearRoundLocal/.test(startup), 'startup does not blindly delete a pending round');
+}
+
+console.log('\n[7] editing preserves play order and never writes a stale local snapshot');
+{
+  const editStart = SRC.indexOf("const edit = document.getElementById('editHole')");
+  const editBlock = SRC.slice(editStart, SRC.indexOf("document.addEventListener('DOMContentLoaded'", editStart));
+  ok(/finishedHoles\.delete\(currentHole\)/.test(editBlock), 'Edit removes the hole from finishedHoles');
+  ok(!/holeSequence\.splice/.test(editBlock), 'Edit does not remove the hole from holeSequence');
+  ok(/updateHole\(\)/.test(editBlock), 'Edit repaints through updateHole()');
+
+  const toggle = extractFn('toggleScore');
+  ok(!/\bsave\(\);/.test(toggle), 'toggleScore() does not write a stale local snapshot');
+  ok(/updateHole\(\)/.test(toggle), 'toggleScore() saves the full snapshot via updateHole()');
+
+  const resume = extractFn('resumeRound');
+  ok(/currentMatchId\s*=\s*round\.matchId/.test(resume), 'resumeRound() restores matchId');
+
+  const navStart = SRC.indexOf("const next = document.getElementById('nextHole')");
+  const navBlock = SRC.slice(navStart, SRC.indexOf("const edit = document.getElementById('editHole')", navStart));
+  ok(/holeSequence/.test(navBlock), 'Next follows play order when a next played hole exists');
+  ok(/currentHole < HOLES \? currentHole \+ 1 : 1/.test(navBlock), 'Next still advances to the next unplayed hole at the end of the sequence');
 }
 
 console.log(`\n================  ${pass} passed, ${fail} failed  ================`);
