@@ -1880,17 +1880,36 @@ message += `${i+1}. ${p.name}: ${p.total}\n`;
     matchId: currentMatchId,
     hole: currentHole,
     par,
+    courseName: courses[currentCourse]?.name || null,
+    holeSequence: holeSequence.slice(),
     playerScores: capturePlayers,
     carryOut,
     standings,
   };
 
-  // THIS IS THE ONLY LINE THAT CHANGED — silent server fetch instead of sms:
-  fetch('https://pwa-players-backend.onrender.com/send-walt', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(capturePayload)
-  }).catch(err => console.error('Walt shadow send failed:', err));
+  async function postCapture() {
+for (let attempt = 0; attempt <= 2; attempt++) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch('https://pwa-players-backend.onrender.com/send-walt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(capturePayload),
+      signal: ctrl.signal,
+      keepalive: true,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return;
+  } catch (err) {
+    console.error(`Walt shadow send failed (attempt ${attempt + 1}):`, err);
+    if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+  }
+  postCapture();
 } 
 }
 
