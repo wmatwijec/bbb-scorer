@@ -17,6 +17,8 @@
  *   6. Edit removed the hole from holeSequence, shifting carries and totals;
  *      toggleScore also wrote a stale local snapshot before the full save.
  *   7. resumeRound() did not restore matchId, and Next ignored play order.
+ *   8. The PWA start path missed the launch guard allowlist, so each home
+ *      screen restart redirected and reloaded the course list.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +26,7 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
+const MANIFEST = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log(`  ${c ? 'PASS' : 'FAIL'}  ${m}`); };
@@ -150,6 +153,20 @@ console.log('\n[7] editing preserves play order and never writes a stale local s
   const navBlock = SRC.slice(navStart, SRC.indexOf("const edit = document.getElementById('editHole')", navStart));
   ok(/holeSequence/.test(navBlock), 'Next follows play order when a next played hole exists');
   ok(/currentHole < HOLES \? currentHole \+ 1 : 1/.test(navBlock), 'Next still advances to the next unplayed hole at the end of the sequence');
+}
+
+console.log('\n[8] PWA start path matches the launch guard allowlist');
+{
+  const startPath = new URL(MANIFEST.start_url, 'https://bbb.invalid').pathname;
+  const guardStart = SRC.indexOf('// Hide launch screen');
+  const guard = SRC.slice(guardStart, SRC.indexOf('</script>', guardStart));
+  const allowed = [...guard.matchAll(/window\.location\.pathname === '([^']+)'/g)].map(m => m[1]);
+  ok(startPath === '/bbb-scorer/', `manifest start_url uses /bbb-scorer/ (got ${startPath})`);
+  ok(MANIFEST.scope === '/bbb-scorer/', 'manifest scope uses /bbb-scorer/');
+  ok(MANIFEST.file_handlers?.[0]?.action === '/bbb-scorer/', 'file handler action uses /bbb-scorer/');
+  ok(allowed.includes(startPath), 'launch guard accepts the manifest start path');
+  ok(allowed.includes('/bbb-golf-scorer/'), 'launch guard accepts the legacy home screen path');
+  ok(/href="\/manifest\.json/.test(SRC), 'manifest link is absolute');
 }
 
 console.log(`\n================  ${pass} passed, ${fail} failed  ================`);

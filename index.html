@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BBB Golf</title>
-  <link rel="manifest" href="manifest.json?v=20251123-YOU-WIN" />
+  <link rel="manifest" href="/manifest.json?v=20261124-startup-fix" />
   <link rel="icon" href="icon.png" /> 
   <meta id="cacheBuster" name="version" content="20251123-Absolute-Victory">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
@@ -622,7 +622,8 @@ font-size: 0.95rem !important;
 <!-- 2. AUTO-HIDE LAUNCH SCREEN + SPINNER KILLER -->
 <script>
   // Hide launch screen
-  if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html') {
+  if (window.location.pathname === '/bbb-scorer/' || window.location.pathname === '/bbb-scorer/index.html' ||
+      window.location.pathname === '/bbb-golf-scorer/' || window.location.pathname === '/bbb-golf-scorer/index.html') {
 document.getElementById('launchWrapper')?.remove();
   }
   else if (localStorage.getItem('appLaunched')) {
